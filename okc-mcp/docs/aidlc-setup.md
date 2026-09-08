@@ -32,9 +32,13 @@ v1은 **프롬프트/규칙 기반**입니다. 실행 엔진·TypeScript 도구�
   - **제거**: `.claude/`, `.codex/`, `.agents/`, `AGENTS.md`, `aidlc/`(2.7.1
     워크스페이스·워크플로우 기록·CodeKB·감사 로그), `docs/aidlc-upstream/`.
   - **설치**: `CLAUDE.md`(v1 core-workflow.md), `.aidlc-rule-details/`.
-- **복구 가능성**: 제거 직전의 2.7.1 전체 상태는 체크포인트 커밋
-  `5c89366` ("checkpoint: preserve AI-DLC 2.7.1 harness state before v1.0.1 switch")에
-  그대로 보존되어 있습니다. 필요하면 그 커밋에서 되살릴 수 있습니다.
+- **복구 가능성**: 원래 전환은 독립 `okc-mcp` 저장소에서 체크포인트 `5c89366` /
+  전환 커밋 `42a9641`로 수행됐습니다. 그러나 이후 okc monorepo가 **전환 이전
+  커밋 `9fe0cda`에서 `git subtree`로 `okc-mcp`를 가져오면서 2.7.1 하네스가
+  되살아났고**, 위 두 커밋은 현재 monorepo 히스토리에서 도달 불가입니다.
+  2026-09-08 재정리로 2.7.1 하네스를 다시 제거했으며, 제거 직전의 2.7.1 전체
+  상태는 브랜치 **`backup/aidlc-2.7.1-harness`**(커밋 `905b255`)에 보존되어
+  있습니다. 필요하면 거기서 되살릴 수 있습니다.
 - 2.7.1 워크플로우가 진행 중이던 `okc-vault-mcp` 인텐트의 이데이션·리버스
   엔지니어링 산출물도 위 체크포인트에 포함됩니다. v1에서 참고가 필요하면 거기서
   꺼내 `aidlc-docs/`로 옮길 수 있습니다.
