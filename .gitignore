@@ -64,3 +64,6 @@ aidlc/diagnostics/
 # concurrent appends — there is intentionally NO .gitattributes merge=union,
 # which was proven to corrupt the multi-line audit blocks) ·
 # aidlc/spaces/*/intents/*/<phase>/<stage>/*.md (artifacts + diary).
+
+# Claude Code harness (local): per-user overrides, never shared.
+.claude/settings.local.json

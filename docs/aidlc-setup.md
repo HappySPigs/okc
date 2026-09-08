@@ -89,6 +89,85 @@ Additional validation on 2026-09-07 with Codex CLI `0.153.4`:
 
 The official diagnostic also reported 47 advisory items from existing scopes, one keyword overlap between project and organization rules, and eight method files that were not yet committed. The overlap is between the instruction to pause unapproved product work and organization-level trunk-development wording; they are different constraints. The absence of a hook heartbeat was consistent with not having started a product workflow. Do not present this setup diagnostic as completed stage execution or completed product validation.
 
+## Claude Code harness (coexistence install, 2026-09-07)
+
+The **Claude Code harness distribution** (`dist/claude`) of the same
+`awslabs/aidlc-workflows` **2.7.1** at the identical pinned commit
+`22ed2d101f4f01196b76d5725cf8d9aabe5fef9e` was installed **alongside** the Codex
+harness. Both drive the same shared `aidlc/` workspace, so the in-flight
+`okc-vault-mcp` intent is resumable from either CLI. AI-DLC is harness-neutral by
+design ("one core, many harnesses"); this is a re-install of the same core onto a
+second harness, not a hand-port. The product gate above remains in force.
+
+Installed by copying `dist/claude/.claude/` into `.claude/` (engine tools, 17
+TypeScript hooks, 42 skills, 14 agents, scopes, sensors, settings). Unlike the
+Codex install, no hook-response adapter or `~/`-level trust registration is
+needed — Claude Code approves project hooks in-place. The workspace shell
+(`dist/claude/aidlc/`) was **not** copied: the
+shared `aidlc/spaces/default/memory/` already exists from the Codex install and
+its `project.md` is customized — copying would clobber it. All other memory files
+were byte-identical between the two distributions.
+
+### Claude-specific adaptations
+
+- **Non-Bedrock (mirrors the Codex adaptation).** The shipped `.claude/settings.json`
+  defaults to AWS Bedrock. Removed `CLAUDE_CODE_USE_BEDROCK`, `AWS_REGION`, the four
+  `ANTHROPIC_DEFAULT_*_MODEL` Bedrock model IDs, and the top-level `model` /
+  `effortLevel` overrides so the framework uses the existing Claude Code login,
+  model, and session settings. `env` retains only the harmless
+  `AWS_AIDLC_DEFAULT_SCOPE`. Hooks, `permissions.allow`, `statusLine`, and
+  `companyAnnouncements` are kept as shipped. This is exactly the documented
+  non-Bedrock step (getting-started § "AWS Bedrock Setup").
+- **MCP omitted.** `dist/claude/.mcp.json` declares five servers (context7 + four
+  AWS servers via `uvx`). None are used by this local-only, no-AWS product, and the
+  Codex distribution shipped zero. `.mcp.json` was not installed; it can be added
+  later if AWS work is ever in scope.
+- **Custom composed scope ported.** The in-flight intent uses the composed scope
+  `okc-local-mcp`, which existed only in the Codex install. Copied
+  `.codex/scopes/aidlc-okc-local-mcp.md` → `.claude/scopes/`, and copied its
+  `scope-grid.json` membership entry (20 EXECUTE / 33) into
+  `.claude/tools/data/scope-grid.json`. `bun .claude/tools/aidlc-graph.ts compile`
+  confirmed `mergeComposedScopes` folds the entry (matching `.md` identity present)
+  so it survives future recompiles.
+- **Root `CLAUDE.md` created.** Claude Code reads root `./CLAUDE.md`; the Codex
+  harness reads `AGENTS.md`. The new root `CLAUDE.md` imports the method
+  (`@.claude/rules/aidlc.md`, which chains to `aidlc/spaces/default/memory/*`) and
+  carries the product gate, mirroring `AGENTS.md`. The shipped `.claude/CLAUDE.md`
+  is left unmodified as the framework's reference doc.
+- **`.gitignore`.** Added `.claude/settings.local.json` (per-user overrides). The
+  `aidlc/` committed-vs-ignored block already existed from the Codex install.
+
+### Validation record (2026-09-07)
+
+Environment: macOS arm64, Claude Code, Bun `1.4.0`, Node `24.13.1`. Read-only
+diagnostics only — no lifecycle verb (`report`, `approve`, …) was run, so no stage
+transition or approval was created.
+
+- `aidlc-utility.ts version`: `aidlc 2.7.1`.
+- `aidlc-utility.ts status`: scope `okc-local-mcp`, Phase IDEATION, Current Stage
+  Scope Definition (1.4), 5/20 stages, State Version 8, Next Stage `rough-mockups`.
+  "Untracked completions — advisory" for the three initialization stages (expected
+  cross-harness resume signal; non-blocking).
+- `aidlc-utility.ts doctor`: **52 passed, 0 failed**. Includes "workspace shell
+  ready", "Scope validation: 12 scopes valid" (11 stock + `okc-local-mcp`), schema
+  33/33. Advisories only: `runtime-graph-stale` (regenerated on next action), a
+  team/project ⇄ org rule overlap (the pause-unapproved-work vs trunk-development
+  wording, distinct constraints), and historical hook timestamps from prior Codex
+  runs.
+- `aidlc-orchestrate.ts next` (read-only): returned `load-steering` for stage
+  `scope-definition` — the Claude engine routes the resumed workflow to the correct
+  next stage.
+- The append-only audit shard gained two **diagnostic** rows (`GUARDRAIL_LOADED`,
+  `HEALTH_CHECKED` from the `doctor` run) — not state transitions.
+
+### Activation (user step)
+
+The 17 hooks and skills load only when Claude Code starts a session with `.claude/`
+present. To activate: **restart Claude Code**, approve the project hooks when
+prompted (or via `/hooks`), then run `/aidlc --resume` in a fresh session to
+continue the workflow from `scope-definition`. `/clear` is not sufficient — a full
+restart is required.
+
 ## Reinstallation and updates
 
 1. Verify the commit and official installation guide in the [installation provenance](aidlc-upstream/installation.json).
