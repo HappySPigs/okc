@@ -51,7 +51,8 @@ test('applyMutation: every update requires a matching hash, writes exactly one b
   const updated = await authoring.updateNote(f.vault, f.config, { path: 'a.md', expectedHash: created.sha256!, changes: { body: '# B\n' }, dryRun: false });
   assert.equal(updated.applied, true);
   assert.equal((await mdBackups(f.statePath)).length, 1);
-  assert.equal(await readFile(path.join(f.vaultPath, 'a.md'), 'utf8'), '# B\n');
+  // Body-only update preserves the created note's frontmatter (replaceBody contract).
+  assert.equal(await readFile(path.join(f.vaultPath, 'a.md'), 'utf8'), '---\ntitle: A\n---\n# B\n');
 });
 
 test('applyMutation: standardize rejects an empty patch and a malformed current note', async t => {

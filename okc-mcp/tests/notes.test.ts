@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { analyzeNote, auditNotes, createNoteContent, fixYamlContent, MAX_NOTE_BYTES, patchFrontmatter, reinforceContent, replaceBody, validateNote } from '../src/notes.js';
+import { analyzeNote, auditNotes, backlinksOf, createNoteContent, fixYamlContent, MAX_NOTE_BYTES, outlineHeadings, patchFrontmatter, reinforceContent, replaceBody, validateNote } from '../src/notes.js';
 
 test('minimal notes and supplied metadata remain useful to ordinary Obsidian users', () => {
   const plain = '# Plain\n\nOriginal claim.\n';
@@ -194,4 +194,64 @@ test('replaceBody swaps only the body, preserving the exact frontmatter block', 
   assert.ok(out.startsWith('---\ntitle: Keep # comment\ncustom: v\n---\n'));
   assert.ok(out.endsWith('# New body\n'));
   assert.throws(() => replaceBody('---\ntitle: [bad\n---\nbody\n', 'x'), 'a malformed current note is rejected');
+});
+
+test('outlineHeadings maps ATX headings, excludes code fences, spans sections, and skips the frontmatter block (REQ-017)', () => {
+  const content = '---\ntitle: Doc\n---\n# Top\n\nintro\n\n## A\n\ntext\n\n```\n# not a heading\n```\n\n## B ##\n\nmore\n';
+  const headings = outlineHeadings(content);
+  assert.deepEqual(headings.map(h => [h.level, h.title]), [[1, 'Top'], [2, 'A'], [2, 'B']]);
+  assert.ok(!headings.some(h => h.title.includes('not a heading')), 'a # inside a fence is not a heading');
+  // The first heading begins after the frontmatter block, at its recorded offset.
+  assert.equal(content.slice(headings[0]!.start, headings[0]!.start + 5), '# Top');
+  // Section span: [start, contentStart) is the heading line; [contentStart, end) is the body.
+  for (const h of headings) assert.ok(content.slice(h.start, h.contentStart).trimStart().startsWith('#'));
+  // '# Top' (level 1) spans until end of file; '## A' ends where '## B' begins.
+  const a = headings.find(h => h.title === 'A')!;
+  const b = headings.find(h => h.title === 'B')!;
+  assert.equal(a.end, b.start, 'a section ends at the next same-or-higher-level heading');
+  assert.equal(headings[0]!.end, content.length, 'the top heading spans to end of file');
+});
+
+test('outlineHeadings ignores # that is not a valid ATX heading (no space, 7+ hashes, 4-space indent)', () => {
+  const content = '#notaheading\n\n####### too many\n\n    # indented code\n\n# Real\n';
+  assert.deepEqual(outlineHeadings(content).map(h => h.title), ['Real']);
+});
+
+test('audit link findings are unaffected by astral characters inside masked regions (BR-VISIBLE-1 regression guard)', () => {
+  const content = '# A\n\n`😀 inline` <!-- 😀 comment -->\n```\n😀 fenced\n```\n\n[[Target]]\n';
+  const result = auditNotes([{ path: 'A.md', content }, { path: 'Target.md', content: '# Target\n' }], [], []);
+  assert.ok(!result.findings.some(f => f.code === 'OKC_LINK_UNRESOLVED'), 'the real [[Target]] link still resolves');
+  assert.ok(!result.findings.some(f => f.code === 'OKC_TEXT_ENCODING'), 'masked emoji is not flagged as an encoding error');
+  assert.deepEqual(analyzeNote('A.md', content).links, ['Target'], 'only the unmasked link is detected');
+});
+
+test('backlinksOf finds inbound wikilinks over the documented subset and reports ambiguity without choosing (REQ-016)', () => {
+  const notes = [
+    { path: 'sources/B.md', content: '# B\n\n## Evidence\n', sha256: 'hB' },
+    { path: 'notes/A.md', content: '# A\n\n[[../sources/B]] [[../sources/B#Evidence]] ![[../sources/B]]\n`[[../sources/B]]`\n', sha256: 'hA' },
+    { path: 'notes/none.md', content: '# none\n\nnothing\n', sha256: 'hN' },
+  ];
+  const toB = backlinksOf('sources/B.md', notes);
+  assert.deepEqual([...new Set(toB.map(link => link.path))], ['notes/A.md'], 'only A links to B');
+  assert.equal(toB.length, 3, 'plain, #heading and embed count; the inline-code link is excluded (BR-VISIBLE-1 shared masking)');
+  assert.ok(toB.some(link => link.embed), 'the ![[embed]] carries embed=true');
+  assert.ok(toB.some(link => link.fragment === 'Evidence'), 'the #Evidence fragment is preserved');
+  assert.ok(toB.every(link => link.sha256 === 'hA'), 'each backlink carries its source SHA-256');
+  assert.deepEqual(backlinksOf('notes/none.md', notes), [], 'a note with no inbound links returns []');
+
+  const shared = [
+    { path: 'p/Dup.md', content: '# Dup\n\n[[Shared]]\n', sha256: 'hP' },
+    { path: 'q/Shared.md', content: '# Shared\n', sha256: 'hQ' },
+    { path: 'r/Shared.md', content: '# Shared\n', sha256: 'hR' },
+  ];
+  const ambiguous = backlinksOf('q/Shared.md', shared).find(link => link.path === 'p/Dup.md');
+  assert.ok(ambiguous?.ambiguous && ambiguous.candidates.length > 1, 'a namesake is reported ambiguous, never auto-chosen');
+});
+
+test('backlinksOf never treats an unsafe or external target as a backlink (BR-LINK-2/3)', () => {
+  const notes = [
+    { path: 'T.md', content: '# T\n', sha256: 'hT' },
+    { path: 'U.md', content: '# U\n\n[[https://evil.example/T]] [[/abs/T]] [[../../escape/T]]\n', sha256: 'hU' },
+  ];
+  assert.deepEqual(backlinksOf('T.md', notes), [], 'URI-like, absolute and Vault-escaping targets are not backlinks');
 });

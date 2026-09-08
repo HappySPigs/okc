@@ -161,13 +161,13 @@ function visibleMarkdown(body: string): string {
     const marker = /^ {0,3}(`{3,}|~{3,})(.*)/u.exec(line);
     if (fenced) {
       if (marker && marker[1]?.[0] === fenced.marker && marker[1].length >= fenced.length && !(marker[2] ?? '').trim()) fenced = null;
-      visible += line.replace(/[^\r\n]/gu, ' ');
+      visible += line.replace(/[^\r\n]/g, ' ');
     } else if (marker && (marker[1]?.[0] !== '`' || !(marker[2] ?? '').includes('`'))) {
       fenced = { marker: marker[1]?.[0] ?? '`', length: marker[1]?.length ?? 3 };
-      visible += line.replace(/[^\r\n]/gu, ' ');
+      visible += line.replace(/[^\r\n]/g, ' ');
     } else visible += line;
   }
-  visible = visible.replace(/<!--[\s\S]*?(?:-->|$)/gu, value => value.replace(/[^\r\n]/gu, ' '));
+  visible = visible.replace(/<!--[\s\S]*?(?:-->|$)/gu, value => value.replace(/[^\r\n]/g, ' '));
   let result = '';
   for (let index = 0; index < visible.length;) {
     if (visible[index] !== '`' || escaped(visible, index)) { result += visible[index]; index++; continue; }
@@ -181,7 +181,7 @@ function visibleMarkdown(body: string): string {
     }
     if (found === -1) { result += visible.slice(index, index + length); index += length; }
     else {
-      result += visible.slice(index, found + length).replace(/[^\r\n]/gu, ' ');
+      result += visible.slice(index, found + length).replace(/[^\r\n]/g, ' ');
       index = found + length;
     }
   }
@@ -194,14 +194,77 @@ function escaped(value: string, index: number): boolean {
   return slashes % 2 === 1;
 }
 
-function wikiLinks(visible: string): string[] {
-  const links: string[] = [];
+export interface WikiLinkOccurrence {
+  raw: string;    // full text inside [[...]] (before splitting on '|')
+  target: string; // the part before '|', trimmed
+  index: number;  // offset of the match in `visible` (== body offset; BR-VISIBLE-1)
+  embed: boolean; // leading '!' (embed/transclusion)
+}
+
+/** Documented wikilink-subset occurrences in a note's visible (fence-masked) body. */
+export function wikiLinkOccurrences(visible: string): WikiLinkOccurrence[] {
+  const occurrences: WikiLinkOccurrence[] = [];
   for (const match of visible.matchAll(/!?\[\[([^\]\r\n]+)\]\]/gu)) {
     if (escaped(visible, match.index)) continue;
-    const target = match[1]?.split('|')[0]?.trim();
-    if (target) links.push(target);
+    const raw = match[1] ?? '';
+    const target = raw.split('|')[0]?.trim() ?? '';
+    if (target) occurrences.push({ raw, target, index: match.index, embed: match[0].startsWith('!') });
   }
-  return [...new Set(links)];
+  return occurrences;
+}
+
+function wikiLinks(visible: string): string[] {
+  return [...new Set(wikiLinkOccurrences(visible).map(occurrence => occurrence.target))];
+}
+
+export interface ResolvedWikiLink {
+  pathPart: string;
+  fragment: string;
+  status: 'unsafe' | 'external' | 'unresolved' | 'resolved' | 'ambiguous';
+  reason?: 'nonportable' | 'escape';
+  candidates: string[]; // sorted note paths (empty unless resolved/ambiguous)
+}
+
+/**
+ * Resolve one wikilink target against the vault index using the SAME rules as
+ * audit_vault (shared so the audit and list_backlinks cannot diverge). It never
+ * touches the filesystem: link text is matched only against already-listed note
+ * paths/names, ambiguity is reported (never auto-chosen), and unsafe/escaping
+ * targets are refused (BR-LINK-2/3/4/5).
+ */
+export function resolveWikiLink(
+  sourcePath: string,
+  target: string,
+  context: { byPath: ReadonlyMap<string, { path: string }>; lookup: ReadonlyMap<string, ReadonlySet<string>>; allFiles: ReadonlySet<string> },
+): ResolvedWikiLink {
+  const hash = target.indexOf('#');
+  const pathPart = (hash < 0 ? target : target.slice(0, hash)).trim();
+  const fragment = hash < 0 ? '' : target.slice(hash + 1);
+  if (/^[a-z][a-z\d+.-]*:/iu.test(pathPart) || pathPart.startsWith('/') || pathPart.includes('\\')) {
+    return { pathPart, fragment, status: 'unsafe', reason: 'nonportable', candidates: [] };
+  }
+  const relative = posix.normalize(posix.join(posix.dirname(sourcePath), pathPart));
+  if (relative === '..' || relative.startsWith('../')) {
+    return { pathPart, fragment, status: 'unsafe', reason: 'escape', candidates: [] };
+  }
+  const found = new Set<string>();
+  if (!pathPart) found.add(sourcePath);
+  else {
+    const locations = [...new Set([relative, pathPart])];
+    for (const location of locations) {
+      for (const candidate of [location, `${location}.md`]) {
+        const hit = context.byPath.get(key(candidate));
+        if (hit) found.add(hit.path);
+      }
+    }
+    if (found.size === 0 && locations.some(location => context.allFiles.has(key(location)))) {
+      return { pathPart, fragment, status: 'external', candidates: [] };
+    }
+    if (found.size === 0) for (const path of context.lookup.get(key(posix.basename(pathPart, posix.extname(pathPart)))) ?? []) found.add(path);
+  }
+  if (found.size === 0) return { pathPart, fragment, status: 'unresolved', candidates: [] };
+  const candidates = [...found].sort((left, right) => (left < right ? -1 : left > right ? 1 : 0));
+  return { pathPart, fragment, status: candidates.length > 1 ? 'ambiguous' : 'resolved', candidates };
 }
 
 function key(value: string): string { return value.trim().normalize('NFC').toLowerCase(); }
@@ -302,6 +365,61 @@ function splitRaw(content: string): { bom: string; newline: string; body: string
   const match = closing.exec(raw);
   if (!match) return { bom, newline, body: raw, hadFrontmatter: false };
   return { bom, newline, body: raw.slice(match.index + match[0].length), hadFrontmatter: true };
+}
+
+/** One heading in an {@link outlineHeadings} result (REQ-017). */
+export interface OutlineHeading {
+  level: number;
+  kind: 'atx';
+  title: string;
+  titleTruncated: boolean;
+  start: number;        // offset in `content` where the heading line begins
+  contentStart: number; // offset in `content` where this heading's section body begins
+  end: number;          // offset of the next same-or-higher-level heading, else content.length
+}
+
+const OUTLINE_TITLE_MAX = 300;
+
+/**
+ * Bounded, code-fence-aware ATX heading map for one note (REQ-017 / BR-OUTLINE-*).
+ * A heuristic structural parse, NOT a full CommonMark/Obsidian parser: setext
+ * headings are intentionally out of scope in this Unit, and a `#` inside fenced
+ * code, an inline-code span, or an HTML comment is excluded via visibleMarkdown.
+ * Offsets are UTF-16 code-unit indices into the full `content`, identical to the
+ * basis of read_note's slice, so a section is read by composing with read_note.
+ * Correctness of the offsets relies on visibleMarkdown being length-preserving
+ * (BR-VISIBLE-1).
+ */
+export function outlineHeadings(content: string): OutlineHeading[] {
+  if (typeof content !== 'string') fail('outline requires string content.');
+  const { body } = splitRaw(content);
+  const bodyStart = content.length - body.length;
+  const visible = visibleMarkdown(body);
+  const vlines = visible.split(/(?<=\n)/u);
+  const blines = body.split(/(?<=\n)/u);
+  const partial: Omit<OutlineHeading, 'end'>[] = [];
+  let offset = 0;
+  for (let index = 0; index < vlines.length; index++) {
+    const vline = vlines[index] ?? '';
+    const lineStart = offset;
+    offset += vline.length;
+    const detect = /^( {0,3}#{1,6})(?:([\t ]+)(.*?))?[\t ]*$/u.exec(vline.replace(/\r?\n$/u, ''));
+    if (!detect) continue;
+    const level = (detect[1] ?? '').trim().length;
+    const prefix = (detect[1] ?? '').length + (detect[2]?.length ?? 0);
+    let title = (blines[index] ?? '').replace(/\r?\n$/u, '').slice(prefix).replace(/[\t ]+#+[\t ]*$/u, '').replace(/[\t ]+$/u, '');
+    const points = [...title];
+    const titleTruncated = points.length > OUTLINE_TITLE_MAX;
+    if (titleTruncated) title = points.slice(0, OUTLINE_TITLE_MAX).join('');
+    partial.push({ level, kind: 'atx', title, titleTruncated, start: bodyStart + lineStart, contentStart: bodyStart + offset });
+  }
+  return partial.map((heading, index) => {
+    let end = content.length;
+    for (let next = index + 1; next < partial.length; next++) {
+      if ((partial[next]?.level ?? 0) <= heading.level) { end = partial[next]!.start; break; }
+    }
+    return { ...heading, end };
+  });
 }
 
 /**
@@ -411,39 +529,22 @@ export function auditNotes(notes: AuditNote[], otherFiles: string[], skipped: st
   for (const path of ambiguousPaths) add(path, 'OKC_NAME_AMBIGUOUS', 'warning', 'A title, filename, or alias shares a lookup name with another note; qualify links where needed.');
   for (const note of analyses) {
     for (const target of note.analysis.links) {
-      const hash = target.indexOf('#');
-      const pathPart = (hash < 0 ? target : target.slice(0, hash)).trim();
-      const fragment = hash < 0 ? '' : target.slice(hash + 1);
-      if (/^[a-z][a-z\d+.-]*:/iu.test(pathPart) || pathPart.startsWith('/') || pathPart.includes('\\')) {
-        add(note.path, 'OKC_LINK_UNSAFE', 'warning', 'A wikilink uses an absolute, URI-like, or nonportable target; review locally.');
+      const resolved = resolveWikiLink(note.path, target, { byPath, lookup, allFiles });
+      if (resolved.status === 'unsafe') {
+        add(note.path, 'OKC_LINK_UNSAFE', 'warning', resolved.reason === 'escape'
+          ? 'A wikilink may escape the source Vault.'
+          : 'A wikilink uses an absolute, URI-like, or nonportable target; review locally.');
         continue;
       }
-      const relative = posix.normalize(posix.join(posix.dirname(note.path), pathPart));
-      if (relative === '..' || relative.startsWith('../')) {
-        add(note.path, 'OKC_LINK_UNSAFE', 'warning', 'A wikilink may escape the source Vault.');
-        continue;
-      }
-      let candidates = new Set<string>();
-      if (!pathPart) candidates.add(note.path);
-      else {
-        const locations = [...new Set([relative, pathPart])];
-        for (const location of locations) {
-          for (const candidate of [location, `${location}.md`]) {
-            const found = byPath.get(key(candidate));
-            if (found) candidates.add(found.path);
-          }
-        }
-        if (candidates.size === 0 && locations.some(location => allFiles.has(key(location)))) continue;
-        if (candidates.size === 0) candidates = lookup.get(key(posix.basename(pathPart, posix.extname(pathPart)))) ?? new Set<string>();
-      }
-      if (candidates.size === 0) add(note.path, 'OKC_LINK_UNRESOLVED', 'warning', 'A wikilink target could not be found by the authoring heuristic.');
-      else if (candidates.size > 1) add(note.path, 'OKC_LINK_AMBIGUOUS', 'warning', 'A wikilink has multiple possible targets; no target was chosen.');
-      else if (fragment) {
-        const candidate = byPath.get(key([...candidates][0] ?? ''));
+      if (resolved.status === 'external') continue;
+      if (resolved.status === 'unresolved') { add(note.path, 'OKC_LINK_UNRESOLVED', 'warning', 'A wikilink target could not be found by the authoring heuristic.'); continue; }
+      if (resolved.status === 'ambiguous') { add(note.path, 'OKC_LINK_AMBIGUOUS', 'warning', 'A wikilink has multiple possible targets; no target was chosen.'); continue; }
+      if (resolved.fragment) {
+        const candidate = byPath.get(key(resolved.candidates[0] ?? ''));
         if (!candidate || candidate.body === undefined) continue;
-        const found = fragment.startsWith('^')
-          ? candidate.blockIds.has(fragment.slice(1))
-          : candidate.headings.has(key(fragment));
+        const found = resolved.fragment.startsWith('^')
+          ? candidate.blockIds.has(resolved.fragment.slice(1))
+          : candidate.headings.has(key(resolved.fragment));
         if (!found) add(note.path, 'OKC_LINK_FRAGMENT_UNRESOLVED', 'warning', 'A heading or block anchor could not be confirmed by the authoring heuristic.');
       }
     }
@@ -463,4 +564,70 @@ export function auditNotes(notes: AuditNote[], otherFiles: string[], skipped: st
       'Findings with the same path, code, and message are aggregated and at most 1,000 unique findings are returned. Summary severity counts include all occurrences; aggregatedOccurrences counts repeated occurrences and omittedFindings counts unique findings excluded by the limit.',
     ],
   };
+}
+
+/** Body used for link extraction: after valid frontmatter, else the whole note. */
+function bodyForLinks(content: string): string {
+  try { return frontmatter(content).body; } catch { return content; }
+}
+
+export interface Backlink {
+  path: string;
+  sha256: string;
+  linkText: string;
+  fragment: string;
+  embed: boolean;
+  ambiguous: boolean;
+  candidates: string[];
+  excerpt: string;
+}
+
+/**
+ * Inbound wikilinks to `targetPath` (REQ-016 / BR-LINK-*). Pure and deterministic:
+ * builds the vault index (byPath/lookup/allFiles) exactly like auditNotes, then
+ * reuses the shared resolveWikiLink over each source note's documented-subset
+ * occurrences, keeping an edge only when a resolved/ambiguous candidate IS the
+ * target. Ambiguous namesakes are reported (never auto-chosen); nothing is read
+ * from the filesystem. Excerpts are verbatim body slices and rely on
+ * visibleMarkdown being length-preserving (BR-VISIBLE-1).
+ */
+export function backlinksOf(
+  targetPath: string,
+  notes: { path: string; content: string; sha256: string }[],
+  otherFiles: string[] = [],
+): Backlink[] {
+  const targetKey = key(targetPath);
+  const byPath = new Map<string, { path: string }>();
+  const lookup = new Map<string, Set<string>>();
+  const allFiles = new Set([...notes.map(note => key(note.path)), ...otherFiles.map(key)]);
+  for (const note of notes) {
+    byPath.set(key(note.path), { path: note.path });
+    const analysis = analyzeNote(note.path, note.content);
+    for (const name of [analysis.title, posix.basename(note.path, '.md'), ...analysis.aliases]) {
+      const names = lookup.get(key(name)) ?? new Set<string>();
+      names.add(note.path);
+      lookup.set(key(name), names);
+    }
+  }
+  const backlinks: Backlink[] = [];
+  for (const note of notes) {
+    const body = bodyForLinks(note.content);
+    const visible = visibleMarkdown(body);
+    const seen = new Set<string>();
+    for (const occurrence of wikiLinkOccurrences(visible)) {
+      const dedupe = `${occurrence.embed ? '!' : ''}${occurrence.raw}`;
+      if (seen.has(dedupe)) continue;
+      seen.add(dedupe);
+      const resolved = resolveWikiLink(note.path, occurrence.target, { byPath, lookup, allFiles });
+      if (resolved.status !== 'resolved' && resolved.status !== 'ambiguous') continue;
+      if (!resolved.candidates.some(candidate => key(candidate) === targetKey)) continue;
+      backlinks.push({
+        path: note.path, sha256: note.sha256, linkText: occurrence.raw, fragment: resolved.fragment,
+        embed: occurrence.embed, ambiguous: resolved.status === 'ambiguous', candidates: resolved.candidates,
+        excerpt: body.slice(Math.max(0, occurrence.index - 60), Math.max(0, occurrence.index - 60) + 180),
+      });
+    }
+  }
+  return backlinks.sort((left, right) =>
+    left.path < right.path ? -1 : left.path > right.path ? 1 : left.linkText < right.linkText ? -1 : left.linkText > right.linkText ? 1 : 0);
 }

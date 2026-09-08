@@ -4,8 +4,9 @@ import { z } from 'zod';
 import * as authoring from './authoring.js';
 import type { Config } from './config.js';
 import { AUTHORING_GUIDE } from './guide.js';
-import { auditNotes } from './notes.js';
+import { auditNotes, backlinksOf, outlineHeadings } from './notes.js';
 import { toKind } from './rejection.js';
+import { foldText } from './search.js';
 import { Vault, VaultError } from './vault.js';
 
 export const VERSION = '0.1.0-alpha.1';
@@ -75,9 +76,10 @@ export function createServer(config: Config, vault: Vault): McpServer {
   }));
 
   server.registerTool('search_notes', {
-    description: 'Bounded literal (codepoint-faithful, case-sensitive) substring search across note paths and text, including Korean. No regex, folding, or semantic ranking. Returns short untrusted excerpts.',
-    inputSchema: { query: z.string().min(1).max(200), ...page }, annotations: readAnnotations,
-  }, async ({ query, offset, limit }, extra) => reply(async () => {
+    description: 'Bounded substring search across note paths and text, including Korean. Codepoint-faithful and case-sensitive by default (exact literal); optional fold=true applies NFC normalization + locale-independent case-insensitive matching (Hangul is caseless, so folding is a no-op for it) and is not a strict superset of the literal default. No regex or semantic ranking. Returns short untrusted excerpts (verbatim note slices; excerpt offsets are best-effort under fold).',
+    inputSchema: { query: z.string().min(1).max(200), ...page, fold: z.boolean().default(false) }, annotations: readAnnotations,
+  }, async ({ query, offset, limit, fold }, extra) => reply(async () => {
+    const needle = fold ? foldText(query) : query;
     const matches: { path: string; sha256: string; excerpt: string }[] = [];
     let bytes = 0;
     for (const path of (await vault.list()).notes) {
@@ -85,13 +87,19 @@ export function createServer(config: Config, vault: Vault): McpServer {
       const note = await vault.read(path);
       bytes += Buffer.byteLength(note.content);
       if (bytes > config.maxScanBytes) throw new VaultError('SCAN_LIMIT', 'Scan byte limit exceeded; narrow the connected Vault or increase its configured limit.');
-      const index = note.content.indexOf(query); // literal, codepoint-faithful (Korean-safe, no folding)
-      if (index >= 0 || path.includes(query)) {
-        matches.push({ path, sha256: note.sha256, excerpt: note.content.slice(Math.max(0, index - 60), Math.max(0, index - 60) + 180) });
+      const index = (fold ? foldText(note.content) : note.content).indexOf(needle); // literal; fold adds NFC + case-insensitivity (Korean-safe)
+      if (index >= 0 || (fold ? foldText(path) : path).includes(needle)) {
+        // Excerpt is always a verbatim slice of the ORIGINAL note. Under fold, center on
+        // the match only when the folded prefix preserves length (offsets stay aligned);
+        // otherwise fall back to the head window rather than mis-center (BR-FOLD-3).
+        const centered = index >= 0 && (!fold || foldText(note.content.slice(0, index)).length === index);
+        const start = centered ? Math.max(0, index - 60) : 0;
+        matches.push({ path, sha256: note.sha256, excerpt: note.content.slice(start, start + 180) });
       }
     }
     return { matches: matches.slice(offset, offset + limit), total: matches.length,
-      nextOffset: offset + limit < matches.length ? offset + limit : null, untrusted: true };
+      nextOffset: offset + limit < matches.length ? offset + limit : null, untrusted: true,
+      ...(fold ? { fold: true } : {}) };
   }));
 
   server.registerTool('audit_vault', {
@@ -112,6 +120,44 @@ export function createServer(config: Config, vault: Vault): McpServer {
     return { ...report, findings: report.findings.slice(offset, offset + limit), totalFindings: report.findings.length,
       nextOffset: offset + limit < report.findings.length ? offset + limit : null,
       heuristic: true, compilerValidation: false, compatibilityProfile };
+  }));
+
+  server.registerTool('outline_note', {
+    description: 'Bounded per-note heading map (code-fence aware; ATX headings). Returns each heading level, untrusted title, and char offsets (heading start / content start / next same-or-higher-level heading) into the current file, plus the full-file SHA-256, so a section can be read via read_note. Heuristic structural parse, not a full CommonMark/Obsidian parser (setext headings are out of scope in this version); no link resolution, ranking, or semantic analysis. Paginated.',
+    inputSchema: { path: notePath, ...page }, annotations: readAnnotations,
+  }, async ({ path, offset, limit }) => reply(async () => {
+    const note = await vault.read(path);
+    const headings = outlineHeadings(note.content);
+    return { path, sha256: note.sha256, totalCharacters: note.content.length,
+      headings: headings.slice(offset, offset + limit), total: headings.length,
+      nextOffset: offset + limit < headings.length ? offset + limit : null, untrusted: true };
+  }));
+
+  server.registerTool('list_backlinks', {
+    description: 'List notes whose [[wikilinks]] resolve to a target note (inbound links), computed per-call by a bounded scan — no persistent index. Interprets a documented wikilink subset only ([[note]], [[note|alias]], [[note#heading]]/[[note#^block]], [[folder/note]], with or without .md, and ![[embeds]]); name matching is NFC + case-insensitive like audit_vault, NOT the codepoint-faithful case-sensitive rule used by search_notes. Ambiguous namesakes are reported, never auto-chosen. Returns untrusted excerpts and per-note SHA-256. Not a search engine and not a complete Obsidian link interpreter.',
+    inputSchema: { path: notePath, ...page, includeAmbiguous: z.boolean().default(true) }, annotations: readAnnotations,
+  }, async ({ path, offset, limit, includeAmbiguous }, extra) => reply(async () => {
+    const target = await vault.read(path); // same path policy + maxNoteBytes as read_note; supplies targetSha256
+    const files = await vault.list();
+    const notes: { path: string; content: string; sha256: string }[] = [];
+    let bytes = 0;
+    for (const notePath of files.notes) {
+      extra.signal.throwIfAborted();
+      const note = await vault.read(notePath);
+      bytes += Buffer.byteLength(note.content);
+      if (bytes > config.maxScanBytes) throw new VaultError('SCAN_LIMIT', 'Scan byte limit exceeded; narrow the connected Vault or increase its configured limit.');
+      notes.push({ path: notePath, content: note.content, sha256: note.sha256 });
+    }
+    const all = backlinksOf(path, notes, files.otherFiles);
+    const backlinks = includeAmbiguous ? all : all.filter(link => !link.ambiguous);
+    return { target: path, targetSha256: target.sha256,
+      backlinks: backlinks.slice(offset, offset + limit), total: backlinks.length,
+      nextOffset: offset + limit < backlinks.length ? offset + limit : null, untrusted: true,
+      limitations: [
+        'Interprets a documented wikilink subset only ([[note]], [[note|alias]], [[note#heading]], [[note#^block]], [[folder/note]], with or without .md, and ![[embeds]]); ordinary Markdown [](links), Canvas/Base links, shortest-path auto-resolution, and plugin/transclusion syntax are not interpreted.',
+        'Name matching uses JavaScript NFC and lowercasing, not the compiler’s pinned full Unicode case folding; source-relative and Vault-relative interpretation may differ.',
+        'Bounded per-call scan (no persistent index); ambiguous namesakes are reported, never auto-chosen. Not a search engine or a complete Obsidian link interpreter.',
+      ] };
   }));
 
   // --- Authoring (mutating; only when not read-only; dryRun default true) ---

@@ -11,7 +11,7 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 const projectRoot = fileURLToPath(new URL('../', import.meta.url));
 const cliPath = path.join(projectRoot, 'src', 'cli.ts');
 const mutations = ['create_note', 'update_note', 'standardize_frontmatter', 'fix_yaml', 'reinforce_sources_links'];
-const readTools = ['audit_vault', 'list_notes', 'read_note', 'search_notes'];
+const readTools = ['audit_vault', 'list_backlinks', 'list_notes', 'outline_note', 'read_note', 'search_notes'];
 const digest = (content: string): string => createHash('sha256').update(content).digest('hex');
 type ToolResult = Awaited<ReturnType<Client['callTool']>>;
 type Envelope = { ok: boolean; data?: unknown; error?: { kind?: string; code: string; message: string } };
@@ -273,4 +273,70 @@ test('errors carry a canonical kind, redact parser content, and response limits 
   // Connection still healthy after the bounded refusal.
   assert.equal((await success<{ total: number }>(client, 'list_notes')).total, 2);
   assert.ok(!stderr().includes(sentinel));
+});
+
+test('search_notes fold matches case-insensitively only when opted in, echoing fold and leaving notes unchanged (REQ-015)', { timeout: 20_000 }, async t => {
+  const files = {
+    'notes/http.md': '# HTTP Caching\n\nThe HTTP protocol.\n',
+    'notes/plain.md': '# Plain\n\n무관한 내용.\n',
+  };
+  const { client, vaultPath } = await connect(t, { files });
+  // Default is codepoint-faithful and case-sensitive: a lowercase query does NOT match 'HTTP'.
+  const literal = await success<{ total: number; fold?: boolean }>(client, 'search_notes', { query: 'http caching' });
+  assert.equal(literal.total, 0);
+  assert.equal(literal.fold, undefined, 'the default response omits the fold field');
+  // fold=true matches case-insensitively and echoes fold.
+  const folded = await success<{ total: number; matches: { path: string }[]; fold?: boolean }>(client, 'search_notes', { query: 'http caching', fold: true });
+  assert.equal(folded.total, 1);
+  assert.equal(folded.matches[0]?.path, 'notes/http.md');
+  assert.equal(folded.fold, true);
+  // Read-only search does not modify notes.
+  for (const [relative, content] of Object.entries(files)) assert.equal(await readFile(path.join(vaultPath, relative), 'utf8'), content);
+});
+
+test('search_notes description no longer advertises the retired "No regex, folding" promise (D20 honesty gate)', { timeout: 20_000 }, async t => {
+  const { client } = await connect(t);
+  const search = (await client.listTools()).tools.find(tool => tool.name === 'search_notes');
+  assert.ok(search);
+  assert.ok(!(search!.description ?? '').includes('No regex, folding'), 'the stale promise must be removed atomically with the fold capability');
+  assert.match(search!.description ?? '', /fold=true/u, 'the description documents the new opt-in fold mode');
+});
+
+test('outline_note returns a code-fence-aware ATX heading map whose offsets compose with read_note, available read-only (REQ-017)', { timeout: 20_000 }, async t => {
+  const content = '---\ntitle: Doc\n---\n# 개요\n\n첫 문단.\n\n## 세부 A\n\n```\n# 코드 안 제목\n```\n\n## 세부 B\n\n본문.\n';
+  const { client } = await connect(t, { readOnly: true, files: { 'notes/문서.md': content } });
+  type Outline = { path: string; sha256: string; totalCharacters: number; untrusted: boolean;
+    headings: { level: number; title: string; start: number; contentStart: number; end: number }[] };
+  const outline = await success<Outline>(client, 'outline_note', { path: 'notes/문서.md' });
+  assert.equal(outline.untrusted, true);
+  assert.equal(outline.sha256, digest(content), 'the outline carries the full-file hash like read_note');
+  assert.equal(outline.totalCharacters, content.length);
+  assert.deepEqual(outline.headings.map(h => [h.level, h.title]), [[1, '개요'], [2, '세부 A'], [2, '세부 B']]);
+  assert.ok(!outline.headings.some(h => h.title.includes('코드')), 'a # inside a fence is excluded');
+  // Composing read_note over [start, end) returns the section beginning at the heading line.
+  const first = outline.headings[0]!;
+  const section = await success<{ content: string }>(client, 'read_note', { path: 'notes/문서.md', offset: first.start, length: first.end - first.start });
+  assert.ok(section.content.startsWith('# 개요'));
+});
+
+test('list_backlinks reports inbound wikilinks read-only, resolving the target through the read_note path policy (REQ-016)', { timeout: 20_000 }, async t => {
+  const files = {
+    'sources/B.md': '# B\n\n## Evidence\n\n근거.\n',
+    'notes/A.md': '# A\n\n[[../sources/B]] 그리고 [[../sources/B#Evidence]]\n',
+    'notes/lonely.md': '# Lonely\n\n인바운드 링크 없음.\n',
+  };
+  const { client } = await connect(t, { readOnly: true, files });
+  type Backlinks = { target: string; targetSha256: string; total: number; untrusted: boolean; limitations: string[];
+    backlinks: { path: string; sha256: string; fragment: string; embed: boolean; ambiguous: boolean }[] };
+  const result = await success<Backlinks>(client, 'list_backlinks', { path: 'sources/B.md' });
+  assert.equal(result.untrusted, true);
+  assert.equal(result.targetSha256, digest(files['sources/B.md']));
+  assert.equal(result.total, 2, 'both the plain and the #Evidence link from A are inbound');
+  assert.ok(result.backlinks.every(link => link.path === 'notes/A.md'));
+  assert.ok(result.backlinks.some(link => link.fragment === 'Evidence'));
+  assert.ok(result.limitations.some(text => /complete Obsidian link interpreter/u.test(text)), 'the §8 boundary is disclosed');
+  // A note with no inbound links is not an error.
+  assert.equal((await success<Backlinks>(client, 'list_backlinks', { path: 'notes/lonely.md' })).total, 0);
+  // A missing target is rejected by the same policy as read_note.
+  await failure(client, 'list_backlinks', { path: 'notes/missing.md' }, 'NOTE_NOT_FOUND');
 });

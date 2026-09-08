@@ -112,7 +112,7 @@ export interface UpdateNoteArgs {
   changes: { body?: string | undefined; frontmatter?: Record<string, unknown> | undefined };
   dryRun: boolean;
 }
-export function updateNote(vault: Vault, config: Config, args: UpdateNoteArgs): Promise<MutationResult> {
+export async function updateNote(vault: Vault, config: Config, args: UpdateNoteArgs): Promise<MutationResult> {
   const { path, expectedHash, changes, dryRun } = args;
   const hasFrontmatter = changes.frontmatter !== undefined && Object.keys(changes.frontmatter).length > 0;
   const hasBody = changes.body !== undefined;
@@ -134,7 +134,7 @@ export interface StandardizeArgs {
   frontmatterPatch: { title?: string | undefined; aliases?: string[] | undefined; tags?: string[] | undefined };
   dryRun: boolean;
 }
-export function standardizeFrontmatter(vault: Vault, config: Config, args: StandardizeArgs): Promise<MutationResult> {
+export async function standardizeFrontmatter(vault: Vault, config: Config, args: StandardizeArgs): Promise<MutationResult> {
   const { path, expectedHash, frontmatterPatch, dryRun } = args;
   const patch: Record<string, unknown> = {};
   for (const key of ['title', 'aliases', 'tags'] as const) {

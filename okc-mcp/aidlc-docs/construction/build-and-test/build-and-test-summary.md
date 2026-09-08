@@ -8,12 +8,15 @@
 
 ## Test Execution Summary
 
+**Executed 2026-09-09 on macOS, Node v24.13.1 (≥ 22.13 requirement met). `npm run check` → exit code 0.**
+Full tally across all test files: **tests 48 · pass 48 · fail 0** (duration ~1.5s).
+
 ### Unit tests (`tests/config|vault|notes|authoring|properties.*.test.ts`)
-- **Status**: **GENERATED; NOT EXECUTED in this environment.** The host Node is **v16.17.1**, below the required **≥ 22.13**; `node --test`/`--import` need Node ≥ 18/20.
-- **Partial runtime verification done here**: pure-logic functions were exercised against compiled `dist/` on the available runtime — canonical rejection mapping, SHA-256 determinism, frontmatter round-trip/preservation, `fixYamlContent`/`reinforceContent`/`replaceBody`, and audit category projection — **all passed**.
+- **Status**: **EXECUTED — ALL PASS.** Covers canonical rejection mapping, SHA-256 determinism, frontmatter round-trip/comment/BOM/CRLF preservation, `fixYamlContent`/`reinforceContent`/`replaceBody`, audit category projection (BR-AUDIT-2), the `applyMutation` pipeline invariants (hash gate, exactly-one-backup, no-backup-on-rejection), and the PBT properties (hash determinism, title-only patch, empty-patch no-op, literal Korean search).
+- **Two defects found and fixed during first execution** (both in files generated-but-never-run): (1) `authoring.test.ts` body-only-update assertion wrongly expected frontmatter to be dropped — corrected to the preserved-frontmatter result; (2) `src/authoring.ts` `updateNote`/`standardizeFrontmatter` threw their empty-patch guard synchronously from a Promise-returning function — made `async` so the guard rejects (uniform with the rest of the pipeline).
 
 ### Integration tests (`tests/server.test.ts` — real stdio MCP client end-to-end)
-- **Status**: **GENERATED; NOT EXECUTED here** (requires Node ≥ 22.13). Covers the full surface→services→core→filesystem path, tool surface, kind/category, redaction, and bounds refusal.
+- **Status**: **EXECUTED — ALL PASS.** Real stdio MCP client drives the full surface→services→core→filesystem path: exact design tool surface + guide resource + capture prompt, create preview/apply/overwrite-refusal, standardize/update/fix_yaml/reinforce through the one pipeline, literal Korean search + categorized audit pagination, read-only sessions omitting mutation tools, canonical `kind` + parser-content redaction + response-limit safety.
 
 ### Performance tests
 - **Status**: **N/A** (local single-process, on-demand, no SLA). Replaced by bounded-resource behavior guarantees (size/count/scan/response), which are part of the unit/integration suites.
@@ -23,19 +26,18 @@
 - **Contract / E2E**: N/A for a single local Unit (the stdio integration test is the end-to-end check).
 
 ## Overall Status
-- **Build**: **SUCCESS**.
+- **Build**: **SUCCESS** (`dist/` emitted for authoring, cli, config, guide, notes, rejection, server, vault).
 - **Type-check**: **PASS**.
-- **Automated test suite**: **PENDING EXECUTION on a Node ≥ 22.13 host** (`npm run check`). Pure-logic subset verified here.
-- **Ready for Operations**: **Not yet** — run the full suite green on a compliant Node first. (Operations is a placeholder phase in AI-DLC v1.)
+- **Automated test suite**: **PASS — 48/48** (`npm run check` exit 0, Node v24.13.1, 2026-09-09).
+- **Ready for Operations**: **Yes** — full suite verified green. (Operations is a placeholder phase in AI-DLC v1.)
 
-## How to complete verification on a compliant host
+## Verification command (reproduce on any Node ≥ 22.13 host)
 ```bash
-# Node >= 22.13
 npm install
-npm run check     # typecheck + test + build  (expect all green)
+npm run check     # typecheck + test + build  → all green, exit 0
 ```
 
 ## Next Steps
-- Execute `npm run check` on a Node ≥ 22.13 host and record the pass/fail counts here.
-- If green: Construction is fully verified; proceed to the Operations phase (placeholder) or package via `npm pack` (D13).
-- If failures: fix the reported cases and re-run (this is a code fix, not a plan change — the design and instructions stand).
+- Construction is fully verified (design + code + build + green test suite). ✅
+- Optional packaging: `npm pack` (D13) to produce the installable tarball.
+- AI-DLC: proceed to the Operations phase (placeholder in v1 — no deployment/monitoring work defined).
