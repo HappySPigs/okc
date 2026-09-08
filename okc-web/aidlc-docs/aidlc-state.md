@@ -55,13 +55,37 @@ _All extensions opted OUT (hackathon PoC scope) → full rule files NOT loaded. 
 - [x] Application Design — COMPLETED (comprehensive; 5 artifacts, 9 API code-verified + 14 corrections; **APPROVED 2026-09-08, Option C**)
 - [x] Units Generation — COMPLETED (standard) — Part 1 (unit-of-work-plan.md, 7 answers=A) **APPROVED 2026-09-08**; Part 2 3 artifacts written (unit-of-work.md 25.9KB · unit-of-work-dependency.md 16.4KB · unit-of-work-story-map.md 16.9KB) via workflow wf_9cd09efe-6b8 (3 generators → adversarial verifier: coverage_ok·acyclic_ok·consistency_ok·codeorg_ok all true, 29/29 stories, 1 minor correction applied E1-S5+U6). **🔵 INCEPTION PHASE COMPLETE** — awaiting user gate before CONSTRUCTION.
 
-### 🟢 CONSTRUCTION Phase (per-unit loop: U0→U1→U2→U3→U4→U5, U6 interleaved)
-- [ ] Functional Design — EXECUTE (selective: U3/U4 comprehensive · U1/U2 standard · U5/U6 skip)
+### 🟢 CONSTRUCTION Phase — BALANCED WAVE schedule (사용자 승인 2026-09-08, 재계획)
+**Schedule**: `inception/plans/execution-plan.md`의 완전순차 시퀀스(`U0→U1→U2→U3→U4→U5`, U6 인터리브)를 **병렬 웨이브로 재구성** → `construction/plans/parallel-execution-plan.md`(BALANCED WAVE, 워크플로 `wf_c2496026-48c` 검증: 2 도출 → 3 적대적 검증[DAG간선/AI-DLC gate/통합-C4] → 1 종합; DAG 위반 0건, 1 blocking(숨은 런타임 spine)·다수 major/minor 모두 종합 반영).
+- **W0** — U0 Foundation (blocking; 계약 freeze + okc-core commit-pin CI 그린 + SourceRegistry seam freeze)
+- **W1** — U1 Auth ‖ U2 Upload (코드작성 병렬 / 스파인 통합은 U1 착지 후 순차; `U2→U1`은 런타임 전용)
+- **W2** — U3 Orchestration (integrate + checkpoint 기계; **compile은 W3 런타임 실행**)
+- **W3** — U4 Review ‖ U5 Serving (DAG로 증명된 완전 병렬 fork, 통합 포함) + 숨은 런타임 spine `integrate(U3)→approve(U4)→compile(U3)→serve(U5)` 착지 (실 vault는 U4 승인 이후 생김)
+- **W4** — U6 Frontend 통합 (별도 per-unit 루프 + 단일 통합 CodeGen 게이트; W1–W3 인터리브 배선은 그 게이트 아래 체크박스 진행)
+- **W5** — Build and Test (C4 하드 게이트 수렴)
+- **크리티컬 패스**: `U0 → U1 → U2 → U3(integrate) → U4(approve) → U3(compile) → U5(real-serve) → Build&Test`
+
+**AUTHORIZED DEVIATION** (사용자 승인): CLAUDE.md의 per-unit 규칙 "각 유닛을 완전히 완료한 뒤 다음 유닛" 중 **유닛 간 순서 규칙만 WAVE 단위로 승격**. **유닛 내부** 스테이지 순서(FD→NFR-Req→NFR-Design→Infra→CodeGen)와 각 스테이지의 표준 **2-옵션 승인 게이트는 무변경·전부 보존**. 병렬 웨이브 내 각 유닛은 자기 고유 2-옵션 게이트 체인을 독립 발화(배치/결합/3-옵션 승인 금지 — NO EMERGENT BEHAVIOR 준수). 웨이브 동기화 배리어 = 웨이브 내 전 유닛 게이트 체인의 AND + 해당 웨이브 spine 세그먼트의 무-mock 통합 체크.
+
+**Per-stage 실행 결정(depth 무변경, execution-plan 상속):**
+- [ ] Functional Design — EXECUTE (selective: U3/U4 comprehensive · U1/U2 standard · U0/U5/U6 skip)
 - [ ] NFR Requirements — EXECUTE (minimal)
 - [ ] NFR Design — EXECUTE (standard)
 - [ ] Infrastructure Design — EXECUTE (minimal)
 - [ ] Code Generation — EXECUTE (comprehensive) — ALWAYS, per-unit
 - [ ] Build and Test — EXECUTE (standard; 하드-MUST exit artifacts: screenshots/·CI·lockfile·README·PROCESS narrative·secret scan)
+
+**Wave 진행 추적:**
+- [ ] W0 — U0 Foundation
+- [ ] W1 — U1 Auth ‖ U2 Upload
+- [ ] W2 — U3 Orchestration
+- [ ] W3 — U4 Review ‖ U5 Serving
+- [ ] W4 — U6 Frontend 통합
+- [ ] W5 — Build and Test
+
+**오픈 질문 처리**: W0에서 해소 = okc-core commit-pin 해시 · SourceRegistry owner(물리=U0 state / 의미=U3, `sources` write-read API를 W0 마이그레이션에 freeze) · job-route two-mount 계약. 소유 웨이브로 이연 = serving addressing/authz+E5-2(U5,W3) · Role 모델+session/token hashing refinements(U1/U2,W1).
+
+_Status_: 계획 문서 확정. **애플리케이션 코드 미생성** — CONSTRUCTION 진입(W0 U0 FD/CodeGen)은 여전히 사용자 게이트 대기.
 
 ### 🟡 OPERATIONS Phase
 - [ ] Operations — SKIP (placeholder; 로컬 단일 프로세스 PoC, 범위 밖)
