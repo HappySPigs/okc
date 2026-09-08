@@ -14,9 +14,9 @@
 
 - **확정 병렬 (DAG로 증명):**
   1. **U4 ∥ U5** (W3): 두 유닛 행 모두 `{U0, U3}`, 상호 연결 간선 없음. U4는 요청 시점 U5 무의존, U5는 `.okc/` 자기완결(compile 미호출·live U4 무의존). U5 read-path는 단일-writer 큐를 우회하므로 런타임 경합도 없음 → **통합까지 완전 병렬**.
-  2. **U6 프런트 트랙 ∥ 전 백엔드 웨이브** (W0 배리어 이후): U6는 별도 Next.js 스택, 백엔드에 **컴파일 간선 0** (HTTP 계약 의존만). W0에서 소비자층·셸을 착수하고 각 화면은 소유 유닛 API가 나오는 즉시 배선.
-  3. **U1 ∥ U2 코드작성** (W1): 둘 사이 컴파일 간선 없음(둘 다 U0에만 컴파일 의존). `U2→U1`은 **런타임 전용**(admin 토큰 발급 콘솔이 admin 세션 필요; `/u/{token}` 업로드는 `Principal::UploadToken` 사용). → 코드작성 병렬, **통합(실 로그인→토큰→업로드 스파인)은 U1 착지 후 순차**.
-- **의도적 순차 유지:** `U0→(U1,U2)→U3→(U4,U5)` 데이터흐름 순서. C4 "실제 end-to-end 동작" 하드 게이트가 데모 스파인(login→upload→integrate→review→serve)의 mock을 금지하므로, 각 웨이브 배리어에서 **실 okc-interop 데이터로 통합 검증**한다.
+  2. **U6 프런트 트랙 ∥ 전 백엔드 웨이브** (W0 배리어 이후): U6는 별도 React+Vite 스택, 백엔드에 **컴파일 간선 0** (HTTP 계약 의존만). W0에서 소비자층·셸을 착수하고 각 화면은 소유 유닛 API가 나오는 즉시 배선.
+  3. **U1 ∥ U2 코드작성** (W1): 둘 사이 컴파일 간선 없음(둘 다 U0에만 컴파일 의존). `U2→U1`은 **런타임 전용**(admin 토큰 발급 콘솔이 admin 세션 필요; `/u/{token}` 업로드는 `Principal.UploadToken` 사용). → 코드작성 병렬, **통합(실 로그인→토큰→업로드 스파인)은 U1 착지 후 순차**.
+- **의도적 순차 유지:** `U0→(U1,U2)→U3→(U4,U5)` 데이터흐름 순서. C4 "실제 end-to-end 동작" 하드 게이트가 데모 스파인(login→upload→integrate→review→serve)의 mock을 금지하므로, 각 웨이브 배리어에서 **실 okc 바인딩 데이터로 통합 검증**한다.
 - **숨은 런타임 spine 간선(핵심 정합성 수정):** `integrate(U3) → approve_taxonomy+approve_cluster(U4) → compile(U3, ReadyToCompile 필요) → serve(U5)`. 빌드 DAG의 `U4→U3`/`U5→U3` 간선이 이 순서를 가린다. **실 컴파일 vault는 U3 완료가 아니라 U4 승인 이후(W3)에 생긴다.**
 - **크리티컬 패스:** `U0 → U1 → U2 → U3(integrate) → U4(approve) → U3(compile) → U5(real-serve) → Build&Test`. 데모 스파인의 꼬리는 U4 그림자 속 U5가 아니라 **U5의 실-서빙 캡처**다.
 - **AI-DLC 게이트:** 유닛 *내부* 스테이지 순서(FD→NFR-Req→NFR-Design→Infra→CodeGen)와 각 스테이지 2-옵션 게이트는 **무변경**. 오직 유닛 *간* "한 유닛 완료 후 다음" 규칙만 **웨이브 단위로 승격**(사용자 승인 deviation). 배치/3-옵션 승인 없음(emergent behavior 금지).
@@ -33,7 +33,7 @@
 | **SOFT 런타임 데이터흐름** | U1↔U5 사이 (admin 세션·착지 소스·checkpoint·compiled vault 읽기) | 코드작성은 계약 대상 병렬 가능, **통합/E2E는 데이터흐름 순서 유지** |
 | **HTTP 계약** | U6 → U0..U5 | 별도 스택. 계약 확정 후 완전 병렬 |
 
-- **U0 → 전 유닛 (HARD):** U0 열이 전부 `X`. 유일 okc-interop 링크점(ADR-0002)이자 최고 리스크(미공개 okc-core 0.3.0 commit-pin CI 그린). → **W0 단독 blocking 웨이브**.
+- **U0 → 전 유닛 (HARD):** U0 열이 전부 `X`. 유일 okc Python 바인딩 import (단일 시임)(ADR-0002)이자 최고 리스크(미공개 okc-core 0.3.0 commit-pin CI 그린 — maturin 빌드 바인딩이 import까지 성공해야 함). → **W0 단독 blocking 웨이브**.
 - **U1 ∥ U2 (컴파일 간선 없음):** 둘 다 U0에만 컴파일 의존. `U2→U1`은 런타임 전용 → 코드작성 병렬 안전. 검증자(missed-parallelism)가 지적한 순차 안전-여유를 반영해 W1에서 함께 착수.
 - **U3 (데이터흐름 pivot):** `U3→{U0,U1,U2}`. U2 착지 소스·U1 curator_id를 실 데이터로 소비해야 하므로 통합은 U2 이후. U3 출력(checkpoint·StalenessProjection·compiled_vault_path)이 U4·U5 **양쪽의 유일 런타임 의존**이라 fork 전 완료 필요.
 - **U4 ∥ U5 (연결 간선 0):** DAG로 증명된 유일한 **통합까지 완전 병렬** 웨이브.
@@ -55,8 +55,8 @@
 ### 2.1 웨이브별 세부
 
 **W0 — Foundation (U0): blocking 계약 freeze + okc-core commit-pin**
-- **백엔드**: `adapter::OkcEngine` 트레이트 + 단일 `OkcEngineImpl`, `*View/*Cmd/*Spec` DTO + `From<okc_interop::…>`, `EngineError` code/category enum + table-driven HTTP 맵, `SchemaGuard` v2, `adapter::queue` 단일-writer `EngineActor`(bounded mpsc+oneshot) 시그니처 + read-path `OkcClient` clone 우회, `shared::authz` `AuthContext`/`Role{Admin,Contributor}`/`Principal{Admin,UploadToken}` + 가드 순서(403⇒엔진 0회 호출), `shared::jobs` `JobStore`+`job_events`, `shared::audit` append-only `curator_decisions`+`HashBindings`+winner-select-불가 `CuratorDecision` enum, `shared::state` 단일 SQLite WAL 마이그레이션 — **`sources`/SourceRegistry write-read API seam 포함**.
-- **프런트**: U6 트랙 개시(얼린 서브셋에 한해): Next.js App Router 셸(ui-screens.md/design-system.md), `apiClient`·`queryKeys`·`okcErrorMap`(U0 맵 mirror, code/category 분기, message 파싱 금지). `useJobPolling`은 **job-route two-mount 계약 확정 후**(§7) 착수.
+- **백엔드**: `adapter.OkcEngine` Protocol + 단일 `OkcEngineImpl`, `*View/*Cmd/*Spec` Pydantic DTO + `from_native(dict)` 변환, `EngineError` code/category + table-driven HTTP 맵, `SchemaGuard` v2, `adapter.queue` 단일-writer 엔진 액터 = `ThreadPoolExecutor(max_workers=1)` + asyncio 브리지 시그니처 + read-path 별도 `OkcClient` 우회, `shared.authz` `AuthContext`/`Role{Admin,Contributor}`/`Principal{Admin,UploadToken}` + 가드 순서(403⇒엔진 0회 호출), `shared.jobs` `JobStore`+`job_events`, `shared.audit` append-only `curator_decisions`+`HashBindings`+winner-select-불가 `CuratorDecision`(3-변형 판별 유니온), `shared.state` 단일 SQLite WAL 마이그레이션 — **`sources`/SourceRegistry write-read API seam 포함**.
+- **프런트**: U6 트랙 개시(얼린 서브셋에 한해): React+Vite SPA 셸(ui-screens.md/design-system.md), `apiClient`·`queryKeys`·`okcErrorMap`(U0 맵 mirror, code/category 분기, message 파싱 금지). `useJobPolling`은 **job-route two-mount 계약 확정 후**(§7) 착수.
 - **배리어**: U0 CodeGen 승인 **AND** okc-core commit-pin CI **그린** **AND** 계약 version-lock. 이 단일 배리어가 백엔드 체인과 U6 트랙을 **동시에** 연다.
 
 **W1 — Auth + Upload (U1 ∥ U2 코드작성; 스파인 통합 순차)**
@@ -131,7 +131,7 @@ U0 → U1 → U2 → U3(integrate) → U4(approve) → U3(compile) → U5(real-s
 ```
 데모 스파인의 꼬리는 **U5의 실-서빙 e2e 캡처**다(U4 그림자 속이 아님) — 실 vault가 U4 승인 후에만 존재하기 때문. U5 CodeGen은 U4와 병렬(작성 크리티컬 패스 밖: FD skip·경량)이나, **U5의 end-to-end 서빙 검증은 C4 크리티컬 패스 위**에 있다. U6 트랙은 U1→U4 전 구간과 오버랩하며 focal 폴리시(W4)와 스크린샷만 꼬리에서 수렴.
 
-### 5.2 통합 배리어 (각 웨이브 = 실 okc-interop 검증 지점)
+### 5.2 통합 배리어 (각 웨이브 = 실 okc 바인딩 검증 지점)
 - **W0**: okc-core commit-pin CI 그린 + U0 계약 version-lock(SourceRegistry seam 포함). 양 스택 unblock.
 - **W1**: 실 로그인→토큰 발급→업로드→`add_source`(단일-writer 큐)로 실 소스+SourceRegistry row 착지 (무-mock).
 - **W2**: 실 integrate가 실 데이터로 IntegrationCheckpoint를 승인-대기 상태까지 진행; checkpoint/StalenessProjection/compiled_vault_path **계약** freeze (실 vault는 아직 아님).
@@ -155,11 +155,11 @@ U0 → U1 → U2 → U3(integrate) → U4(approve) → U3(compile) → U5(real-s
 
 - **W0에서 해소 (횡단, 하위 차단):**
   - okc-core commit-pin 해시 (CI 게이트).
-  - **SourceRegistry owner** — 해소: 물리 스키마 = U0 `shared::state`, 의미 = U3. `sources` write/read API를 W0 마이그레이션에서 freeze (U2 `add_source→record`가 U3 전에 컴파일 가능하도록).
+  - **SourceRegistry owner** — 해소: 물리 스키마 = U0 `shared.state`, 의미 = U3. `sources` write/read API를 W0 마이그레이션에서 freeze (U2 `add_source→record`가 U3 전에 컴파일 가능하도록).
   - **job-route two-mount 계약** `GET /api/projects/{id}/jobs/{jobId}` + `/u/{token}/jobs/{jobId}` — U6 `useJobPolling`·U2/U3 의존.
 - **소유 웨이브로 이연 (유닛-로컬):**
   - serving addressing/authz + E5-2 contradiction source → U5 (W3).
-  - `Role::{Admin,Contributor}` vs curator 모델 + session/token hashing refinements → U1/U2 (W1).
+  - `Role{Admin,Contributor}` vs curator 모델 + session/token hashing refinements → U1/U2 (W1).
   - 의존 U6 배선(E5 화면·세션 의존 흐름)은 W0로 밀어넣지 말고 해당 유닛 착지에 게이팅.
 - **기록/검증:**
   - per-unit "한 유닛 완료 후 다음"의 웨이브-승격 deviation을 aidlc-state.md + audit.md에 기록(2-옵션 게이트는 유닛 내부 보존).
@@ -171,7 +171,7 @@ U0 → U1 → U2 → U3(integrate) → U4(approve) → U3(compile) → U5(real-s
 
 1. **숨은 런타임 간선(최고 정합성 리스크)**: compile은 `ReadyToCompile`(U4 승인 필요) → 실 vault 마일스톤은 W3. U3 완료를 vault-ready로 다루는 변형은 C4 serve 세그먼트를 깬다. 완화: W3 런타임 배리어 `integrate→approve→compile→serve` + 통합-테스트 어서션.
 2. **W0 직렬 병목·SPOF**: okc-core commit-pin CI 미그린이면 백엔드·U6 트랙 **전부** 정지. 설계상 최고 리스크 선차단이나 W0를 느슨히 time-box 금지.
-3. **SourceRegistry seam**: U0 `shared::state` 내부 seam(오픈 질문). W0에서 freeze 누락 시 U2 `add_source→record`가 W1에서 컴파일/완료 불가.
+3. **SourceRegistry seam**: U0 `shared.state` 내부 seam(오픈 질문). W0에서 freeze 누락 시 U2 `add_source→record`가 W1에서 컴파일/완료 불가.
 4. **이연 오픈 질문 계약 drift**: serving addressing/authz·E5-2·session/token hashing·Role 모델이 소유 웨이브에서 확정 후 형태가 바뀌면 U6 `useJobPolling`/E5 배선·seam-stub 작성이 캐스케이드 재작업. U0 계약 freeze 규율 + job-route 조기 확정이 병렬 주장의 load-bearing.
 5. **동시 게이트 리뷰 대역폭**: U1∥U2, U4∥U5의 per-unit 게이트가 동시 도착. 무거운 유닛(U4 comprehensive/focal)이 Request-Changes면 배리어 정지·형제 유닛 idle. 완화: 경량 유닛은 마치고 대기, 집합 배리어만 대기.
 6. **단일-writer 큐 지연 노출**: 큐는 W1(`add_source`)부터 실사용 → PROJECT_BUSY 결함이 W0 sign-off 대비 늦게 표면화. W5 단일-writer/PROJECT_BUSY 통합 테스트가 backstop, 이연 금지.
@@ -217,7 +217,7 @@ flowchart TD
 - **C1 (협업 진정성/추적성)**: 본 계획은 승인된 [`unit-of-work-dependency.md`](../../inception/application-design/unit-of-work-dependency.md) 매트릭스·[`execution-plan.md`](../../inception/plans/execution-plan.md) depth를 **재명명/재범위 없이** 상속하고 병렬 스케줄만 재구성. 유닛↔epic↔story 매핑·FD depth 무변경. 도출→적대적 검증(3렌즈)→종합의 감사 흔적이 audit.md·`wf_c2496026-48c` 저널에 기록.
 - **C2 (문제 정의)**: N/A (스케줄링 산출물; 문제정의 카피는 U6/README 소유).
 - **C3 (차별성)**: U4 Case-B 결정 표면(winner-select 없음·Major/Critical→422)·모순 보존이 **W3 실 파이프라인으로 검증**되도록 배리어에 인코딩 — 주장 아닌 실행 산출로 착지.
-- **C4 (실제 동작)**: 각 웨이브 배리어가 **실 okc-interop 무-mock 통합 체크**. 숨은 런타임 spine 간선을 명시화해 serve 세그먼트가 실 vault로 동작하도록 보장. W5가 screenshots/·e2e·CI로 하드 게이트.
+- **C4 (실제 동작)**: 각 웨이브 배리어가 **실 okc 바인딩 무-mock 통합 체크**. 숨은 런타임 spine 간선을 명시화해 serve 세그먼트가 실 vault로 동작하도록 보장. W5가 screenshots/·e2e·CI로 하드 게이트.
 - **C5 (온보딩/사용성)**: U6 트랙 병렬화로 상태 매트릭스·focal 화면이 조기 배선·꼬리 폴리시. 화면별 배선은 계약 확정 후만 → 재작업 최소.
 - **C6 (유지보수성)**: 유닛↔모듈 1:1·U0 seam 격리 무변경. 병렬화는 스케줄만 바꾸고 경계·큐·상태 소유를 건드리지 않음. 명시적 sync 배리어·계약 freeze 규율이 병렬 안전성의 근거.
 

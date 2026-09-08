@@ -60,10 +60,10 @@ PreparedCorpus → (sensitive preflight) → recorded embeddings/candidates
 
 ## 4. 권장 통합 메커니즘
 
-**Rust 백엔드(예: axum)에서 `okc-interop` 크레이트를 path dependency로 직접 링크** (필요 시 `okc-app` 로 타입드 접근).
-- 이유: `okc-interop` 은 `publish=false`·Rust 전용 → Rust 백엔드가 JSON 왕복 없이 네이티브 링크, 타입드 DTO(interop schema v2), `OkcClient→Project→Job<T>` async/cancellable 모델, 구조화된 `OkcError`, bounded scheduler + per-project reservation을 그대로 획득.
-- Node/Python 바인딩은 대안이지만 약함: 미배포 0.3.0 소스빌드, provider 시크릿을 env-var **이름**으로만 수용, 승인/클러스터 payload가 **불투명 JSON(VersionedPayload)**, Python `result()` 는 블로킹.
-- **결정적 주의**: scheduler와 `PROJECT_RESERVATIONS` 는 **프로세스 전역 static** → cross-process 상호배제는 오직 on-disk `project.lock` 에 의존. okc-web은 **단일 장수 엔진 프로세스**(또는 프로젝트 셋당 소유 프로세스 1개)로 운영하고 통합 실행을 스스로 직렬화/큐잉해야 함. 모든 I/O는 절대 로컬 경로. 서비스에서 CLI shell-out은 지양.
+**okc-web(FastAPI) 백엔드에서 okc-core의 Python 바인딩(`okc`/`okc-compiler` 0.3.0)을 직접 import** (`okc-interop`과 동일 표면, `INTEROP_SCHEMA_VERSION == 2`).
+- 이유: okc-core는 `okc-interop`(런타임 중립 facade, `publish=false`) 위에 1st-class Python 바인딩(`bindings/python`, maturin/pyo3, `requires-python>=3.11`)을 제공 → FastAPI 백엔드가 `okc.OkcClient→Project→Job` 모델, 타입드 반환(interop schema v2), 구조화된 `okc.OkcError`, bounded scheduler + per-project reservation을 `okc-interop`와 1:1 표면으로 그대로 획득.
+- 트레이드오프(해소됨): 승인/클러스터 payload가 바인딩에서 `dict`/`TypedDict`(불투명 JSON, `VersionedPayload`)로 오고 Python `result()`가 블로킹인 점은 — (a) `adapter/dto.py`가 바인딩 dict를 Pydantic DTO로 파싱하고, (b) 블로킹 `result()`를 단일-worker `ThreadPoolExecutor`(asyncio 브리지)로 감싸 해소한다. 바인딩은 미배포 0.3.0 소스빌드(maturin/Rust 툴체인 build-time 의존)이며 provider 시크릿은 env-var **이름**으로만 수용.
+- **결정적 주의**: scheduler와 `PROJECT_RESERVATIONS` 는 **프로세스 전역 static** → cross-process 상호배제는 오직 on-disk `project.lock` 에 의존. okc-web은 **단일 장수 엔진 프로세스**(uvicorn one worker; 또는 프로젝트 셋당 소유 프로세스 1개)로 운영하고 통합 실행을 스스로 직렬화/큐잉해야 함. 모든 I/O는 절대 로컬 경로. 서비스에서 CLI shell-out은 지양.
 
 ## 5. 주요 리스크 / 갭
 

@@ -2,7 +2,7 @@ okc-web 디자인 시스템 + 정보구조(IA)·내비게이션 (해커톤 데�
 
 Linear + Vercel/Geist 톤의 "조용한 베이스 + 정확히 3개 focal wow 화면" 전략. 목표는 데모 심사에서 **고유 가치(충돌 리뷰 · Provenance 검증 · 라이브 통합)가 3초 안에 읽히는** 것. 모든 토큰/규칙/라우트는 okc-core 하드 제약(승자 선택 없음, Major/Critical waive 불가, ≤10 소스, freeze-then-run, okc-mcp 이연, 읽기전용 Compiled Vault)을 UI로 정직하게 드러내도록 설계된다.
 
-Stack: Next.js(App Router) + Tailwind + shadcn/ui + Tremor + Lucide + Geist/Inter + Radix Colors.
+Stack: React + Vite SPA (TypeScript, React Router v6) + Tailwind + shadcn/ui + Tremor + Lucide + Geist/Inter + Radix Colors.
 
 > 본 문서는 **IA/내비게이션 정본**을 포함한다(§7~§13). 화면별 상세는 `ui-screens.md`. 라우트·아이콘·용어·심각도 표기는 본 문서를 **유일 기준**으로 삼는다(critique 정합성 이슈 해소).
 
@@ -65,7 +65,7 @@ Radix 12-step 의미(공통): 1~2 배경 · 3~5 컴포넌트 배경(기본/hover
 
 ## 2. 타이포그래피 (Geist / Inter)
 
-- UI 서체: **Geist Sans**(폴백 Inter), `next/font` self-host. 모노: **Geist Mono** — 경로/토큰/해시/엔드포인트/에러코드/`curator_id` 전용. 표 숫자 `tabular-nums`. 본문 기본 **14px**(Linear식).
+- UI 서체: **Geist Sans**(폴백 Inter), self-hosted Geist via `@fontsource`/`@font-face`. 모노: **Geist Mono** — 경로/토큰/해시/엔드포인트/에러코드/`curator_id` 전용. 표 숫자 `tabular-nums`. 본문 기본 **14px**(Linear식).
 
 | 토큰 | px/lh | weight | tracking | 용도 |
 |---|---|---|---|---|
@@ -207,8 +207,8 @@ Organization (단일, 암묵적)
 | Tier | 성격 | 셸 | 예시 |
 |---|---|---|---|
 | **Global** | 인증·프로젝트 선택·계정/사용자 | App Shell(프로젝트 컨텍스트 없음) | `/login`, `/projects`, `/settings/*` |
-| **Project** | 파이프라인 작업 전부 | App Shell(프로젝트 컨텍스트 활성) | `/projects/[id]/*` |
-| **Token Upload** | 로그인 없이 토큰만 | **Upload Shell(셸 없음)** | `/u/[token]` |
+| **Project** | 파이프라인 작업 전부 | App Shell(프로젝트 컨텍스트 활성) | `/projects/:id/*` |
+| **Token Upload** | 로그인 없이 토큰만 | **Upload Shell(셸 없음)** | `/u/:token` |
 
 FR-UP-2를 존중해 contributor 동선은 앱 셸과 **물리적으로 분리**. okc-mcp(비인간)는 UI가 없고 계약은 admin 화면(`/serving/contract`)에 노출.
 
@@ -217,23 +217,23 @@ IA 라우트맵을 정본으로 채택하고 모든 에픽 라우트를 정렬(c
 
 | 라우트 | 화면 | 셸/역할 | 결정 사항 |
 |---|---|---|---|
-| `/login` | 로그인 | Auth/전체 | contributor 토큰 탭은 `/u/[token]`로 이동만(앱 세션 없음) |
-| `/u/[token]` · `/upload` · `/done` | 토큰 업로드 3화면 | Upload/contributor | `/upload`(구 admin 리다이렉트) 라우트 폐기 |
+| `/login` | 로그인 | Auth/전체 | contributor 토큰 탭은 `/u/:token`로 이동만(앱 세션 없음) |
+| `/u/:token` · `/upload` · `/done` | 토큰 업로드 3화면 | Upload/contributor | `/upload`(구 admin 리다이렉트) 라우트 폐기 |
 | `/projects` | 프로젝트 목록 | App(global)/admin | |
 | `/projects/new` | 생성 모달 | App(modal)/admin | |
 | `/settings/users` · `/settings/account` | 사용자·역할 / 내 계정 | App(global)/admin | Global tier — 계정 메뉴 진입 |
-| `/projects/[id]` | Overview | App(project)/admin | **전용 화면**(구 병합 허브에서 분리) |
-| `/projects/[id]/sources` | 소스 & Freeze | App(project)/admin | **전용 화면** |
-| `/projects/[id]/tokens` · `/tokens/new` | 업로드 토큰 | App(project)/admin | |
-| `/projects/[id]/integration` (+`?job=live`) | 통합 오케스트레이션 & 진행 모니터 ★focal | App(project)/admin | **전용 화면**(구 병합 허브에서 분리) |
-| `/projects/[id]/review` | 리뷰 게이트 | App(project)/admin | 컴파일 트리거 없음(딥링크만) |
-| `/projects/[id]/review/taxonomy` | Taxonomy 승인 | App(project)/admin | |
-| `/projects/[id]/review/clusters/[clusterId]` (+`?tab=`,`?contra=`) | 클러스터 리뷰 ★focal | App(project)/admin | **path param**(query param 폐기). 모순=이 화면의 "모순 탭"(별도 라우트 없음) |
-| `/projects/[id]/review/clusters/[clusterId]/regenerate` | Regenerate diff | App(project)/admin | base |
-| `/projects/[id]/compiled` (+`?note=`) | **Compiled Vault**(컴파일 실행 + 트리) | App(project)/admin | **컴파일 트리거 & 3영역 트리 단일 지점** |
-| `/projects/[id]/serving` | 서빙 개요 & publish | App(project)/admin | 서빙 서브탭 루트 |
-| `/projects/[id]/serving/verify` (+`?note=`) | **Provenance & Verify** ★focal | App(project)/admin | provenance 정본 위치 |
-| `/projects/[id]/serving/contract` | okc-mcp 계약 | App(project)/admin | **별도 라우트**(탭 아님) |
+| `/projects/:id` | Overview | App(project)/admin | **전용 화면**(구 병합 허브에서 분리) |
+| `/projects/:id/sources` | 소스 & Freeze | App(project)/admin | **전용 화면** |
+| `/projects/:id/tokens` · `/tokens/new` | 업로드 토큰 | App(project)/admin | |
+| `/projects/:id/integration` (+`?job=live`) | 통합 오케스트레이션 & 진행 모니터 ★focal | App(project)/admin | **전용 화면**(구 병합 허브에서 분리) |
+| `/projects/:id/review` | 리뷰 게이트 | App(project)/admin | 컴파일 트리거 없음(딥링크만) |
+| `/projects/:id/review/taxonomy` | Taxonomy 승인 | App(project)/admin | |
+| `/projects/:id/review/clusters/:clusterId` (+`?tab=`,`?contra=`) | 클러스터 리뷰 ★focal | App(project)/admin | **path param**(query param 폐기). 모순=이 화면의 "모순 탭"(별도 라우트 없음) |
+| `/projects/:id/review/clusters/:clusterId/regenerate` | Regenerate diff | App(project)/admin | base |
+| `/projects/:id/compiled` (+`?note=`) | **Compiled Vault**(컴파일 실행 + 트리) | App(project)/admin | **컴파일 트리거 & 3영역 트리 단일 지점** |
+| `/projects/:id/serving` | 서빙 개요 & publish | App(project)/admin | 서빙 서브탭 루트 |
+| `/projects/:id/serving/verify` (+`?note=`) | **Provenance & Verify** ★focal | App(project)/admin | provenance 정본 위치 |
+| `/projects/:id/serving/contract` | okc-mcp 계약 | App(project)/admin | **별도 라우트**(탭 아님) |
 | `/api/serving/tree`·`/note`·`/verify`·`/explain` | read-only API | UI 없음/okc-mcp | 구 `/vault/*` 폐기 |
 
 정본 결정 3줄 요약: **(1) 컴파일 산출물·트리·트리거 = `/compiled` 한 곳. (2) provenance = `/serving/verify`. (3) 모순 = E4-3 "모순 탭"(별도 라우트 없음).**
@@ -277,7 +277,7 @@ Global tier와 Project tier를 **평면 혼합하지 않는다.**
 
 | 항목 | 아이콘 | 라우트 | 우측 배지/상태 |
 |---|---|---|---|
-| Overview | `LayoutDashboard` | `/projects/[id]` | — |
+| Overview | `LayoutDashboard` | `/projects/:id` | — |
 | Sources | `Files` | `…/sources` | `n/10`(10 도달 amber, 11번째 차단) |
 | Upload Tokens | `KeyRound` | `…/tokens` | 활성 토큰 수(secondary) |
 | Integration | `Workflow` | `…/integration` | 실행 중 `●` 펄스 dot / 대기 무색 |
@@ -299,7 +299,7 @@ Global tier와 Project tier를 **평면 혼합하지 않는다.**
 | 대상 | Persona | 셸 | 접근 라우트 | 사이드바 | 비고 |
 |---|---|---|---|---|---|
 | **Administrator/Curator** | 인간, full control | App Shell | Global + Project 전부 | Global tier / Project tier(7항목) | `curator_id`로 매핑(FR-AUTH-4) |
-| **Contributor** | 인간, 업로드만 | **Upload Shell(셸 없음)** | **`/u/[token]`만** | **없음** | 모든 `/projects/*`·`/settings/*`는 URL 직타해도 **403**(E1-4). `/upload`·`/me/uploads` 라우트 없음 |
+| **Contributor** | 인간, 업로드만 | **Upload Shell(셸 없음)** | **`/u/:token`만** | **없음** | 모든 `/projects/*`·`/settings/*`는 URL 직타해도 **403**(E1-4). `/upload`·`/me/uploads` 라우트 없음 |
 | **okc-mcp consumer** | 비인간, read-only | — | `/api/serving/*`(read), 계약은 admin `…/serving/contract` | — | 채팅/쿼리 UI 없음 — **엔드포인트/계약만** |
 
 > 데모 포인트: admin 로그인 = 7섹션 풀 사이드바. contributor 링크 = 사이드바가 **아예 없는** 단일 업로드 카드. "관리자만 통합(②)"이 화면 구조 자체로 증명된다. contributor는 앱 셸 크롬(탑바/Breadcrumb/⌘K/계정 메뉴)에 **전혀 노출되지 않는다.**
@@ -310,7 +310,7 @@ Global tier와 Project tier를 **평면 혼합하지 않는다.**
 |---|---|---|---|
 | **Auth Shell** | `/login` | 중앙 단일 `Card`, 로고 상단, 무채색 배경 | `Card`,`Input`,`Button`,`Label`,`Form`,에러 `Alert` |
 | **App Shell** | Global+Project(admin) | §9 사이드바+탑바 | 위 전부 |
-| **Upload Shell** | `/u/[token]`,`/upload`,`/done` | 셸 없음. 얇은 org 로고 바 + 중앙 업로드 카드. token 스코프 컨텍스트만(대상 프로젝트/슬롯/만료) | `Card`,dropzone(`Input file`),`Progress`(Tremor `ProgressBar`),`Alert`,`Sonner` |
+| **Upload Shell** | `/u/:token`,`/upload`,`/done` | 셸 없음. 얇은 org 로고 바 + 중앙 업로드 카드. token 스코프 컨텍스트만(대상 프로젝트/슬롯/만료) | `Card`,dropzone(`Input file`),`Progress`(Tremor `ProgressBar`),`Alert`,`Sonner` |
 
 Upload Shell 3상태: 유효(업로드 폼) · 만료/폐기(차단 카드, FR-UP-2 AC) · 완료(수락 확인 + owner_display_name).
 

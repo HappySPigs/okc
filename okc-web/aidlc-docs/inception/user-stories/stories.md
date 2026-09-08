@@ -17,7 +17,7 @@
 - **C-3 소스 ≤10**: 프로젝트당 소스 하드 상한 10개(ADR-0016). federation은 범위 밖.
 - **C-4 hash-bound freeze-then-run**: 승인은 hash-bound 단일 실행. 상위 입력(소스/설정/taxonomy)이 하나라도 바뀌면 모든 하위 승인이 **무효(stale)** 가 된다.
 - **C-6 compile 결정론/offline**: compile은 offline·결정론적으로 Markdown 전용 병합 Vault(`knowledge/`+`legacy/`+`.okc/`)를 생성하며 publish는 **no-clobber**.
-- **C-5/C-7 서빙·스택**: HTTP/업로드/토큰/서빙/RAG는 전부 okc-web 신규. 확정 스택은 Rust axum + `okc-interop` 직접 링크(Q8=A) → critic/synthesis 결과는 **타입드 DTO(interop schema v2)** 로 전달(불투명 JSON `VersionedPayload`는 Python/Node 바인딩 폴백 경로에서만).
+- **C-5/C-7 서빙·스택**: HTTP/업로드/토큰/서빙/RAG는 전부 okc-web 신규. 확정 스택은 FastAPI(Python 3.11+) + okc Python 바인딩(`okc-compiler` 0.3.0) 직접 import(Q8=C, ADR-0025). 바인딩은 critic/synthesis payload를 `dict`/`TypedDict`(불투명 JSON `VersionedPayload`)로 반환하며, `adapter/dto.py`가 이를 **타입드 Pydantic DTO(interop schema v2)** 로 파싱해 전달(리뷰 계층은 여전히 타입드 DTO만 소비).
 - **오류 규약(FR-INT-8)**: 오류는 `OkcError{code,category}` 의 **code/category로 분기**(메시지 문자열 파싱 금지). `PROJECT_BUSY` 는 재시도/큐잉으로 처리한다.
 
 ---
@@ -367,7 +367,7 @@
 - **Given** taxonomy가 승인되어 클러스터별 synthesis + CriticReport가 생성된 상태에서, **When** admin이 특정 클러스터를 열면, **Then** 합성된 노트 초안과 critic findings 목록이 심각도(Critical/Major/Minor) 배지와 함께 표시된다.
 - **Given** findings가 표시된 상태에서, **When** Major 또는 Critical finding이 있으면, **Then** 해당 finding은 "차단(blocking)·waive 불가·regenerate로만 해소"로 명확히 표기된다.
 - **Given** findings가 표시된 상태에서, **When** Minor finding이 있으면, **Then** 해당 finding은 "waive 가능(사유 필수)"로 표기된다.
-- **Given** 확정 스택은 Rust axum + `okc-interop` 직접 링크(Q8=A, C-7)로 critic/synthesis 결과가 **타입드 DTO(interop schema v2)** 로 전달되고(불투명 JSON `VersionedPayload`는 Python/Node 바인딩 폴백 경로에서만 해당), **When** okc-web이 payload를 해석하면, **Then** **스키마 버전을 검증하고 미지원 버전은 `OkcError`의 code/category로 거부**한다(메시지 문자열 파싱 금지).
+- **Given** 확정 스택은 FastAPI(Python) + okc Python 바인딩 직접 import(Q8=C, C-7)로 critic/synthesis payload가 바인딩에서 `dict`/`TypedDict`(불투명 JSON `VersionedPayload`)로 오고 `adapter/dto.py`가 **타입드 Pydantic DTO(interop schema v2)** 로 파싱하며, **When** okc-web이 payload를 해석하면, **Then** **스키마 버전을 검증하고 미지원 버전은 `OkcError`의 code/category로 거부**한다(메시지 문자열 파싱 금지).
 
 **Traceability**: FR-INT-4 (+FR-INT-8 오류 분기) · 원 요구사항 ③
 

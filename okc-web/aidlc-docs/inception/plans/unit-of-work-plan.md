@@ -13,13 +13,13 @@
 
 | 유닛 | 모듈 | Epic | 책임 | 배포 |
 |---|---|---|---|---|
-| **U0** Foundation | `adapter`(+`queue`) · `shared`(authz/error/jobs/audit/state) | cross | 유일 okc-interop 링크점, 단일-writer 큐, RBAC 가드, OkcError→HTTP, JobStore, 감사, SQLite | (단일 프로세스 내) |
+| **U0** Foundation | `adapter`(+`queue`) · `shared`(authz/error/jobs/audit/state) | cross | 유일 okc 바인딩 링크점, 단일-writer 큐, RBAC 가드, OkcError→HTTP, JobStore, 감사, SQLite | (단일 프로세스 내) |
 | **U1** Auth | `auth` | E1 | 계정·역할·세션·비밀번호 해시 | 동일 |
 | **U2** Upload | `upload` | E2 | 토큰 발급/폐기, 토큰 인증 업로드, 검증, 소스 landing, ≤10 캡 | 동일 |
 | **U3** Orchestration | `orchestration` | E3 | 프로젝트 수명주기·freeze·checkpoint 루프·compile·staleness·`sources` 레지스트리 | 동일 |
 | **U4** Review | `review` | E4 | taxonomy/cluster 결정 표면, DecisionGate(Major/Critical→422), regenerate | 동일 |
 | **U5** Serving | `serving` | E5 | 읽기전용 compiled-vault API, verify/explain, publish, mcp 계약 | 동일 |
-| **U6** Frontend | `web`(Next.js) | cross | API 소비층(apiClient·okcErrorMap·queryKeys·useJobPolling), 화면 배선 | 프론트 |
+| **U6** Frontend | `web`(React + Vite SPA) | cross | API 소비층(apiClient·okcErrorMap·queryKeys·useJobPolling), 화면 배선 | 프론트 |
 
 **시퀀스**: U0 → U1 → U2 → U3 → U4 → U5, **U6 인터리브**(각 유닛 API가 나오면 해당 화면 배선).
 
@@ -37,7 +37,7 @@ X) 기타 (please describe after [Answer]: tag below)
 [Answer]: A
 
 ## Question 2 — 유닛 간 통신·의존 패턴은? (Dependencies)
-A) **인-프로세스 Rust 모듈**(단일 axum 크레이트) — 유닛 간 네트워크 호출 없음; 모든 변경성 엔진 op은 U0 단일-writer 큐 통과; 공유 상태는 U0 `shared::state`(SQLite) 경유; 유닛은 트레이트/타입 경계로만 결합 — 권장
+A) **인-프로세스 Python 모듈**(단일 FastAPI 앱/패키지) — 유닛 간 네트워크 호출 없음; 모든 변경성 엔진 op은 U0 단일-writer 큐 통과; 공유 상태는 U0 `shared.state`(SQLite) 경유; 유닛은 Protocol/타입 경계로만 결합 — 권장
 
 B) 유닛별 마이크로서비스 + HTTP/gRPC — 해커톤 단일 프로세스 토폴로지엔 과함, PROJECT_RESERVATIONS 직렬화와 상충
 
@@ -55,7 +55,7 @@ X) 기타 (please describe after [Answer]: tag below)
 [Answer]: A
 
 ## Question 4 — 배포 모델은? (Technical Considerations)
-A) **단일 배포 프로세스**(axum 바이너리 1개 + Next.js 프론트) — 유닛은 논리 모듈; 유닛별 독립 배포 없음(모놀리스). okc-interop scheduler/PROJECT_RESERVATIONS가 프로세스-글로벌이라 단일 프로세스가 정합 — 권장
+A) **단일 배포 프로세스**(uvicorn 프로세스 1개, 1 worker + React + Vite SPA 프론트) — 유닛은 논리 모듈; 유닛별 독립 배포 없음(모놀리스). okc 바인딩 scheduler/PROJECT_RESERVATIONS가 프로세스-글로벌이라 단일 프로세스가 정합 — 권장
 
 B) 유닛별 독립 배포 — 코어 동시성 모델과 상충, 데모 복잡도↑
 
@@ -73,7 +73,7 @@ X) 기타 (please describe after [Answer]: tag below)
 [Answer]: A
 
 ## Question 6 — 코드 조직/디렉터리 구조는? (Code Organization — Greenfield)
-A) **모노레포 준비형 단일 크레이트 백엔드** — `backend/src/{adapter,shared,auth,upload,orchestration,review,serving}/` (유닛↔모듈 1:1) + `frontend/`(Next.js App Router). 향후 모노레포 편입 시 `okc-web/` 하위로 이동(module-integration-guide §4와 정합). code-generation.md 패턴 준수 — 권장
+A) **모노레포 준비형 단일 패키지 백엔드** — `backend/app/{adapter,shared,auth,upload,orchestration,review,serving}/` (유닛↔모듈 1:1) + `frontend/`(React + Vite SPA). 향후 모노레포 편입 시 `okc-web/` 하위로 이동(module-integration-guide §4와 정합). code-generation.md 패턴 준수 — 권장
 
 B) 계층형 디렉터리(`handlers/`,`services/`,`repos/`) — 유닛 경계와 교차, 추적성↓
 

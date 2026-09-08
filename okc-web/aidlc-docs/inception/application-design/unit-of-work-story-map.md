@@ -17,11 +17,11 @@
    - E4(Conflict/Critic 리뷰) → **U4**(module `review`)
    - E5(서빙/okc-mcp 계약) → **U5**(module `serving`)
 3. **U0·U6는 횡단 지원 유닛(cross-cutting)**: `application-design.md` §13은 U0(foundation)과 U6(frontend)를 에픽 없는 `(cross)` 행으로 둔다. 두 유닛은 **사용자 스토리를 소유하지 않고 전 스토리를 지원**한다.
-   - **U0 Foundation** = `adapter`(+`adapter::queue`) · `shared`(authz/error/jobs/audit/state). 유일한 okc-interop 링크점, 단일-writer 엔진 큐, RBAC 가드, `OkcError→HTTP` 매핑, `JobStore`, 큐레이터 감사, SQLite — **모든 스토리의 기반 기전을 제공**한다.
-   - **U6 Frontend** = module `web`(Next.js). API 소비층(`apiClient`·`okcErrorMap`·`queryKeys`·`useJobPolling`)과 화면 배선 — **화면이 있는 모든 스토리를 지원**한다.
-4. **횡단 성격이 강한 스토리도 owner는 에픽 유닛**: 예) E1-S3(변경성 op admin 게이팅)의 실행 기전인 RBAC 가드 미들웨어는 U0 `shared::authz`가 제공하지만, 스토리의 **1차 역량(인증/권한 정책)** 은 E1이므로 owner는 U1이고 U0는 게이팅 기전을 제공하는 지원 유닛으로 표기한다(§13에서 E1 = `U1 (+U0 authz)`). E3-S7(진행/오류 표시)도 동일하게 owner U3, 기전(JobStore·error 매핑·PROJECT_BUSY 큐)은 U0 지원.
+   - **U0 Foundation** = `app/adapter`(+`adapter.queue`) · `app/shared`(authz/error/jobs/audit/state). 유일한 `okc` 바인딩 import 지점, 단일-writer 엔진 큐, RBAC 가드, `OkcError→HTTP` 매핑, `JobStore`, 큐레이터 감사, SQLite — **모든 스토리의 기반 기전을 제공**한다.
+   - **U6 Frontend** = module `web`(React + Vite SPA). API 소비층(`apiClient`·`okcErrorMap`·`queryKeys`·`useJobPolling`)과 화면 배선 — **화면이 있는 모든 스토리를 지원**한다.
+4. **횡단 성격이 강한 스토리도 owner는 에픽 유닛**: 예) E1-S3(변경성 op admin 게이팅)의 실행 기전인 RBAC 가드 `Depends` 의존성은 U0 `shared.authz`가 제공하지만, 스토리의 **1차 역량(인증/권한 정책)** 은 E1이므로 owner는 U1이고 U0는 게이팅 기전을 제공하는 지원 유닛으로 표기한다(§13에서 E1 = `U1 (+U0 authz)`). E3-S7(진행/오류 표시)도 동일하게 owner U3, 기전(JobStore·error 매핑·PROJECT_BUSY 큐)은 U0 지원.
 
-> 표기 규약: 지원 유닛은 `Ux(제공 기전)` 형태. `FE`=프런트 화면 배선, `authz/error/jobs/audit/state`=U0 `shared::*` 하위 관심사, `adapter/queue`=U0 엔진 어댑터·단일-writer 큐.
+> 표기 규약: 지원 유닛은 `Ux(제공 기전)` 형태. `FE`=프런트 화면 배선, `authz/error/jobs/audit/state`=U0 `shared.*` 하위 관심사, `adapter/queue`=U0 엔진 어댑터·단일-writer 큐.
 
 ---
 
@@ -33,8 +33,8 @@
 |---|---|---|---|---|
 | E1-S1 | 관리자 로그인·세션/토큰 발급 | U1 | U0(authz 가드·state accounts/sessions), U6(FE E1-1/E1-5) | E1 |
 | E1-S2 | 역할 부여·관리(admin/contributor) | U1 | U0(authz·state), U6(FE E1-3) | E1 |
-| E1-S3 | 변경성 통합 작업 admin 전용 게이팅 | U1 | U0(RBAC 가드 미들웨어 `shared::authz` — 403-never-calls-core 기전), U6(FE E1-4 403/401) | E1 |
-| E1-S4 | 인증 admin→okc-core `curator_id` 라벨 바인딩 | U1 | U0(authz `Principal::Admin.curator_label`·audit 기록), U3(create_project 시 바인딩 적용), U6(FE) | E1 |
+| E1-S3 | 변경성 통합 작업 admin 전용 게이팅 | U1 | U0(RBAC 가드 `Depends` 의존성 `shared.authz` — 403-never-calls-core 기전), U6(FE E1-4 403/401) | E1 |
+| E1-S4 | 인증 admin→okc-core `curator_id` 라벨 바인딩 | U1 | U0(authz `Principal.Admin.curator_label`·audit 기록), U3(create_project 시 바인딩 적용), U6(FE) | E1 |
 | E1-S5 | 인증 시크릿(비밀번호/토큰) 안전 저장 | U1 | U0(state hashed@rest 저장), U2(업로드 토큰 verifier 해시 동일 패턴), U6(FE E1-1/E1-5 마스킹·1회 노출) | E1 |
 
 ### 2.2 U2 — Upload (module `upload`, epic E2) — 소유 6
@@ -43,7 +43,7 @@
 |---|---|---|---|---|
 | E2-S1 | 업로드 토큰 발급(1회 표시) | U2 | U1(admin 세션 전제), U0(authz admin 게이트·state upload_tokens), U6(FE E2-1/E2-2) | E2 |
 | E2-S2 | 업로드 토큰 조회·폐기 | U2 | U1(admin 세션), U0(authz·state), U6(FE E2-1) | E2 |
-| E2-S3 | 토큰 인증 업로드 엔드포인트 | U2 | U0(authz 토큰 resolver `Principal::UploadToken`), U6(FE E2-3/E2-4) | E2 |
+| E2-S3 | 토큰 인증 업로드 엔드포인트 | U2 | U0(authz 토큰 resolver `Principal.UploadToken`), U6(FE E2-3/E2-4) | E2 |
 | E2-S4 | 업로드 바이트 검증(포맷/크기/경로·symlink) | U2 | U0(error 매핑 거부 code), U6(FE E2-4) | E2 |
 | E2-S5 | 검증분 로컬 착지 & `add_source`(≤10) | U2 | U0(adapter/queue `add_source`·jobs·audit), U3(`sources` 레지스트리·≤10 reconcile·projects), U6(FE E2-4/E2-5) | E2 |
 | E2-S6 | 업로드 결과·거부 사유 조회(기여자 피드백) | U2 | U0(JobStore `/u/{token}/jobs` 스냅샷), U6(FE E2-5) | E2 |
@@ -87,21 +87,21 @@ U0는 사용자 스토리를 소유하지 않는다(`application-design.md` §13
 
 | story-id | U0가 제공하는 지원(핵심 기전) | 소유 유닛(owner) |
 |---|---|---|
-| E1-S3 | `shared::authz` RBAC 가드 미들웨어(403이면 okc-core 미호출 불변식) | U1 |
-| E1-S4 | `Principal::Admin.curator_label` 확립 + `shared::audit` 기록(HashBindings) | U1 |
-| E2-S3 | `AuthProvider::resolve_token` → `Principal::UploadToken` 토큰 인증 | U2 |
-| E2-S5 | `adapter::queue` 단일-writer `add_source` + JobStore + audit | U2 |
+| E1-S3 | `shared.authz` RBAC 가드 `Depends` 의존성(403이면 okc-core 미호출 불변식) | U1 |
+| E1-S4 | `Principal.Admin.curator_label` 확립 + `shared.audit` 기록(HashBindings) | U1 |
+| E2-S3 | `AuthProvider.resolve_token` → `Principal.UploadToken` 토큰 인증 | U2 |
+| E2-S5 | `adapter.queue` 단일-writer `add_source` + JobStore + audit | U2 |
 | E3-S3 | 단일-writer 엔진 큐(직렬화)·status·PROJECT_BUSY | U3 |
-| E3-S6 | `adapter::queue` compile(no-clobber) 실행 | U3 |
+| E3-S6 | `adapter.queue` compile(no-clobber) 실행 | U3 |
 | E3-S7 | `JobStore` 폴링 + `OkcError→HTTP` code/category 분기 + PROJECT_BUSY 재시도 | U3 |
-| E4-S3 | `adapter::queue` approve_cluster + `shared::audit` record-then-act | U4 |
-| E4-S6 | `shared::error` 422 APPROVAL_REQUIRED 매핑 | U4 |
-| E5-S2 | `shared::error` 404/405 read-only 매핑 | U5 |
+| E4-S3 | `adapter.queue` approve_cluster + `shared.audit` record-then-act | U4 |
+| E4-S6 | `shared.error` 422 APPROVAL_REQUIRED 매핑 | U4 |
+| E5-S2 | `shared.error` 404/405 read-only 매핑 | U5 |
 | E5-S3 | `adapter` read-path(큐 우회) verify/explain + schema-v2 가드 | U5 |
 
-> 위 목록은 예시가 아니라 U0 기전이 1차 결정적인 스토리다. 그 외 전 스토리(계정·토큰·프로젝트·서빙 상태)도 U0 `shared::state`(단일 SQLite WAL)와 `shared::error` 매핑을 공유한다.
+> 위 목록은 예시가 아니라 U0 기전이 1차 결정적인 스토리다. 그 외 전 스토리(계정·토큰·프로젝트·서빙 상태)도 U0 `shared.state`(단일 SQLite WAL)와 `shared.error` 매핑을 공유한다.
 
-### 2.7 U6 — Frontend (module `web` Next.js, cross) — 소유 0 (횡단 지원 전용)
+### 2.7 U6 — Frontend (module `web` React+Vite, cross) — 소유 0 (횡단 지원 전용)
 
 U6도 사용자 스토리를 소유하지 않는다(`(cross) frontend` 행). **화면이 존재하는 모든 스토리를 배선**한다. UI는 `ui-screens.md`/`design-system.md`로 동결(frozen)되어 U6는 API-소비 배선(`apiClient`·`okcErrorMap`·`queryKeys`·`useJobPolling`) + 화면 상태 매트릭스만 담당한다. `application-design.md` §12의 모든 화면(E1-1..E5-4)이 U6 배선 대상이며, 기계용 read API(`/api/serving/*`, E5-S2/S4의 소비자 관점)만 UI 없이 U5 백엔드가 직접 노출한다.
 
@@ -155,7 +155,7 @@ U6도 사용자 스토리를 소유하지 않는다(`(cross) frontend` 행). **�
 | **U3** Orchestration | `orchestration` | epic E3 | **7** | E3-S1, E3-S2, E3-S3, E3-S4, E3-S5, E3-S6, E3-S7 |
 | **U4** Review | `review` | epic E4 | **6** | E4-S1, E4-S2, E4-S3, E4-S4, E4-S5, E4-S6 |
 | **U5** Serving | `serving` | epic E5 | **5** | E5-S1, E5-S2, E5-S3, E5-S4, E5-S5 |
-| **U6** Frontend | `web`(Next.js) | 횡단(cross) | **0** | — (화면 있는 전 스토리 배선) |
+| **U6** Frontend | `web`(React+Vite) | 횡단(cross) | **0** | — (화면 있는 전 스토리 배선) |
 | **합계** | — | — | **29** | — |
 
 계산: 0 + 5 + 6 + 7 + 6 + 5 + 0 = **29**.
@@ -176,6 +176,6 @@ U6도 사용자 스토리를 소유하지 않는다(`(cross) frontend` 행). **�
 - **지원 유닛 도출**: `application-design.md` §12 화면→스토리 매트릭스의 `Unit(s)` 컬럼(예: E2-5=`U2 (+U0 jobs)`, E5-1=`U3 (compile) + U5`, E1-4=`U0 authz + U6`), `component-dependency.md` 의존성 매트릭스(U2→U0 queue·U3 state, U3→U5 compiled path, U5→U3 SourceRegistry 등), `services.md` 서비스 소유권(DecisionGate=U4, 단일-writer 큐/error/audit=U0, StalenessProjection=U3)을 근거로 배정.
 - **횡단 owner 판단 근거**: E1-S3(RBAC 가드)·E3-S7(Job/OkcError/PROJECT_BUSY)은 기전이 U0에 있으나, 1차 역량이 각각 인증-정책(E1)·통합 진행/오류(E3)이므로 owner를 U1·U3로 두고 U0를 지원으로 표기(§1-4 원칙). 이는 §13의 `U1 (+U0 authz)`·`U3 (+U0 adapter/queue)` 표기와 정합.
 - **하드 제약 반영**: 승자 선택 없음(C-2)은 E4-S5 owner U4 + `.okc/` read-path(U0) 지원으로 표현(별도 winner-select 스토리·유닛 없음). 소스 ≤10(C-3)은 E2-S5/E3-S2가 U2·U3 공동 관여(owner는 각 에픽). verify/explain 큐 우회(비변경)는 E5-S3의 U0 adapter read-path 지원으로 표기.
-- **적대적 검증 수정(wf_9cd09efe-6b8)**: verifier 판정 coverage_ok·acyclic_ok·consistency_ok·codeorg_ok 전부 true(29/29, 순환 없음). 지적 1건 반영 — E1-S5(시크릿 저장)는 화면 있는 스토리(E1-1/E1-5)이므로 §2.1·§3 지원 유닛에 **U6 추가**(§2.7 "화면 있는 스토리는 U6 지원" 원칙과 정합; owner·커버리지 합계 불변). 참고: `component-dependency.md` 매트릭스의 잠재 U2↔U3 상호간선은 U2의 project/sources 접근을 U0 `shared::state`로 귀속시켜 DAG·빌드순서를 보존(본 산출물 및 dependency 산출물에서 명시적 해소).
+- **적대적 검증 수정(wf_9cd09efe-6b8)**: verifier 판정 coverage_ok·acyclic_ok·consistency_ok·codeorg_ok 전부 true(29/29, 순환 없음). 지적 1건 반영 — E1-S5(시크릿 저장)는 화면 있는 스토리(E1-1/E1-5)이므로 §2.1·§3 지원 유닛에 **U6 추가**(§2.7 "화면 있는 스토리는 U6 지원" 원칙과 정합; owner·커버리지 합계 불변). 참고: `component-dependency.md` 매트릭스의 잠재 U2↔U3 상호간선은 U2의 project/sources 접근을 U0 `shared.state`로 귀속시켜 DAG·빌드순서를 보존(본 산출물 및 dependency 산출물에서 명시적 해소).
 
 _다음_: 유닛 경계·의존성 검증(순환 없음, U0 단방향 기반) → CONSTRUCTION PHASE(U0→U1→U2→U3→U4→U5, U6 인터리브).

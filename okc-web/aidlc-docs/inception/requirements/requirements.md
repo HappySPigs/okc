@@ -32,7 +32,7 @@
 | Q5 | 통합 방식 | **Freeze-then-run** | hash-bound 단일 실행 모델에 부합 |
 | Q6 | 업로드/토큰 | **okc-web 토큰 스토어 + 로컬 디스크 착지 → add_source** | S3 없이 로컬로 완결 |
 | Q7 | req5 서빙 | **okc-web이 read-only API 제공, okc-mcp 이연** | okc-mcp 미구현 |
-| Q8 | 백엔드 스택 | **Rust(axum) + okc-interop 직접 링크** ⚠️팀 숙련도 시 Python로 변경 | FFI 고통 없음, 타입드 |
+| Q8 | 백엔드 스택 | **FastAPI (Python 3.11+) + okc Python 바인딩(`okc-compiler` 0.3.0) 직접 import** (문서화된 Python 폴백 실현, ADR-0025) | 타입드 DTO·구조화 에러, 팀 Python 정합 |
 | Q9 | 토폴로지 | **단일 장수 엔진 프로세스, 실행 직렬화** | 분산 락 불필요 |
 | Q10 | 코어 안정성 | **pre-stable 0.3.0 수용, Markdown 전용, commit 핀** | 데모 실현성 |
 | Q11–13 | 확장 | Security/Resiliency/PBT **전부 opt-out** | 해커톤 PoC |
@@ -115,7 +115,7 @@
 - **C-4** 승인은 hash-bound 단일 실행 → freeze-then-run.
 - **C-5** okc-core는 HTTP/업로드/토큰/서빙/RAG 레이어가 없다 → §4.2/§4.4 는 전부 신규.
 - **C-6** 통합/컴파일은 절대 로컬 경로 기반 → 업로드는 디스크 착지 후 등록.
-- **C-7** 권장 통합: Rust 백엔드가 `okc-interop` 직접 링크(타입드·async Job·구조화 에러). 바인딩 경로는 payload 불투명 JSON·소스 빌드 비용.
+- **C-7** 확정 통합: FastAPI(Python) 백엔드가 `okc` Python 바인딩(`okc-compiler` 0.3.0, maturin path install)을 직접 import(타입드·Job·구조화 에러). 바인딩의 "불투명 JSON payload"(`dict`/`TypedDict`) 우려는 `adapter/dto.py`가 바인딩 dict를 Pydantic DTO로 파싱해 해소한다(소스 빌드는 maturin/Rust 툴체인 build-time 의존).
 - **A-1** 데모는 로컬/신뢰 환경에서 단일 조직·소수 사용자·소수 Markdown Vault를 가정한다.
 - **A-2** AI provider(임베딩/합성) 자격증명은 서버측에 env-var 이름으로 프로비저닝된다.
 
@@ -149,7 +149,7 @@
 - **R-2** req ⑤의 "RAG" 기대 대비 okc-mcp 부재 → okc-web은 소스 제공까지만, RAG는 이연(사용자 합의됨, Q7=A).
 - **R-3** pre-stable 0.3.0 + Markdown 전용 → 데모 콘텐츠를 .md로 한정.
 - **R-4** 소스 10 상한 → 데모 규모 제한(federation 미구현).
-- **R-5** Q8 스택 선택은 팀 Rust 숙련도에 민감(재검토 여지).
+- **R-5** resolved: 스택 확정 — FastAPI (Python 3.11+) + okc Python 바인딩 (ADR-0025). Q8의 Rust 숙련도 리스크는 문서화된 Python 폴백 채택으로 해소.
 
 ---
 

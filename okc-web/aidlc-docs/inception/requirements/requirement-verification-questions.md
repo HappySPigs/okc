@@ -5,7 +5,7 @@
 답이 여러 개면 쉼표로(`A, C`) 적어도 됩니다. 다 마치면 "완료" 라고 알려 주세요.
 
 > **✅ 답변 상태**: 2026-09-08, 사용자 요청으로 **해커톤 권장값(recommended for hackathon)** 을 채웠습니다. (Q1은 사용자가 직접 A로 선택)
-> 변경하고 싶은 항목이 있으면 해당 `[Answer]:` 를 수정하세요. 특히 **Q8(백엔드 스택)** 은 팀 숙련도에 따라 재검토를 권장합니다.
+> 변경하고 싶은 항목이 있으면 해당 `[Answer]:` 를 수정하세요. **Q8(백엔드 스택)은 확정 변경됨**: FastAPI (Python 3.11+) + okc Python 바인딩(`okc-compiler` 0.3.0) — 문서화된 Python 폴백 실현(ADR-0025).
 
 > **왜 이 질문들이 필요한가 (okc-core 분석 결과 핵심)**
 > - okc-core에는 **인증/권한/RBAC/멀티테넌시가 전혀 없습니다** → 권한 관리(req 1·2)는 okc-web이 100% 새로 구현.
@@ -132,7 +132,7 @@ C) **Python 백엔드** + okc-core Python 바인딩 (result() 블로킹, threadp
 
 X) 기타 (please describe after [Answer]: tag below)
 
-[Answer]: A  (⚠️ 팀이 Rust에 익숙하지 않으면 C(Python)로 변경 권장 — 단 네이티브 바인딩 소스 빌드 셋업 비용 감수)
+[Answer]: C  (확정: FastAPI(Python 3.11+) + okc Python 바인딩(`okc-compiler` 0.3.0) 직접 import. 문서화된 Python 폴백 실현(ADR-0025) — 불투명 JSON payload는 `adapter/dto.py`가 Pydantic DTO로 파싱, 블로킹 `result()`는 단일-worker `ThreadPoolExecutor`(asyncio 브리지)로 감쌈. maturin/Rust 툴체인은 바인딩 build-time 의존.)
 
 ---
 

@@ -17,7 +17,7 @@
 | 모듈 | 언어/런타임 | 역할 | 상태 |
 |---|---|---|---|
 | **okc-core** | Rust (workspace) | Vault 컴파일 엔진(인제스트·AI 파이프라인·critic/curator 게이트·모순 보존·compile/verify/explain) | 기존(핀된 의존성) |
-| **okc-web** | Rust(axum) + Next.js | 플랫폼: 인증/RBAC, 토큰 업로드, 통합 오케스트레이션, 리뷰(결정 표면), 서빙 | **설계 완료(INCEPTION), 코드 미착수** |
+| **okc-web** | Python(FastAPI) + React(Vite SPA) | 플랫폼: 인증/RBAC, 토큰 업로드, 통합 오케스트레이션, 리뷰(결정 표면), 서빙 | **설계 완료(INCEPTION), 코드 미착수** |
 | **okc-mcp** | (미정) | 병합 Vault를 RAG 소스로 소비(청킹·임베딩·vector index, MCP 툴) | 미구현(계약만) |
 | **obsidian-hook** | TypeScript (Obsidian 플러그인) | 로컬 Vault → okc-web 자동 업로드 | 미구현(계약만) |
 
@@ -39,8 +39,9 @@
 ## 3. Getting Started
 
 ### 사전 요구사항
-- **Rust** (stable; `okc-core` 핀 커밋과 호환되는 버전)
-- **Node.js** LTS + npm (Next.js 프론트)
+- **Python 3.11+** + **uv** (백엔드 FastAPI; `okc-compiler` `requires-python>=3.11`)
+- **Rust** (stable) + **maturin** — `okc-compiler` 바인딩 빌드타임에만 필요(`okc-core/bindings/python`, `okc-core` 핀 커밋과 호환되는 버전)
+- **Node.js** LTS + npm (React+Vite 프론트)
 - (선택) **Obsidian** — hook 데모용
 - `okc-core`를 **서브모듈/vendored**로 편입한 경우: `git submodule update --init --recursive`
 
@@ -78,9 +79,9 @@ INCEPTION은 완료됐으니 재시작하지 말고 CONSTRUCTION(U0)부터 가�
 ### CONSTRUCTION 완료 후(코드가 생성된 뒤) 빌드·실행
 > 아래는 CONSTRUCTION이 끝나 `backend/`·`frontend/`가 생긴 이후에 유효하다.
 1. 환경설정: `cp .env.example .env` 후 빈 값(자격증명) 채우기 — **`.env`는 커밋 금지**.
-2. okc-core: 핀 커밋 소스 빌드.
-3. 백엔드: `cd okc-web/backend && cargo run`.
-4. 프론트: `cd okc-web/frontend && npm install && npm run dev`.
+2. okc-compiler 바인딩: `okc-core/bindings/python`에서 maturin 빌드(핀 커밋 소스; Rust 툴체인 필요).
+3. 백엔드: `cd okc-web/backend && uv sync && uvicorn app.main:app --workers 1`.
+4. 프론트: `cd okc-web/frontend && npm ci && npm run dev` (Vite dev, `/api`·`/u` → uvicorn 프록시).
 5. 데모 스파인: 관리자 로그인 → 업로드 토큰 발급 → `.md` 업로드 → 통합/리뷰 → 서빙 API 확인.
 
 ---

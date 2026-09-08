@@ -1,8 +1,8 @@
 # okc-web — Application Design (Integrated)
 
 **Stage**: INCEPTION / Application Design — Part 2 synthesis · Depth: comprehensive
-**System**: okc-web = a Rust (axum) + Next.js control-plane and serving layer built ON TOP of the okc-core engine (consumed via `okc-interop`, ADR-0002). Single long-lived process, single SQLite state file, single-writer engine queue.
-**Grounding**: okc-interop verified at `c:/Users/genie/workplace/okc-core/crates/okc-interop/src/lib.rs` (INTEROP_SCHEMA_VERSION=2); okc-core config at `crates/okc-core/src/config.rs` (max_sources=10, follow_symlinks=false, max_archive_expansion_ratio=100). UI frozen by `ui-screens.md` + `design-system.md` — **API-wiring contract only, no UI redesign**.
+**System**: okc-web = a Python (FastAPI) + React (Vite) SPA control-plane and serving layer built ON TOP of the okc-core engine (consumed via the `okc` Python bindings, ADR-0002). Single long-lived process (uvicorn, one worker), single SQLite state file, single-writer engine queue.
+**Grounding**: okc Python bindings verified at `okc-core/bindings/python/okc/__init__.pyi` (INTEROP_SCHEMA_VERSION=2); okc-core config at `crates/okc-core/src/config.rs` (max_sources=10, follow_symlinks=false, max_archive_expansion_ratio=100). UI frozen by `ui-screens.md` + `design-system.md` — **API-wiring contract only, no UI redesign**.
 
 This document integrates the five design decisions the brief requires: (1) ADR-0002 adapter boundary; (2) RBAC-before-core; (3) single engine process + in-process single-writer queue with PROJECT_BUSY; (4) Case-B `CuratorDecision`→core mapping with winner-select ABSENT; (5) hash-bound staleness-cascade ownership; plus the OkcError→HTTP mapping, the SQLite state model, the E4-3/E5-2 focal data contracts, the screen→story matrix (C1), and the epic-aligned module map (C6).
 
@@ -12,19 +12,19 @@ This document integrates the five design decisions the brief requires: (1) ADR-0
 
 ```mermaid
 flowchart LR
-    subgraph FE["U6 Next.js App Router"]
+    subgraph FE["U6 React + Vite SPA"]
       direction TB
-      SHELL["server components: shell/static"]
-      CLIENT["client components: review/upload/polling"]
+      SHELL["React Router v6 routes + shell"]
+      CLIENT["client components: review/upload/polling (TanStack Query)"]
     end
-    FE -->|"REST + JSON, 3 auth contexts"| API["axum single binary"]
+    FE -->|"REST + JSON, 3 auth contexts"| API["FastAPI process (uvicorn, 1 worker)"]
     subgraph API
       direction TB
-      AUTHZ["shared::authz RBAC-before-core"]
+      AUTHZ["shared.authz RBAC-before-core (Depends)"]
       MODS["auth | upload | orchestration | review | serving"]
-      ADAPT["adapter: OkcEngine trait + dto + schema_guard"]
-      QUEUE["adapter::queue: single-writer EngineActor"]
-      READPATH["read-path OkcClient clone"]
+      ADAPT["adapter: OkcEngine Protocol/ABC + dto + schema_guard"]
+      QUEUE["adapter.queue: single-writer EngineActor"]
+      READPATH["read-path OkcClient (2nd client)"]
       SHAREDX["shared: error | jobs | audit | state SQLite"]
     end
     AUTHZ --> MODS
@@ -33,7 +33,7 @@ flowchart LR
     MODS -->|"non-reserving reads"| READPATH
     QUEUE --> ADAPT
     READPATH --> ADAPT
-    ADAPT -->|"path dep, commit-pinned"| INTEROP["okc-interop"]
+    ADAPT -->|"maturin path install"| INTEROP["okc Python bindings"]
     INTEROP --> CORE["okc-core engine"]
     MODS --> SHAREDX
     SERVE["U5 CompiledVaultStore"] -->|"read-only fs"| VAULT["compiled vault: knowledge/ legacy/ .okc/"]
@@ -41,27 +41,27 @@ flowchart LR
 ```
 
 ### Text alternative
-The Next.js frontend (server components for shell/static, client components for review/upload/polling) calls a single axum binary over REST+JSON using three auth contexts (admin cookie, upload bearer token, read-only serving). Inside axum, `shared::authz` enforces RBAC before any handler runs; handlers live in five modules (auth, upload, orchestration, review, serving). All engine access goes through the `adapter` module (the `OkcEngine` trait + DTOs + schema guard). Reserving/mutating ops route through the single-writer `EngineActor` queue; non-reserving reads use a read-path `OkcClient` clone. Only `adapter` links `okc-interop` (a commit-pinned path dep), which wraps okc-core. `shared` provides the error mapping, job store, curator audit, and the SQLite state file. U5's CompiledVaultStore reads the immutable 3-root compiled vault directly from disk. okc-mcp consumes the read-only `/api/serving/*` API.
+The React + Vite SPA frontend (a single client tree with React Router v6 routes; data via TanStack Query) calls a single FastAPI process (uvicorn, one worker) over REST+JSON using three auth contexts (admin cookie, upload bearer token, read-only serving). Inside FastAPI, `shared.authz` enforces RBAC via `Depends(...)` dependencies before any handler runs; handlers live in five modules (auth, upload, orchestration, review, serving). All engine access goes through the `adapter` module (the `OkcEngine` Protocol/ABC + DTOs + schema guard). Reserving/mutating ops route through the single-writer `EngineActor` queue; non-reserving reads use a read-path second `OkcClient`. Only `adapter` imports the `okc` Python bindings (`okc-compiler`, maturin path install), which wrap okc-core. `shared` provides the error mapping, job store, curator audit, and the SQLite state file. U5's CompiledVaultStore reads the immutable 3-root compiled vault directly from disk. okc-mcp consumes the read-only `/api/serving/*` API.
 
 ---
 
-## 2. ADR-0002 adapter boundary (OkcEngine trait + typed-DTO schema-v2 guard)
+## 2. ADR-0002 adapter boundary (OkcEngine Protocol/ABC + typed-DTO schema-v2 guard)
 
-- **One trait, one impl.** `adapter::OkcEngine` is the sole abstract seam; `OkcEngineImpl` is the only struct that names `okc_interop` types. No new okc-core public API is added — okc-web consumes the existing surface only.
-- **Typed DTOs mirror interop schema v2.** `adapter::dto` defines okc-web-owned `*View`/`*Cmd`/`*Spec` types and `From<okc_interop::…>` conversions. Downstream units decouple from interop churn behind this one version boundary.
-- **Single schema-version guard.** `SchemaGuard` asserts `INTEROP_SCHEMA_VERSION == 2` once at client init and again at every DTO decode; a mismatch yields `EngineError{code: SchemaUnsupported}` (never a silent mis-decode).
-- **Error boundary (corrected).** Every `okc_interop::OkcError` is converted to the okc-web-owned `EngineError{code, category, retryable, retry_after_ms, message}` **inside `adapter`**. U1–U6 signatures use `EngineError` (or their own `AuthError`/`UploadError`/`StateError`) — no interop type crosses the boundary.
-- **Corrected trait surface** (verifier #1/#2/#5): added `preflight` and `status` (`status` returns `StatusView{checkpoint, integration}` from the single reserving `status()` call); split lifecycle into `create_project` + `open_project` to mirror interop.
-- **API mapping (verified, no ADR-0002 breach):** `verify`→`verify_artifact`, `explain`→`explain_artifact` (non-mutating); `compile` internally uses `IntegrationService::compile_latest` (hidden); `checkpoint` is not a standalone interop method — it is derived from `Project::status()` and packed into `StatusView`.
+- **One Protocol/ABC, one impl.** `adapter.OkcEngine` is the sole abstract seam; `OkcEngineImpl` is the only class that names `okc.*` types. No new okc-core public API is added — okc-web consumes the existing surface only.
+- **Typed DTOs mirror binding schema v2.** `adapter.dto` defines okc-web-owned `*View`/`*Cmd`/`*Spec` Pydantic models and `from_native(dict)`/`model_validate` conversions. Downstream units decouple from binding churn behind this one version boundary.
+- **Single schema-version guard.** `SchemaGuard` asserts `okc.INTEROP_SCHEMA_VERSION == 2` once at client init and again at every DTO decode; a mismatch yields `EngineError(code="SchemaUnsupported")` (never a silent mis-decode).
+- **Error boundary (corrected).** Every `okc.OkcError` is converted to the okc-web-owned `EngineError(code, category, retryable, retry_after_ms, message)` **inside `adapter`**. U1–U6 signatures use `EngineError` (or their own `AuthError`/`UploadError`/`StateError`) — no binding type crosses the boundary.
+- **Corrected Protocol surface** (verifier #1/#2/#5): added `preflight` and `status` (`status` returns `StatusView(checkpoint, integration)` from the single reserving `status()` call); split lifecycle into `create_project` + `open_project` to mirror the bindings.
+- **API mapping (verified, no ADR-0002 breach):** `verify`→`verify_artifact`, `explain`→`explain_artifact` (non-mutating); `compile` internally uses `IntegrationService::compile_latest` (hidden okc-core path); `checkpoint` is not a standalone binding method — it is derived from `Project.status()` and packed into `StatusView`.
 
 ---
 
 ## 3. RBAC-before-core placement (C-1)
 
 okc-core has no auth/RBAC; `curator_id` is an unverified label. Therefore okc-web owns all authz, enforced BEFORE any core call.
-- `shared::authz` middleware + extractors run first for every protected route. **Invariant (testable):** a 403/401 guarantees zero `OkcEngine` methods executed — okc-core was never touched.
-- **Roles (corrected):** `Role::{Admin, Contributor}` only. "Curator" is the capacity in which an admin acts, recorded as the unverified `curator_id` label (FR-AUTH-4). Upload is a capability, modeled as `Principal::UploadToken(UploadContext)`, not a role. `viewer` is deferred (FR-AUTH-2).
-- **Principals:** `Principal::Admin{account_id, session_id_hash, curator_label}` (session, cookie); `Principal::UploadToken(UploadContext{token_id, project_id, slot_index, owner_display_name, owner_kind})` (bearer, `/u/{token}/*`).
+- `shared.authz` `Depends(...)` dependencies run first for every protected route. **Invariant (testable):** a 403/401 guarantees zero `OkcEngine` methods executed — okc-core was never touched (a 401/403 raised in a dependency ⇒ the handler body never runs).
+- **Roles (corrected):** `Role.{Admin, Contributor}` (`enum.Enum`) only. "Curator" is the capacity in which an admin acts, recorded as the unverified `curator_id` label (FR-AUTH-4). Upload is a capability, modeled as `Principal.UploadToken(UploadContext)`, not a role. `viewer` is deferred (FR-AUTH-2).
+- **Principals:** `Principal.Admin(account_id, session_id_hash, curator_label)` (session, cookie); `Principal.UploadToken(UploadContext(token_id, project_id, slot_index, owner_display_name, owner_kind))` (bearer, `/u/{token}/*`).
 - **Domain gate on top of RBAC:** U4's `DecisionGate` runs the Major/Critical check in okc-web and returns 422 APPROVAL_REQUIRED before any `approve_cluster` engine call (see §5).
 - **Contributor has no app shell** (E1-2 canonical): only `/u/{token}` is reachable without an admin session; contributor direct-hits on `/projects/*`/`/settings/*` → 403 (E1-4).
 
@@ -69,27 +69,41 @@ okc-core has no auth/RBAC; `curator_id` is an unverified label. Therefore okc-we
 
 ## 4. Single engine process + in-process single-writer queue (Q6 / NFR-CONC-1) + PROJECT_BUSY
 
-- **One `OkcClient` in the process**, owned exclusively by a dedicated **blocking** worker (`EngineActor`). Async handlers send an `EngineCommand` over a bounded mpsc queue and await a oneshot reply. The worker processes exactly one reserving/mutating command at a time, driving each interop `Job` to terminal (pumping `events()` into `JobStore`, then reading the blocking `result()`), before dequeuing the next. This makes okc-web the single writer on top of interop's process-global `PROJECT_RESERVATIONS`.
-- **Why blocking, not a tokio task:** `Job::result()` blocks on a Condvar; a plain async task would starve the runtime (reconciles Q6's "one task owns the handle").
-- **Read-path policy (verifier #8):** only reserving/mutating ops go through the queue — `status` (interop `status()` reserves), `add_source`, `replace_sources`, `preflight`, `integrate`, `approve_taxonomy`, `approve_cluster`, `regenerate_cluster`, `compile`. Non-reserving reads (`taxonomy`, `clusters`, `manifest`, `verify`, `explain`) use a read-path `OkcClient` clone and bypass the queue, so serving/read screens never stall behind a multi-minute integrate/compile.
-- **PROJECT_BUSY:** the queue makes lock contention rare; residual `ProjectBusy` (genuine cross-process contention) → HTTP 409 with a synthesized `Retry-After`. okc-web branches on the **code**, never on interop's `retryable` flag (verified inconsistent for reservation-collision `ProjectBusy`).
-- **Progress (Q7):** long ops return a `JobId`; clients poll the canonical route (see §7). Live E3-5 progress reads in-flight `Job.events()`/`state()` via the JobStore (non-reserving), not a fresh `status()`.
+- **One `OkcClient` in the process**, owned exclusively by a dedicated single worker thread (`EngineActor` = a `ThreadPoolExecutor(max_workers=1)`). Async handlers submit an `EngineCommand` and `await` the reply via `loop.run_in_executor(engine_pool, ...)`. The worker processes exactly one reserving/mutating command at a time, driving each `okc.Job` to terminal (pumping `.events()` into `JobStore`, then reading the blocking `.result()`), before dequeuing the next. This makes okc-web the single writer on top of the bindings' process-global `PROJECT_RESERVATIONS`.
+- **Why a dedicated worker thread, not an asyncio task:** `okc.Job.result()` blocks (the native ext releases the GIL); running it on the event loop would starve the runtime, so the sole `OkcClient` lives on a single-worker `ThreadPoolExecutor` bridged via `run_in_executor` (reconciles Q6's "one task owns the handle").
+- **Read-path policy (verifier #8):** only reserving/mutating ops go through the queue — `status` (binding `status()` reserves), `add_source`, `replace_sources`, `preflight`, `integrate`, `approve_taxonomy`, `approve_cluster`, `regenerate_cluster`, `compile`. Non-reserving reads (`taxonomy`, `clusters`, `manifest`, `verify`, `explain`) use a read-path second `OkcClient` (its own small executor) and bypass the queue, so serving/read screens never stall behind a multi-minute integrate/compile.
+- **PROJECT_BUSY:** the queue makes lock contention rare; residual `ProjectBusy` (genuine cross-process contention) → HTTP 409 with a synthesized `Retry-After`. okc-web branches on the **code**, never on the binding's `retryable` flag (verified inconsistent for reservation-collision `ProjectBusy`).
+- **Progress (Q7):** long ops return a `JobId`; clients poll the canonical route (see §7). Live E3-5 progress reads in-flight `okc.Job.events()`/`.state` via the JobStore (non-reserving), not a fresh `status()`.
 
 ---
 
 ## 5. Case-B CuratorDecision → core mapping (Q8, FR-INT-5) — winner-select ABSENT (C3)
 
-Per Decision Record "경우 B" (ADR-0024/C-2): the admin's "선택" is a **decision (action)**, never picking a winner. The internal model is an explicit enum with **exactly three variants and no winner-select variant** — a code-verifiable structural differentiator confirmed by the verifier in both U0 and U4.
+Per Decision Record "경우 B" (ADR-0024/C-2): the admin's "선택" is a **decision (action)**, never picking a winner. The internal model is an explicit discriminated union with **exactly three variants and no winner-select variant** — a code-verifiable structural differentiator confirmed by the verifier in both U0 and U4.
 
-```rust
-enum CuratorDecision {
-    ApproveTaxonomy   { edited_clusters: Option<Vec<ClusterEdit>>, rationale: Option<String> },
-    ApproveCluster    { cluster_id: String,
-                        omission_rationales: BTreeMap<String,String>,  // key "{document_id}:{target_id}" (core omission_key)
-                        minor_waivers:       BTreeMap<String,String> }, // key = Minor finding_id
-    RegenerateCluster { cluster_id: String, feedback: String },
-    // NO SelectWinner / ResolveContradiction variant — deliberately.
-}
+```python
+class ApproveTaxonomy(BaseModel):
+    kind: Literal["approve_taxonomy"] = "approve_taxonomy"
+    edited_clusters: list[ClusterEdit] | None = None
+    rationale: Optional[str] = None
+
+class ApproveCluster(BaseModel):
+    kind: Literal["approve_cluster"] = "approve_cluster"
+    cluster_id: str
+    omission_rationales: dict[str, str]   # key "{document_id}:{target_id}" (core omission_key)
+    minor_waivers: dict[str, str]         # key = Minor finding_id
+
+class RegenerateCluster(BaseModel):
+    kind: Literal["regenerate_cluster"] = "regenerate_cluster"
+    cluster_id: str
+    feedback: str
+
+# discriminated union, tagged by `kind` — EXACTLY 3 variants.
+# NO SelectWinner / ResolveContradiction variant — structurally unrepresentable (C3), deliberately.
+CuratorDecision = Annotated[
+    Union[ApproveTaxonomy, ApproveCluster, RegenerateCluster],
+    Field(discriminator="kind"),
+]
 ```
 
 Mapping (record-then-act: `AuditStore.append` with `HashBindings` BEFORE the op; receipt/`JobId` linked after):
@@ -97,14 +111,14 @@ Mapping (record-then-act: `AuditStore.append` with `HashBindings` BEFORE the op;
 - `ApproveCluster` → **`DecisionGate.assert_approvable`** → `engine.approve_cluster(cluster_id, omission_rationales, minor_waivers)`.
 - `RegenerateCluster` → `engine.regenerate_cluster(cluster_id, feedback, allow_remote, disclosure_confirmed)` (long AI job).
 
-**DecisionGate necessity (code-verified):** core rejects blocking approvals with `AppError::InvalidProject("major or critical critic findings require regeneration")`, which interop's `map_project_message` maps to the generic `ProjectInvalid`, NOT `ApprovalRequired`. So the clean, deterministic `422 APPROVAL_REQUIRED` must be produced by the okc-web gate — a genuine correctness reason, not style. Contradictions are read-only (both sides preserved); the only path that changes one is a full cluster Regenerate.
+**DecisionGate necessity (code-verified):** core rejects blocking approvals with `AppError::InvalidProject("major or critical critic findings require regeneration")`, which the `okc` bindings' `map_project_message` maps to the generic `ProjectInvalid`, NOT `ApprovalRequired`. So the clean, deterministic `422 APPROVAL_REQUIRED` must be produced by the okc-web gate — a genuine correctness reason, not style. Contradictions are read-only (both sides preserved); the only path that changes one is a full cluster Regenerate.
 
 ---
 
 ## 6. Hash-bound staleness-cascade ownership (C-4)
 
 - **okc-core owns authoritative staleness** via hash binding (`corpus_hash → taxonomy_hash → proposal_hash → integration_plan_id`), surfaced as `ApprovalStale` (category Approval) at run/approve/compile time, or as a checkpoint regression from `status()`.
-- **okc-web owns only a DERIVED projection** (`U3::StalenessProjection`): it records the source-set/config fingerprint at each approval (in the audit store) and compares it to the current fingerprint after any `add_source`/`replace_sources`/freeze change, to pre-warn in E3-6/E3-4/E4-1/E5-3 banners. okc-web never treats its projection as truth; on any engine `ApprovalStale` it defers to core and marks the affected approvals stale.
+- **okc-web owns only a DERIVED projection** (`U3.StalenessProjection`): it records the source-set/config fingerprint at each approval (in the audit store) and compares it to the current fingerprint after any `add_source`/`replace_sources`/freeze change, to pre-warn in E3-6/E3-4/E4-1/E5-3 banners. okc-web never treats its projection as truth; on any engine `ApprovalStale` it defers to core and marks the affected approvals stale.
 - **Serving staleness (E5-S5):** `ServingStateStore.status ∈ {Offline, Live, Stale}` is derived by comparing the bound manifest hashes to U3's current frozen-input hashes; the immutable manifest is still served with a Stale label.
 
 ---
@@ -121,7 +135,7 @@ TanStack Query `useJobPolling` refetches until terminal and drains `events[]` in
 
 ## 8. OkcError code/category → HTTP mapping (Q9, extended)
 
-Single table-driven module (`shared::error`). **Branch on `code`/`category` ONLY; never parse `message`.** Body: `{code, category, message, retryable, retry_after_ms?}`.
+Single table-driven module (`shared.error`). **Branch on `code`/`category` ONLY; never parse `message`.** Body: `{code, category, message, retryable, retry_after_ms?}`.
 
 | EngineErrorCode | Category | HTTP | Notes |
 |---|---|---|---|
@@ -129,7 +143,7 @@ Single table-driven module (`shared::error`). **Branch on `code`/`category` ONLY
 | Forbidden (okc-web) | Auth | **403** | role insufficient → **core untouched (C-1)**; also `SENSITIVE_REMOTE_FORBIDDEN` |
 | PathNotFound / note out-of-root | NotFound | **404** | serving reads, unknown project/route |
 | (mutating verb on read-only API) | — | **405** | `/api/serving/*` write attempt |
-| ProjectBusy | Concurrency | **409** | +`Retry-After`, retryable **by code** (not interop flag) |
+| ProjectBusy | Concurrency | **409** | +`Retry-After`, retryable **by code** (not binding flag) |
 | OutputExists / OutputOverlap | Project | **409** | compile no-clobber collision |
 | ApprovalRequired | Approval | **422** | DecisionGate / compile gate |
 | ApprovalStale | Approval | **422** | staleness cascade |
@@ -143,7 +157,7 @@ Single table-driven module (`shared::error`). **Branch on `code`/`category` ONLY
 | ProviderUnavailable / ProviderError | Provider | **502 / 424** | remote provider fault |
 | Cancelled | Lifecycle | **409** | cancel before publish barrier |
 | **OutputDurabilityUncertain** | Io | **500** | *added* — treat as server error |
-| SchemaUnsupported | Schema | **500** | interop version mismatch at runtime (startup aborts) |
+| SchemaUnsupported | Schema | **500** | binding version mismatch at runtime (startup aborts) |
 | Internal / **any unmapped code** | — | **500** | *added* safe default — never fall through to a panic |
 
 ---
@@ -157,7 +171,7 @@ Single WAL file. Owners in parentheses. `hashed@rest` marks secret-at-rest colum
 - **upload_tokens** (U2): `id` PK (`tok_<ulid>`) · `project_id` FK → projects · `slot_index` · `selector` UNIQUE (public, indexed) · `verifier_hash` **hashed@rest** (argon2id or HMAC-SHA256+pepper+salt) · `verifier_salt?` · `owner_display_name` (decorative, unverified) · `owner_kind` CHECK IN ('department','individual') · `created_by` FK → accounts · `created_at`/`expires_at?`/`revoked_at?`/`last_used_at?` · `registered_source_id?`. Status derived from timestamps. Index on (`project_id`,`revoked_at`).
 - **projects** (U3): `id` PK (`proj_<ulid>`) · `name` · `engine_root_abs_path` · `curator_id` (unverified label, C-1) · `created_by` FK → accounts · `source_set_fingerprint?` · `freeze_state` CHECK IN ('unfrozen','frozen') · `frozen_at?` · `created_at`/`updated_at`.
 - **sources** (U3-owned, written by U2 at commit — the `SourceRegistry`, resolves verifier #10): `source_id` PK (okc-core SourceId) · `project_id` FK · `document_id?` · `owner_display_name` · `owner_kind` · `content_hash` · `absolute_path` · `slot_index` · `upload_token_id?` FK → upload_tokens · `registered_at`. Read by U5 for provenance owner-label enrichment.
-- **jobs** (U0): `id` PK (`job_<ulid>`, the id clients poll — Q7) · `project_id` · `kind` ('add_source','preflight','integrate','approve_taxonomy','approve_cluster','regenerate_cluster','compile') · `state` CHECK mirroring interop JobState · `phase?` (preflight/embedding/candidate/synthesis/critic) · `progress_completed`/`progress_total` · `error_code?`/`error_category?`/`error_retryable?` (mirror EngineError; never message) · `requested_by?` (account or token id) · `created_at`/`updated_at`/`started_at?`/`finished_at?`. Companion **job_events** (U0): `job_id` FK · `sequence` · `phase` · `code` · `ts` — backs the E3-5 append-only live log.
+- **jobs** (U0): `id` PK (`job_<ulid>`, the id clients poll — Q7) · `project_id` · `kind` ('add_source','preflight','integrate','approve_taxonomy','approve_cluster','regenerate_cluster','compile') · `state` CHECK mirroring `okc.JobState` · `phase?` (preflight/embedding/candidate/synthesis/critic) · `progress_completed`/`progress_total` · `error_code?`/`error_category?`/`error_retryable?` (mirror EngineError; never message) · `requested_by?` (account or token id) · `created_at`/`updated_at`/`started_at?`/`finished_at?`. Companion **job_events** (U0): `job_id` FK · `sequence` · `phase` · `code` · `ts` — backs the E3-5 append-only live log.
 - **curator_decisions** (U0 audit, produced by U4/U3 — append-only): `id` PK · `project_id` · `account_id` FK · `curator_id` (label sent to core) · `decision_kind` CHECK IN ('approve_cluster','regenerate_cluster','approve_taxonomy') — enum-constrained so **no winner-select row is representable** (C3) · `target_ref?` · `proposal_hash?` · **`critic_hash?`** · **`taxonomy_hash?`** (all three `HashBindings`, verifier LOW #2) · `payload_json` (serialized `CuratorDecision`) · `core_op` · `core_job_id?` FK → jobs · `created_at`. No UPDATE/DELETE (convention + optional deny trigger).
 - **serving_publications** (U5): `project_id` PK/FK · `compiled_vault_path` (abs) · `bound_integration_plan_id` · `bound_corpus_hash` · `bound_taxonomy_hash` · `status` CHECK IN ('offline','live','stale') · `published_at?` · `published_by?` (curator_id label).
 
@@ -169,23 +183,36 @@ Single WAL file. Owners in parentheses. `hashed@rest` marks secret-at-rest colum
 
 Composed 1:1 from okc-core `ClusterTaskOutput{proposal: SynthesisProposal, critic: CriticReport}`, enriched with okc-web gate/derived fields. Every field is populated from real engine output (`engine.clusters()` + `engine.taxonomy()`) — no placeholder/mock (C3/C4 mandate).
 
-```rust
-struct ClusterReviewView {
-    cluster_id: String,
-    title: String,                          // TaxonomyCluster.title (joined from taxonomy)
-    proposal_hash: String,                  // SynthesisProposal.proposal_hash — the hash the decision binds to
-    revision: u32,
-    sections: Vec<SynthesisSectionDto>,     // {section_id, heading, markdown_body, evidence[]}  -> Synthesis tab
-    related_links: Vec<RelatedLinkDto>,     // {kind, target_cluster_id, evidence[]}
-    omission_candidates: Vec<OmissionCandidateDto>, // dispositions where kind==OmissionProposed -> Omission tab
-    contradictions: Vec<ContradictionSetDto>,       // read-only, no winner -> Contradictions tab
-    findings: Vec<CriticFindingDto>,        // {finding_id, severity(Minor|Major|Critical), kind, message, evidence[]}
-    gate: GateVerdict,                      // derived by DecisionGate: blocking counts + approvable flag
-    approval_state: ClusterApprovalState,   // {Pending|Approved|Regenerating|Stale}
-}
-struct ContradictionClaimDto  { claim_id, rendered_claim, observed_at: Option<String>, context, evidence: Vec<SectionEvidenceDto> } // both sides preserved
-struct SectionEvidenceDto     { document_id, block_id, content_hash }   // provenance for HoverCard
-struct OmissionCandidateDto   { key: String /* "{document_id}:{target_id}" */, target_kind, content_hash }
+```python
+class ClusterReviewView(BaseModel):
+    cluster_id: str
+    title: str                                       # TaxonomyCluster.title (joined from taxonomy)
+    proposal_hash: str                               # SynthesisProposal.proposal_hash — the hash the decision binds to
+    revision: int
+    sections: list[SynthesisSectionDto]              # (section_id, heading, markdown_body, evidence[])  -> Synthesis tab
+    related_links: list[RelatedLinkDto]              # (kind, target_cluster_id, evidence[])
+    omission_candidates: list[OmissionCandidateDto]  # dispositions where kind==OmissionProposed -> Omission tab
+    contradictions: list[ContradictionSetDto]        # read-only, no winner -> Contradictions tab
+    findings: list[CriticFindingDto]                 # (finding_id, severity(Minor|Major|Critical), kind, message, evidence[])
+    gate: GateVerdict                                # derived by DecisionGate: blocking counts + approvable flag
+    approval_state: ClusterApprovalState             # Pending|Approved|Regenerating|Stale
+
+class ContradictionClaimDto(BaseModel):  # both sides preserved
+    claim_id: str
+    rendered_claim: str
+    observed_at: Optional[str]
+    context: str
+    evidence: list[SectionEvidenceDto]
+
+class SectionEvidenceDto(BaseModel):     # provenance for HoverCard
+    document_id: str
+    block_id: str
+    content_hash: str
+
+class OmissionCandidateDto(BaseModel):
+    key: str                             # "{document_id}:{target_id}"
+    target_kind: str
+    content_hash: str
 ```
 
 ---
@@ -194,19 +221,18 @@ struct OmissionCandidateDto   { key: String /* "{document_id}:{target_id}" */, t
 
 `NoteProvenanceView` fuses non-mutating `explain` + `verify` + owner labels + the immutable `.okc/` contradiction index. Post-compile serving is self-contained (no live U4 dependency).
 
-```rust
-struct NoteProvenanceView {
-    note: RelPath,
-    verify: VerificationView,               // engine.verify -> {valid, artifact_path, manifest, per_file: Vec<VerifyCheckRowDto>}
-    provenance: ProvenanceView,             // engine.explain -> ProvenanceRecord {record_id, kind, output_path, output_hash,
-                                            //   integration_plan_id, cluster_id, proposal_hash, critic_hash, approval_hash,
-                                            //   evidence: Vec<SectionEvidence>, source_document}
-    lineage: LineageGraphDto,               // nodes: source-notes -> cluster/synthesis -> compiled note; edges with evidence
-    contradictions: Vec<ContradictionViewDto>, // from .okc/integration-plan.json; both sides, NO winner control
-    owner_labels: OwnerLabelMap,            // SourceId/DocumentId -> owner_display_name (from U3 SourceRegistry; decorative)
-    manifest: ManifestSummaryDto,           // CompiledVaultManifest {integration_plan_id, corpus_hash, taxonomy_hash, files[]}
-    serving_status: ServingStatusDto,       // Live/Offline/Stale (E5-S5)
-}
+```python
+class NoteProvenanceView(BaseModel):
+    note: RelPath
+    verify: VerificationView                # engine.verify -> (valid, artifact_path, manifest, per_file: list[VerifyCheckRowDto])
+    provenance: ProvenanceView              # engine.explain -> ProvenanceRecord (record_id, kind, output_path, output_hash,
+                                            #   integration_plan_id, cluster_id, proposal_hash, critic_hash, approval_hash,
+                                            #   evidence: list[SectionEvidence], source_document)
+    lineage: LineageGraphDto                # nodes: source-notes -> cluster/synthesis -> compiled note; edges with evidence
+    contradictions: list[ContradictionViewDto]  # from .okc/integration-plan.json; both sides, NO winner control
+    owner_labels: OwnerLabelMap             # SourceId/DocumentId -> owner_display_name (from U3 SourceRegistry; decorative)
+    manifest: ManifestSummaryDto            # CompiledVaultManifest (integration_plan_id, corpus_hash, taxonomy_hash, files[])
+    serving_status: ServingStatusDto        # Live/Offline/Stale (E5-S5)
 ```
 `verify` = internal-consistency proof, NOT publisher-authenticity (NFR-DET-1, surfaced as a permanent callout). Provenance is file-granular (not span-level).
 
@@ -252,12 +278,12 @@ Every FR (FR-AUTH-1..4, FR-UP-1..4, FR-INT-1..8, FR-SRV-1..3, NFR-DET-1) maps to
 
 | Epic | Unit | Backend module(s) | Frontend wiring (U6) | Screens |
 |---|---|---|---|---|
-| E1 auth/RBAC | U1 (+U0 authz) | `auth`, `shared::authz` | login/session/error-interceptor hooks | E1-1..E1-5 |
+| E1 auth/RBAC | U1 (+U0 authz) | `auth`, `shared.authz` | login/session/error-interceptor hooks | E1-1..E1-5 |
 | E2 upload/tokens | U2 | `upload` | token console + `/u/[token]` upload hooks | E2-1..E2-5 |
-| E3 orchestration | U3 (+U0 adapter/queue) | `orchestration`, `adapter`, `adapter::queue`, `shared::jobs` | project/overview/sources/integration polling | E3-1..E3-6 |
-| E4 review | U4 | `review`, `shared::audit` | taxonomy/cluster/gate + decision mutations | E4-1..E4-4 |
+| E3 orchestration | U3 (+U0 adapter/queue) | `orchestration`, `adapter`, `adapter.queue`, `shared.jobs` | project/overview/sources/integration polling | E3-1..E3-6 |
+| E4 review | U4 | `review`, `shared.audit` | taxonomy/cluster/gate + decision mutations | E4-1..E4-4 |
 | **E5 serving** | **U5** | **`serving`** | compiled tree/note, provenance, serving status, mcp-contract hooks | E5-1..E5-4 + machine API |
-| (cross) frontend | U6 | `web` (Next.js) | `apiClient`, `okcErrorMap`, `queryKeys`, `useJobPolling` | all |
+| (cross) frontend | U6 | `web` (React + Vite SPA) | `apiClient`, `okcErrorMap`, `queryKeys`, `useJobPolling` | all |
 | (cross) foundation | U0 | `adapter`, `shared` | `okcErrorMap` mirror, `useJobPolling` | — |
 
 ---
@@ -267,17 +293,17 @@ Every FR (FR-AUTH-1..4, FR-UP-1..4, FR-INT-1..8, FR-SRV-1..3, NFR-DET-1) maps to
 The verifier verdict was `consistency_ok: false`; all listed corrections are applied in these artifacts:
 1. **[HIGH] preflight** added to `OkcEngine`.
 2. **[HIGH] status()** added returning `StatusView{checkpoint, integration}` (U3 gets `IntegrationStatus` in one reserving call).
-3. **[HIGH] error boundary** — U3/U4/U5 signatures standardized on `EngineError`; no `okc_interop::OkcError` past `adapter` (ADR-0002).
-4. **[HIGH] Role** — standardized `Role::{Admin, Contributor}`; dropped `Curator`/`UploadAgent`; upload modeled as `Principal::UploadToken`.
-5. **[HIGH] create/open split** in the trait to mirror interop.
-6. **[MED] AuthContext** — U0 owns canonical `{principal, role}` + extractor; U1 supplies the resolver; `account_id`/`curator_label`/`session_id_hash` folded into `Principal::Admin`.
-7. **[MED] UploadContext** = the payload of `Principal::UploadToken` (single type).
+3. **[HIGH] error boundary** — U3/U4/U5 signatures standardized on `EngineError`; no `okc.OkcError` past `adapter` (ADR-0002).
+4. **[HIGH] Role** — standardized `Role.{Admin, Contributor}`; dropped `Curator`/`UploadAgent`; upload modeled as `Principal.UploadToken`.
+5. **[HIGH] create/open split** in the Protocol to mirror the bindings.
+6. **[MED] AuthContext** — U0 owns canonical `(principal, role)` + dependency; U1 supplies the resolver; `account_id`/`curator_label`/`session_id_hash` folded into `Principal.Admin`.
+7. **[MED] UploadContext** = the payload of `Principal.UploadToken` (single type).
 8. **[MED] job route** — one canonical `GET /api/projects/{id}/jobs/{jobId}`; E2-5 reuses the same `JobStore` snapshot via `/u/{token}/jobs/{jobId}`.
-9. **[MED] read-path policy** — only reserving/mutating ops (incl. `status`) go through the queue; non-reserving reads use the read-path clone.
+9. **[MED] read-path policy** — only reserving/mutating ops (incl. `status`) go through the queue; non-reserving reads use the read-path second `OkcClient`.
 10. **[MED] verify/explain DTOs** unified: `VerificationView` (verify), `ProvenanceView` (explain, == ProvenanceRecord).
 11. **[MED] SourceRegistry** — defined as the U3-owned `sources` table, written by U2, read by U5.
 12. **[LOW] HTTP mapping** extended with `ProjectInvalid`, `ArtifactSchemaUnsupported`, `PathUnsupported`, `OutputDurabilityUncertain` + safe default 500.
 13. **[LOW] curator_decisions** carries all three hash bindings; single owner = U0.
 14. **[LOW] naming** — `ProjectRef` (engine handle) vs `ProjectId` (SQLite PK) clarified; `NewProjectReq` (service DTO) → `CreateProjectSpec` (adapter).
 
-**Positive confirmations preserved:** CuratorDecision has exactly 3 variants, no winner-select (C3); authz-before-core and single-writer-as-sole-mutating-path are consistent; the interop schema-v2 guard-point is centralized in `adapter`.
+**Positive confirmations preserved:** CuratorDecision has exactly 3 variants, no winner-select (C3); authz-before-core and single-writer-as-sole-mutating-path are consistent; the binding schema-v2 guard-point is centralized in `adapter`.

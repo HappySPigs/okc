@@ -41,7 +41,7 @@
 | FR에 [코어]/[신규] 태그 + ①–⑤→FR 추적행렬 | Requirements | ✅ | requirements.md §4 태그, §10 행렬 | 5개 요구↔설계 연결 붕괴 |
 | 스토리 계획이 requirements 근거 + 방법론 Q1–Q7 사전 기록 | User Stories | ✅ | story-generation-plan.md + user-stories-assessment.md | 스토리가 요구와 무관 생성 의심 |
 | 스토리별 추적(원요구+FR) + AC에 okc-core 제약 내장 + 정/역 추적행렬 | User Stories | ✅ | stories.md Traceability 라인 + 역 FR→story 맵 | orphaned 결정 → 연결 미완 |
-| Requirements 아키텍처 결정(Q8=A Rust+interop, Q7=A conflict)이 스토리/페르소나에 실제 반영 | User Stories | ✅ | E4-S2 typed DTO, Epic E4 헤더 + personas P1 | 전파 주장 미증명 |
+| Requirements 아키텍처 결정(Q8=A FastAPI+okc 바인딩[ADR-0025 rebase], Q7=A conflict)이 스토리/페르소나에 실제 반영 | User Stories | ✅ | E4-S2 typed DTO, Epic E4 헤더 + personas P1 | 전파 주장 미증명 |
 | 출력을 실제로 바꾼 AI critic/refinement 루프 증거(one-shot 아님) | User Stories | ✅ | stories.md Finalize + audit.md 10개 수정 → coverage_ok=true | C1의 최강 authenticity 신호 붕괴 |
 | append-only 시간순 audit(원문 입력·응답·게이트·run ID) | Cross-cutting | ✅ | audit.md 한국어 원문·승인·run ID(wf_...) | 반복/협업 증명 불가 |
 | **Application Design 산출물이 디스크에 실재 + 화면→스토리ID(E1–E5) 매핑** | Application Design | 🔴 | application-design/** 가 비어있는데 state line 8/audit는 ui-screens.md 생성 주장. **조치: application-design/ui-screens.md에 화면→스토리ID 행렬(특히 E4 review·E5 provenance) 랜딩 후 stories.md 유예 매핑 정리** | state/audit가 있다는 스테이지를 repo가 못 보여줌 → 날조된 진행으로 읽혀 C1 직격 |
@@ -83,7 +83,7 @@
 | un-waivable Major/Critical + Minor-waivable(+rationale) + regenerate-only가 gated 결정 표면(approve_taxonomy / approve_cluster(omission_rationales, minor_waivers) / regenerate_cluster)으로 구현, blocking 잔존 시 APPROVAL_REQUIRED로 compile 거부 | User Stories→Code Gen | 🟡 | E4-S2/S3/S4/S6+C-2. **조치: 실제 okc-core 승인 호출 + APPROVAL_REQUIRED compile-거부 게이트 wiring** | 없으면 일반 approve/reject로 보여 구조 차별 미검증 |
 | hash-bound freeze-then-run + stale-invalidation을 continuous-sync 대비 구조 대조로 + code-verified(소스/설정 변경 시 하위 승인 stale, 재승인까지 compile 차단) | User Stories→Code Gen | 🟡 | E3-S5, E2-S5, E4 stale AC + C-4. **조치: stale-on-change 구현·시연, E3 orchestration UI에 노출** | prose만이면 평범한 원클릭 통합으로 보임 |
 | auth-less 엔진 위 RBAC trust boundary를 구조 차별로(okc-web가 게이팅 100% 소유, curator_id=미검증 라벨) + code-verified(mutating 호출은 okc-core 호출 前 403) | User Stories→Code Gen | 🟡 | E1-S3('okc-core NOT called at all'), E1-S4 + C-1. **조치: pre-core RBAC 게이트 구현 + 데모 403; okc-core엔 auth 없음을 차별성 문서에 명시** | 'permission-managed'가 일반 로그인으로 붕괴(요구 (1)+(2)) |
-| adapter-not-policy-owner(ADR-0002) + typed-DTO 직접 링크(interop schema v2, CLI shell-out/FFI round-trip 아님)를 의도적 구조 선택으로 문서화 + 스키마 버전 검증 | Requirements/NFR Design→Code Gen | 🟡 | Q8/C-7 + capability §4 + E4-S2 AC. **조치: 직접-링크 백엔드 구현 + schema-version-reject 유지, 차별성 문서에 명시** | shell-out wrapper면 일반 프런트로 보여 미인정 |
+| adapter-not-policy-owner(ADR-0002) + typed-DTO(Pydantic) okc 바인딩 in-process import(interop schema v2, 별도 프로세스/CLI shell-out 아님)를 의도적 구조 선택으로 문서화 + 스키마 버전 검증 | Requirements/NFR Design→Code Gen | 🟡 | Q8/C-7 + capability §4 + E4-S2 AC. **조치: in-process 바인딩 import 백엔드 구현 + schema-version-reject 유지, 차별성 문서에 명시** | shell-out wrapper면 일반 프런트로 보여 미인정 |
 | provenance + verify()/explain()를 serving 차별로: per-file ProvenanceRecord + verify=내부일관성 증명(발행자 진위 아님)임을 화면에 명시, provenance 버리는 RAG 대비 | User Stories→App Design(E5 'wow')→Code Gen | 🟡 | E5-S3+NFR-DET-1. state에 focal 지정. **조치: provenance/verify 뷰 구축, .okc/ 감사 envelope 노출, 내부일관성-not-진위 명시** | prose만이면 auditable 차별 불가시, C3·C5 고가치 화면 상실 |
 | okc-mcp serving CONTRACT + re-embedding 경계(okc-core 임베딩 ephemeral → consumer가 re-embed)를 end-to-end RAG 번들 도구와 구별되는 구조 경계로 문서화 | User Stories→App Design/Code Gen | 🟡 | E5-S4 + capability §5-10 + FR-SRV-3. **조치: read-only discovery/contract 엔드포인트 구현 + re-embed 요구 문서화; 'source만 serve, RAG는 별 tier'를 의도 구조로** | 프레이밍 없으면 미완성 제품으로 읽힘 |
 | 구조적 차별점들이 **screenshots/ 또는 result/** 캡처에 가시(주장 아닌 SEE) | Build & Test | ⏳ | screenshots/·result/·코드 없음. **조치: E4 review·E5 provenance·403 게이트 캡처, README 차별성 주장과 매칭** | code/design 확인 요구 → 데모 없으면 일반 upload+merge 웹앱 취급 |
@@ -98,12 +98,12 @@
 |------|------|------|-----------|---------------|
 | **repo 루트에 screenshots/ 또는 result/ 존재 + 실제 실행 화면 캡처(목업/Figma 아님)** | Build & Test | 🔴 | 둘 다 없고 캡처 스케줄 없음. **조치: Code Gen 후 앱 실행·실제 캡처 커밋, 'demo screenshots 커밋'을 Build&Test exit 산출물로 + Workflow Planning에 명시** | 시연 스크린샷은 하드 MUST → 코드 품질 무관 C4 즉시 실패 |
 | 스크린샷이 두 focal flow 커버: E4 conflict/critic review(severity 배지·Minor waive vs un-waivable regenerate·APPROVAL_REQUIRED 차단·보존된 contradiction) + E2 토큰 업로드(토큰 발급→업로드→accept/reject 피드백) | App Design + Build & Test | 🔴 | §9 map이 demo-critical로 표시하나 화면 없음. **조치: App Design이 정확히 이 화면 생성, Build&Test가 캡처** | E4는 데모 중심 + 구조 차별점; 미시연 시 C4·C3 최강 증거 상실 |
-| 백엔드 진입점 존재·부팅: main()+router+bind 주소 있는 axum 바이너리 크레이트 | Code Generation | ⏳ | .rs/Cargo.toml 전무. 스택=Rust+axum+okc-interop(Q8). **조치: Code Gen에서 서비스 바이너리 생성** | 부팅 경로 없으면 판정자 실행 불가, C4 상한 낮음 |
-| 프런트 진입점 실행: Next.js가 build·serve(next build/dev) + 데모 화면 라우트 | Code Generation | ⏳ | package.json/*.tsx 없음. 스택=Next.js+Tailwind+shadcn/Tremor. **조치: 라우팅된 화면 생성** | 실행 UI 없으면 필수 스크린샷 불가 |
-| **양 스택 deps 선언 + lockfile 커밋**: Cargo.toml+Cargo.lock, package.json+JS lockfile | Code Generation | ⏳ | 전무. **조치: 매니페스트+lockfile 커밋** | C4가 'lockfile' 명시 → 없으면 재현 불가 직접 감점 |
-| okc-core를 특정 commit에 pin + pinned 빌드 실제 사용(바인딩 미배포 → source 빌드) | Infrastructure + Build & Test | 🟡 | NFR-PORT-1가 의도만 진술, pin 매니페스트/CI 없음. **조치: commit pin(submodule/rev) + source 빌드 실체화** | interop 직접 링크라 unpinned/unbuildable okc-core = 빌드 실패 |
-| 양 스택(Rust 백엔드 + Next.js 프런트)을 build·test하는 CI 설정 파일 | Build & Test | 🔴 | CI 파일 없음(NFR-PORT-1 의도만). **조치: CI 워크플로를 Build&Test exit 산출물로 추가** | CI는 명시적 C4 서브체크 → 없으면 빌드 건전성 미검증 신호 |
-| 백엔드 핸들러가 okc-interop 링크 + **실제** okc-core 함수 호출(add_source, approve_taxonomy, approve_cluster, regenerate_cluster, compile, verify, explain) — mock/하드코딩 응답 아님 | Code Generation | ⏳ | typed-DTO 경로 명세(§0 C-5/C-7, E4-S2)되나 코드 없음. **조치: 각 핸들러를 interop에 wiring, 호출이 엔진 도달 확인(fake 아님)** | okc-core가 fake면 플랫폼 존재 이유가 스텁 |
+| 백엔드 진입점 존재·부팅: FastAPI app(uvicorn entrypoint, 1 worker: `uvicorn app.main:app`) | Code Generation | ⏳ | `.py`/`pyproject.toml` 전무. 스택=FastAPI+okc 바인딩(Q8, ADR-0025 rebase). **조치: Code Gen에서 서비스 앱(uvicorn 엔트리포인트) 생성** | 부팅 경로 없으면 판정자 실행 불가, C4 상한 낮음 |
+| 프런트 진입점 실행: React+Vite SPA build·serve(`vite build`/`vite dev`) + 데모 화면 라우트 | Code Generation | ⏳ | `package.json`/`*.tsx` (Vite) 없음. 스택=React+Vite SPA+Tailwind+shadcn/Tremor. **조치: 라우팅된 화면 생성** | 실행 UI 없으면 필수 스크린샷 불가 |
+| **양 스택 deps 선언 + lockfile 커밋**: `pyproject.toml`+`uv.lock`, `package.json`+`package-lock.json` | Code Generation | ⏳ | 전무. **조치: 매니페스트+lockfile 커밋** | C4가 'lockfile' 명시 → 없으면 재현 불가 직접 감점 |
+| okc-core를 특정 commit에 pin + pinned 빌드 실제 사용(바인딩=로컬 maturin/pyo3 패키지 → source 빌드) | Infrastructure + Build & Test | 🟡 | NFR-PORT-1가 의도만 진술, pin 매니페스트/CI 없음. **조치: commit pin(submodule/rev) + source 빌드(maturin) 실체화** | okc 바인딩(maturin)이라 unpinned/unbuildable okc-core = 빌드 실패 |
+| 양 스택(FastAPI 백엔드 + React/Vite 프런트) CI 설정 파일 | Build & Test | 🔴 | CI 파일 없음(NFR-PORT-1 의도만). **조치: CI 워크플로를 Build&Test exit 산출물로 추가** | CI는 명시적 C4 서브체크 → 없으면 빌드 건전성 미검증 신호 |
+| 백엔드 핸들러가 okc Python 바인딩 import + **실제** okc-core 함수 호출(add_source/approve_taxonomy/approve_cluster/regenerate_cluster/compile/verify/explain — mock 금지) | Code Generation | ⏳ | typed-DTO 경로 명세(§0 C-5/C-7, E4-S2)되나 코드 없음. **조치: 각 핸들러를 okc 바인딩에 wiring, 호출이 엔진 도달 확인(fake 아님)** | okc-core가 fake면 플랫폼 존재 이유가 스텁 |
 | §9 end-to-end가 하나의 연결 flow로 코드 실행: 토큰 업로드→admin login/create-project/freeze→run 루프(provider+remote-disclosure consent)→taxonomy approve→cluster synthesis/critic→compile(no-clobber)→read-only serve | Build & Test | ⏳ | §9 + §9 map(22 Must) 완전 명세. **조치: Build&Test에서 전 체인 실행 시연** | 어느 한 곳 단절 시 미완성 구현으로 읽힘 |
 | RBAC 게이트가 **실행 중** 미들웨어로 강제: contributor/미인증의 모든 mutating op가 okc-core 호출 前 403/401 | Code Generation | ⏳ | E1-S3 + C-1(코어 auth 없음). **조치: 실제 미들웨어 게이트 구현** | 요구 (2)='admin만 통합'이 okc-web 단독 책임 → 비작동 시 헤드라인 기능 미동작 + C6 감점 |
 | compile-거부 게이트(E4-S6)가 실제 강제 코드 경로: 미해결 Major/Critical 또는 미승인 cluster로 compile 시 APPROVAL_REQUIRED류 코드 + 미해결 항목 리스트 | Code Generation | ⏳ | E4-S6 AC + FR-INT-5. **조치: 서버 게이트로 강제(UI copy만 아님)** | 요구 (3) human-review 중심 → 스텁이면 마퀴 동작이 가짜 |
@@ -111,7 +111,7 @@
 | read-only serving이 실제 compiled-vault 내용 반환: knowledge/+legacy/+.okc/ list+body, write verb=405, path-escape/nonexistent=404; verify()/explain()=구조화 integrity+provenance | Code Generation | ⏳ | E5-S2/S3 AC. **조치: 실제 compiled 디렉터리 serving 엔드포인트 + 실제 compiled-vault fixture** | 요구 (5) serving 계약 비작동 시 actually-works + okc-mcp 차별 약화 |
 | README가 스크린샷이 시연하는 기능과 정확히 일치(과대주장 없음), okc-mcp RAG=contract-only/deferred 명시 | Build & Test | 🔴 | README 없음. **조치: 시연 화면=기능 리스트인 README 작성 + okc-mcp contract-only 명시** | 스크린샷↔README 정합 서브체크 위반 = 직접 감점 |
 | 22 Must-story 핵심 경로에 TODO/스텁/빈 함수 없음(특히 E4 approve_cluster/regenerate, E5 verify/explain) | Code Generation + Build & Test | ⏳ | MoSCoW에 22 Must 열거. **조치: 데모 캡처 전 모든 Must 경로 코드리뷰** | 핵심 경로 스텁 = 쉽게 발견되는 감점 |
-| Application Design이 구체 화면 인벤토리 + 백엔드 모듈/okc-interop 경계 산출(진입점→실제 구현 경로를 코딩 前 설계) | App Design + Units Generation | 🔴 | state line 8은 'running' 주장하나 디렉터리 없음. **조치: 설계 산출물 랜딩 + state 정합** | design→code 추적성 없으면 C4 완성도 + C1 연결성 붕괴 |
+| Application Design이 구체 화면 인벤토리 + 백엔드 모듈/okc 바인딩 경계 산출(진입점→실제 구현 경로를 코딩 前 설계) | App Design + Units Generation | 🔴 | state line 8은 'running' 주장하나 디렉터리 없음. **조치: 설계 산출물 랜딩 + state 정합** | design→code 추적성 없으면 C4 완성도 + C1 연결성 붕괴 |
 
 ### C5 — 온보딩 / 사용성
 
@@ -119,9 +119,9 @@
 
 | 점검 | 단계 | 상태 | 근거·조치 | 미준수 리스크 |
 |------|------|------|-----------|---------------|
-| README/quickstart로 양 tier(Rust axum+interop 백엔드 + Next.js 프런트) 설치·실행: deps 선언·lockfile·dev-server 명령·포트 | Code Gen; Build&Test 검증 | ⏳ | 스택 고정되나 코드/README 없음. **조치: Code Gen에서 tier별 install/run README + lockfile 커밋** | '시작 경로' 서브체크 0점 + C4 빌드 견인 |
+| README/quickstart로 양 tier(FastAPI 백엔드 + React/Vite 프런트) 설치·실행: deps 선언·lockfile·dev-server 명령·포트 | Code Gen; Build&Test 검증 | ⏳ | 스택 고정되나 코드/README 없음. **조치: Code Gen에서 tier별 install/run README + lockfile 커밋** | '시작 경로' 서브체크 0점 + C4 빌드 견인 |
 | 필요한 자격증명/계정 구체 명시: AI embedding/synthesis provider env-var **이름**(UI에 비밀값 금지)과 운영자 서버측 제공법 | Infra/NFR Design; README 표면화 | 🟡 | 메커니즘(A-2, E3-S4)은 있으나 어떤 env var를 세팅해야 하는지 통합 리스트 없음. **조치: Infra Design + README 'needed keys'에 구체 env-var 이름 열거** | provider 설정에서 막힘 → 시작 실패 |
-| pinned okc-core fetch/빌드 안내(바인딩 미배포, source 빌드)로 clean machine에서 interop 링크 가능 | Infra Design; Build&Test CI | 🟡 | NFR-PORT-1/C-7이 요구만, 구체 스텝 없음. **조치: commit pin+빌드 명령 문서화 + CI wiring** | 의존성 빌드 불가 → 실행·온보딩 차단 |
+| pinned okc-core fetch/빌드 안내(바인딩=로컬 maturin/pyo3 패키지, source 빌드)로 clean machine에서 okc 바인딩 링크 가능 | Infra Design; Build&Test CI | 🟡 | NFR-PORT-1/C-7이 요구만, 구체 스텝 없음. **조치: commit pin+빌드 명령(maturin) 문서화 + CI wiring** | 의존성 빌드 불가 → 실행·온보딩 차단 |
 | first-run 경로가 작동하는 admin login + contributor가 계정 없이 upload URL+token 획득(시드/데모 데이터 문서화) | Code Gen(시드+문서) | 🔴 | E1-S2 MoSCoW 노트 '시드 대체 가능'만 힌트, 강제 스토리/문서 없음. **조치: 시드 계정 + '첫 upload token 발급' 스텝 문서화** | 빈 시스템에 admin 자격 없음 → 즉시 막힘 |
 | launch 후 핵심 시나리오 매뉴얼(upload→login→create→freeze→run→review→compile→serve), 데모 시나리오 미러 | Code Gen(README), App Design 근거 | 🟡 | §9 + §9 map 우수 원재료이나 screen-referenced 실행 매뉴얼 아님. **조치: §9를 스크린샷 포함 단계별 walkthrough로 변환** | requirements의 서사는 usable walkthrough 아님 |
 | 트러블슈팅이 OkcError code/category를 구체 사용자 액션에 매핑: 최소 PROJECT_BUSY(retry)·APPROVAL_REQUIRED(compile 차단)·업로드 거부(format/size/path-symlink/non-Markdown) | Functional Design(카탈로그); Code Gen(문서) | 🟡 | 코드는 열거(§0, E3-S7, E4-S6, E2-S4/S6)되나 사용자향 메시지/트러블슈팅 카탈로그 없음. **조치: code→user-message→next-action 카탈로그** | raw 코드만 노출 → 트러블슈팅·피드백 손상 |
@@ -142,18 +142,18 @@
 
 | 점검 | 단계 | 상태 | 근거·조치 | 미준수 리스크 |
 |------|------|------|-----------|---------------|
-| epic-정렬 모듈/컴포넌트 맵: Rust 백엔드↔Next.js 프런트 분리 + 백엔드를 5개 관심사(E1 auth/RBAC·E2 upload+token·E3 orchestration·E4 review·E5 serving)로 분할(단일 monolith 핸들러 아님) | Application Design | 🔴 | requirements §8이 5 seam 열거·E1–E5 매핑 깔끔하나 application-design/ 없음(wf 시작만). **조치: ui-screens.md + E1–E5 keyed 백엔드 모듈/크레이트 맵 산출** | '코드 구조·모듈화' 명시 채점; 맵 없으면 undifferentiated blob |
-| 모든 okc-core/interop 호출을 ONE 어댑터 모듈에 격리(typed-DTO interop schema v2 경계 소유, 스키마 버전 검증·미지원은 OkcError 코드로 reject, pinned commit 중앙화) | Application Design | 🟡 | §0 C-5/C-7 + ADR-0002 + E4-S2 + NFR-PORT-1. 격리 설계 없음. **조치: interop-adapter 단일 모듈 + commit pin 단일 위치 지정** | 0.3.0 pre-stable; 호출 누출 시 re-pin이 전역 파급 |
+| epic-정렬 모듈/컴포넌트 맵: FastAPI(Python) 백엔드↔React/Vite 프런트 분리 + 백엔드를 5개 관심사(E1 auth/RBAC·E2 upload+token·E3 orchestration·E4 review·E5 serving)로 분할(단일 monolith 핸들러 아님) | Application Design | 🔴 | requirements §8이 5 seam 열거·E1–E5 매핑 깔끔하나 application-design/ 없음(wf 시작만). **조치: ui-screens.md + E1–E5 keyed 백엔드 모듈/패키지 맵 산출** | '코드 구조·모듈화' 명시 채점; 맵 없으면 undifferentiated blob |
+| 모든 okc-core/바인딩 호출을 ONE 어댑터 모듈에 격리(typed-DTO interop schema v2 경계 소유, 스키마 버전 검증·미지원은 OkcError 코드로 reject, pinned commit 중앙화) | Application Design | 🟡 | §0 C-5/C-7 + ADR-0002 + E4-S2 + NFR-PORT-1. 격리 설계 없음. **조치: okc-바인딩 어댑터 단일 모듈 + commit pin 단일 위치 지정** | 0.3.0 pre-stable; 호출 누출 시 re-pin이 전역 파급 |
 | 인가를 단일 중앙 미들웨어/guard로 강제(모든 okc-core 호출 前), 모든 mutating 엔드포인트(project create, add_source, provider/consent, approve_*, regenerate_cluster, compile, serving publish, token issue/revoke)가 통과 — per-handler ad-hoc 아님 | Application Design | ✅ | FR-AUTH-3 + E1-S3(401/403 AC + mutating-op 전체 리스트) + C-1. 스펙 완전. **조치(Code Gen): scatter 아닌 단일 guard 구현** | 코어가 게이팅 0 → 게이트 안 된 엔드포인트 1개 = 보안+유지보수 함정 |
 | 재사용 입력검증 모듈이 적대적 업로드 차단(format allowlist zip/tar.zst, size cap, zip-bomb/expansion guard, path-traversal '../', absolute path, symlink entry, Markdown-only)하고 실패 시 바이트 미착지·add_source 미호출 보장 | Application Design | ✅ | E2-S4 테스트가능 AC. **조치(Code Gen): 업로드 엔드포인트 재사용 단일 검증 모듈, OkcError 코드 reject** | 업로드=적대적 입력면; inline/중복 시 신규 경로에서 우회 |
-| 비밀번호=salted one-way hash만, session/upload token=hash/secret-ref만, 토큰 1회 표시·이후 read는 masked — 평문 자격증명 미저장 | NFR Design | ✅ | NFR-SEC-1 + E1-S5 + E2-S1. **조치(Code Gen): 실제 KDF(argon2/bcrypt), 평문 미저장 검증** | '시크릿 관리' 명시; 원시 토큰 저장 시 스펙이 미이행 약속 |
+| 비밀번호=salted one-way hash만, session/upload token=hash/secret-ref만, 토큰 1회 표시·이후 read는 masked — 평문 자격증명 미저장 | NFR Design | ✅ | NFR-SEC-1 + E1-S5 + E2-S1. **조치(Code Gen): 실제 KDF(argon2id/`argon2-cffi`), 평문 미저장 검증** | '시크릿 관리' 명시; 원시 토큰 저장 시 스펙이 미이행 약속 |
 | AI provider 자격증명을 서버측 env-var **이름**으로만 참조; 비밀값 입력/echo/저장 안 함(E3-S4 provider-selection 엔드포인트에서 강제) | Infrastructure Design | ✅ | A-2 + E3-S4 AC. **조치: env-var provisioning + names-only .env.example 커밋, Code Gen이 비밀값 입력 reject** | 하드코딩 provider 키=C6 canonical auto-fail; 키 리터럴 grep이 비어야 함 |
 | 설정분리 매니페스트가 모든 배포별 값 외부화 — local absolute landing/output path, source cap(=10), okc-core commit pin, provider env-var 이름, serving root — env/config로, 소스 하드코딩 없음 | Infrastructure Design | 🟡 | 값들이 requirements 전반(FR-UP-4, E3-S6, C-3, NFR-PORT-1, A-2)에 참조되나 외부화 통합 없음. **조치: 단일 config 매니페스트** | '설정 분리' 명시; 하드코딩 절대경로=비이식성, 첫 clone에서 막힘 |
 | 구조화 로깅/관측 NFR이 log format·levels·request/job correlation id 정의, 모든 에러 로깅이 OkcError{code,category} keyed(message-string 파싱 금지), PROJECT_BUSY 별도 처리 | NFR Requirements | 🟡 | NFR-OBS-1 하나 + FR-INT-8/E3-S7/PROJECT_BUSY. audit.md도 '보강 필요' 자인. **조치: 1급 구조화-로깅/관측 NFR 추가, NFR Design이 format/levels/correlation 상세** | 명시 서브체크이자 최약 영역; 관측 요구/설계 부재 = 직접 감점 |
 | 직렬화 single-engine 통합의 job state 영속화 + 라이프사이클 이벤트 로깅으로, 멈춘/실패 수 분 job을 운영자가 진단 가능(사용자향 progress polling과 별개) | NFR Design | 🟡 | E3-S7(사용자향) + NFR-AVAIL-1/NFR-CONC-1(project.lock)이 접하나 운영자측 미설계. **조치: job-state 영속화 + 이벤트 로깅 명세** | 수 분 human-in-loop; job 관측 없으면 hung job 진단 불가(C6+C5) |
 | 큐레이터 결정(taxonomy 승인·cluster 승인·minor waiver·omission rationale·regenerate feedback)을 curator_id·rationale·timestamp와 함께 append-only 영속화(감사 가능 상태변경 이력) | Application Design | 🟡 | E1-S4·E4-S1·E4-S3가 결정 기록 명세하나 append-only store/timestamp 형태 미설계. **조치: 결정-감사 store 정의(audit.md append-only 패턴 미러)** | '누가 언제 무엇을 승인/waive했나' 답 없음 → 과거 통합 감사 불가 |
 | 단일 OkcError-code/category → HTTP-status + UI-copy 매핑 모듈(APPROVAL_REQUIRED, PROJECT_BUSY→retry, 401/403/404/405)로 일관 에러 처리, message-string 파싱 없음 | Application Design | 🟡 | FR-INT-8/E3-S7/E4-S2/E4-S6/E5-S2/E5-S3에 규칙 진술되나 단일 모듈 미설계. **조치: code→status/copy 매핑을 단일 테이블/모듈로 산출** | 흩어진 매핑=불일치 응답·취약; C6 구조·모듈화 훼손 |
-| 리포지토리에 커밋된 시크릿 없음: .env.example(이름만), 실제 env/자격증명 제외 .gitignore, 의존성 lockfile 커밋(Cargo.lock + package-lock/pnpm-lock)으로 재현·시크릿 위생 검증 가능 | Code Generation | ⏳ | 코드/빌드 없음. A-2·E1-S5·E2-S1이 정책 설정. **조치: .env.example·.gitignore·lockfile scaffold, 데모 전 secret scan** | C6 '시크릿 비하드코딩' + C4 lockfile 동시 실패; 커밋된 키=최악 발견 |
+| 리포지토리에 커밋된 시크릿 없음: .env.example(이름만), 실제 env/자격증명 제외 .gitignore, 의존성 lockfile 커밋(`uv.lock` + `package-lock.json`)으로 재현·시크릿 위생 검증 가능 | Code Generation | ⏳ | 코드/빌드 없음. A-2·E1-S5·E2-S1이 정책 설정. **조치: .env.example·.gitignore·lockfile scaffold, 데모 전 secret scan** | C6 '시크릿 비하드코딩' + C4 lockfile 동시 실패; 커밋된 키=최악 발견 |
 
 ---
 
@@ -178,7 +178,7 @@
 - **[C3]** **'기존 도구 대비 구조적 차별성' 섹션**(named 대안: Obsidian Publish/Sync, Notion/Confluence, LlamaIndex/Mem0, git-merge) + **differentiator→artifact→(future)module 행렬**.
 - **[C2]** 랜딩/대시보드/빈 화면에 문제 프레이밍 copy 요구.
 - **[C5]** checkpoint stepper(다음 액션만 노출), E4 자가설명(승자 선택 없음·un-waivable regenerate·Minor waive+rationale), 토큰 전용 업로드 화면의 **업로드 前** format/size/Markdown 안내, stale 경고, 장기 job progress/loading, **화면별 empty/loading/success/error 상태 매트릭스**, contributor 결과 조회(E2-S6 승격 고려), 화면 내 helper copy.
-- **[C6]** epic-정렬 백엔드 **모듈 맵**(격리된 okc-interop 어댑터 + 단일 authz guard + 단일 OkcError→HTTP 매핑 모듈 + 재사용 입력검증 모듈 + curator-decision append-only store).
+- **[C6]** epic-정렬 백엔드 **모듈 맵**(격리된 okc 바인딩 어댑터 + 단일 authz guard + 단일 OkcError→HTTP 매핑 모듈 + 재사용 입력검증 모듈 + curator-decision append-only store).
 - **[C1]** UI 방향(clean/minimal, E4·E5 focal 'wow') 결정을 산출물에 인코딩.
 
 ### 게이트 3 — Functional Design (per-unit)
@@ -191,7 +191,7 @@
 - **[C6]** job-state 영속화 + 라이프사이클 이벤트 로깅(운영자 진단).
 - **[C6]** **설정분리 매니페스트**(landing/output path, cap=10, commit pin, provider env-var 이름, serving root).
 - **[C4]** 전역 에러 핸들러 + OkcError 분기 형태 명세(401/403/404/405/APPROVAL_REQUIRED, PROJECT_BUSY=retry, message-string 파싱 금지).
-- **[C3·C6]** typed-DTO 직접-링크 결정 + 스키마 버전 검증 반영.
+- **[C3·C6]** typed-DTO okc 바인딩 직접 import(in-process) 결정 + 스키마 버전 검증 반영.
 - **[C6]** 비밀번호/토큰 해싱(실제 KDF) 설계 확정.
 
 ### 게이트 5 — Infrastructure Design (per-unit)
@@ -200,9 +200,9 @@
 - **[C6]** 설정분리 매니페스트 배포 세부(env/config 파일) 확정.
 
 ### 게이트 6 — Code Generation (per-unit, ALWAYS)
-- **[C4]** 백엔드 axum 진입점(main+router+bind) + 프런트 Next.js 진입점(라우트된 화면).
-- **[C4]** deps 선언 + **lockfile 커밋**(Cargo.lock + JS lockfile).
-- **[C4·C3]** 핸들러가 **실제 okc-interop** 호출(mock 아님): add_source/approve_taxonomy/approve_cluster/regenerate_cluster/compile/verify/explain.
+- **[C4]** 백엔드 FastAPI 진입점(uvicorn `app.main:app`, 1 worker) + 프런트 React+Vite 진입점(라우트된 화면).
+- **[C4]** deps 선언 + **lockfile 커밋**(`uv.lock` + `package-lock.json`).
+- **[C4·C3]** 핸들러가 **실제 okc 바인딩** 호출(mock 아님): add_source/approve_taxonomy/approve_cluster/regenerate_cluster/compile/verify/explain.
 - **[C4·C6]** **RBAC 게이트를 실행 미들웨어로**(okc-core 호출 前 403/401), 단일 guard.
 - **[C4·C3]** **compile-거부 게이트**(APPROVAL_REQUIRED, 미해결 항목 리스트) 서버 강제.
 - **[C4]** read-only serving이 실제 compiled-vault(knowledge/+legacy/+.okc/) 반환, write=405, escape=404, verify/explain 구조화.
@@ -236,12 +236,12 @@
 4. **Requirements에 독립 Problem Statement 추가**(WHOSE/WHAT/**WHEN**/**HOW-OFTEN**/status-quo 고통/how-solved) → README·전시 페이지에 verbatim 재사용. (C2의 명시 감점 3종 + 40%·60% 표면화.)
 5. **Application Design: ui-screens.md + 화면→스토리ID 행렬 + focal E4(자가설명, 승자 선택 없음)·E5(provenance) 화면 + 화면별 empty/loading/success/error 상태 매트릭스 + 화면 내 문제·안내 copy.** (C1·C4·C5 동시 — 데모 중심이자 최난해 개념.)
 6. **Application Design: 'named 도구 대비 구조적 차별성' 섹션 + differentiator→artifact→module 행렬** → README 미러. (C3의 '주장만=0점' 방지.)
-7. **Application Design: epic-정렬 백엔드 모듈 맵** — 격리 okc-interop 어댑터 + 단일 authz guard + 단일 OkcError→HTTP 매핑 + 재사용 입력검증 + curator-decision append-only store. (C6 구조·모듈화; 강력한 RBAC/시크릿 스펙이 착지할 구조.)
+7. **Application Design: epic-정렬 백엔드 모듈 맵** — 격리 okc 바인딩 어댑터 + 단일 authz guard + 단일 OkcError→HTTP 매핑 + 재사용 입력검증 + curator-decision append-only store. (C6 구조·모듈화; 강력한 RBAC/시크릿 스펙이 착지할 구조.)
 
 ### NFR / Infrastructure
 8. **NFR: 1급 구조화-로깅/관측 NFR 추가**(correlation id, code/category keyed) + job-state 영속화 + **설정분리 매니페스트**(paths/cap/commit-pin/provider env 이름). (C6 최약 영역 보강.)
 9. **Infrastructure: okc-core commit pin + source 빌드 스텝 + env-var 이름(.env.example names-only)** 문서화. (C4 재현 빌드 + C5 시작 경로.)
 
 ### Code Generation / Build & Test
-10. **Code Gen: 핸들러를 실제 okc-interop에 wiring**(mock 금지)로 §9 flow 구동, **RBAC-before-core 403 + APPROVAL_REQUIRED compile 게이트** 강제, `.gitignore`·`.env.example`·lockfile 커밋, 22 Must 경로 스텁 없음. (C4 핵심 + C6 시크릿/인가.)
+10. **Code Gen: 핸들러를 실제 okc 바인딩에 wiring**(mock 금지)로 §9 flow 구동, **RBAC-before-core 403 + APPROVAL_REQUIRED compile 게이트** 강제, `.gitignore`·`.env.example`·lockfile 커밋, 22 Must 경로 스텁 없음. (C4 핵심 + C6 시크릿/인가.)
 11. **Build & Test: §9 end-to-end 실행 + 실제 screenshots(E4·E2·E5·403) 캡처 → screenshots/**, README(기능=스크린샷, okc-mcp contract-only) + AI-DLC PROCESS 서사, secret scan. (C4 필수 스크린샷·C1 판정자 가독 서사·C2 README 문제.)

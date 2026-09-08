@@ -1,0 +1,19 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# okc-web runtime state (never commit the state DB or uploaded/compiled data)
+*.db
+*.db-wal
+*.db-shm
+projects/
+.maturin-build.log
+
+# build artifacts
+dist/
+build/
