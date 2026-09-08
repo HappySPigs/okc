@@ -54,7 +54,7 @@ evidence is attached to that SHA:
 
 The `okc-compiler` name on PyPI and npm MUST be revalidated immediately before
 any candidate publication. Registry credentials and publication steps belong
-in a separate reviewed, protected workflow; `.github/workflows/sdk-bindings.yml`
+in a separate reviewed, protected workflow; `.github/workflows/core-sdk-bindings.yml`
 is build-and-verification only and MUST remain unable to publish.
 The official registry JSON endpoints returned HTTP 404 for both names on
 2026-09-06; this observation is recorded in the

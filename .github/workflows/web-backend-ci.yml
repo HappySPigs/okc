@@ -1,16 +1,11 @@
 # Backend CI — okc-web (FastAPI + real okc binding).
-#
-# NOTE (monorepo integration): GitHub Actions reads workflows from the REPO-ROOT
-# `.github/workflows/`. This file lives in the okc-web module (AI-DLC module-scope
-# rule); to activate it in the monorepo, surface it at the repo root (copy or a
-# repo-root workflow with `paths: [okc-web/**, okc-core/**]`). It assumes okc-core
-# is available as a sibling checkout (this repo expects ../okc-core).
+# Monorepo root workflow: a single checkout provides okc-web/ and okc-core/ side by side.
 
 name: backend-ci
 
 on:
   push:
-    paths: ["okc-web/backend/**", "okc-core/**", "okc-web/.github/workflows/backend-ci.yml"]
+    paths: ["okc-web/backend/**", "okc-core/**", ".github/workflows/web-backend-ci.yml"]
   pull_request:
     paths: ["okc-web/backend/**", "okc-core/**"]
   workflow_dispatch: {}
@@ -22,17 +17,8 @@ jobs:
       run:
         working-directory: okc-web/backend
     steps:
-      - name: Checkout okc-web
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          path: okc-web
-
-      - name: Checkout okc-core (sibling)
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ github.repository_owner }}/okc-core   # adjust to the real okc-core repo
-          path: okc-core
-          # ref: <pinned okc-core commit>   # pin for reproducibility
 
       - uses: dtolnay/rust-toolchain@stable
       - name: Install uv

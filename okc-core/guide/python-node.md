@@ -57,7 +57,7 @@ npm run typecheck --prefix bindings/node
 
 wheel, sdist, root npm tarball과 platform addon tarball을 만드는 정확한 clean
 install 절차는
-[`sdk-bindings.yml`](https://github.com/dolgogae/okc/blob/main/.github/workflows/sdk-bindings.yml)에
+[`core-sdk-bindings.yml`](https://github.com/dolgogae/okc/blob/main/.github/workflows/core-sdk-bindings.yml)에
 고정되어 있습니다. 이 workflow는 각 산출물의 SHA-256과 CycloneDX SBOM을
 검사하지만 registry에는 게시하지 않습니다. 로컬에서 workflow 정의를
 실행했다는 사실만으로 네 platform gate가 통과한 것은 아닙니다.

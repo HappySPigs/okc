@@ -1,11 +1,11 @@
 # Frontend CI — okc-web (React + Vite SPA).
-# See backend-ci.yml for the monorepo-root activation note.
+# Monorepo root workflow: paths-scoped to okc-web/frontend.
 
 name: frontend-ci
 
 on:
   push:
-    paths: ["okc-web/frontend/**", "okc-web/.github/workflows/frontend-ci.yml"]
+    paths: ["okc-web/frontend/**", ".github/workflows/web-frontend-ci.yml"]
   pull_request:
     paths: ["okc-web/frontend/**"]
   workflow_dispatch: {}

@@ -4,7 +4,13 @@ on:
   push:
     branches:
       - main
+    paths:
+      - "okc-core/**"
+      - ".github/workflows/core-ci.yml"
   pull_request:
+    paths:
+      - "okc-core/**"
+      - ".github/workflows/core-ci.yml"
   workflow_dispatch:
 
 permissions:

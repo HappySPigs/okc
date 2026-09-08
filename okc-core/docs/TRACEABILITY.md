@@ -143,7 +143,7 @@ verified code land together.
 - Interop DTOs/jobs/errors: [`crates/okc-interop/src/lib.rs`](../crates/okc-interop/src/lib.rs)
 - Python public API and typing: [`bindings/python/tests/`](../bindings/python/tests/)
 - Node.js public API and declarations: [`bindings/node/tests/`](../bindings/node/tests/)
-- SDK native package matrix: [`.github/workflows/sdk-bindings.yml`](../../.github/workflows/sdk-bindings.yml)
+- SDK native package matrix: [`.github/workflows/core-sdk-bindings.yml`](../../.github/workflows/core-sdk-bindings.yml)
 
 ## Current-only archive evidence
 
