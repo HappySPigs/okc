@@ -1,0 +1,9 @@
+{
+  "vaultPath": "/absolute/path/to/AuthoringVault",
+  "statePath": "/absolute/path/to/okc-mcp-state",
+  "readOnly": false,
+  "maxNoteBytes": 1048576,
+  "maxFiles": 10000,
+  "maxScanBytes": 67108864,
+  "maxResponseBytes": 65536
+}

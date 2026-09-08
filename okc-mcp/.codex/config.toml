@@ -1,0 +1,17 @@
+# AI-DLC 2.7.1 project integration; upstream commit is recorded in
+# docs/aidlc-upstream/installation.json. Inherit the user's model, provider,
+# authentication, sandbox, network policy, and TUI preferences.
+
+[shell_environment_policy]
+set = { AIDLC_RULES_DIR = "aidlc/spaces/default/memory" }
+
+# The orchestrator owns delegation; delegated roles are leaves.
+[agents]
+max_depth = 1
+
+# Official AI-DLC gate controls for Codex CLI.
+[tools]
+experimental_request_user_input = { enabled = true }
+
+[features]
+default_mode_request_user_input = true

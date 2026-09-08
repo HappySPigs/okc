@@ -1,0 +1,27 @@
+{
+  "name": "okc-mcp",
+  "version": "0.1.0-alpha.1",
+  "description": "Local Obsidian authoring MCP for evidence-rich OKC source Vaults",
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": ">=22.13.0" },
+  "bin": { "okc-mcp": "dist/cli.js" },
+  "files": ["dist", "README.md", "LICENSE", "docs/authoring-guide.md", "examples/okc-mcp.example.json"],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.tests.json",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "check": "npm run typecheck && npm test && npm run build",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "yaml": "2.9.0",
+    "zod": "4.5.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "5.9.3"
+  }
+}
