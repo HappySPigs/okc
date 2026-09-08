@@ -36,3 +36,7 @@ cd backend && .venv/bin/python -m uvicorn app.main:create_app --factory --worker
 
 ## Reproducibility
 Both lockfiles are committed. The okc binding is pinned to `okc-compiler` 0.3.0 / `INTEROP_SCHEMA_VERSION==2`; pin the okc-core commit in CI for full reproducibility.
+
+The 2026-09-09 continuous-upload extension adds locked `cbor2==5.9.0` and an
+idempotent SQLite migration on startup. Follow
+[continuous-sync verification](continuous-sync-verification.md) for the new receiver.

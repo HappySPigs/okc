@@ -12,7 +12,12 @@
 //!
 //! I/O(로그 reload)·채널 push 를 수행하나 어떤 경로에서도 `unwrap`/`expect`/`panic`/인덱싱을 쓰지
 //! 않는다.
-#![deny(clippy::unwrap_used, clippy::expect_used, clippy::indexing_slicing, clippy::panic)]
+#![deny(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::indexing_slicing,
+    clippy::panic
+)]
 
 use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex, MutexGuard};
@@ -20,7 +25,7 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use foundation::{ConfigProvider, Health, StatusSnapshot, UploadHistoryRecord};
 use observability::StructuredLogger;
 use ops_control::{
-    ControlError, ControlHandlers, ConsentView, HistoryFilter, StopMode, WatcherHandlers,
+    ConsentView, ControlError, ControlHandlers, HistoryFilter, StopMode, WatcherHandlers,
 };
 
 use crate::coordinator::CycleTrigger;
@@ -64,6 +69,7 @@ pub struct DaemonControlHandlers {
     logger: Arc<StructuredLogger>,
     /// reload 시 `reload()` 를 호출하는 config 프로바이더.
     config: Arc<ConfigProvider>,
+    target_fingerprint: String,
 }
 
 impl DaemonControlHandlers {
@@ -73,12 +79,14 @@ impl DaemonControlHandlers {
         trigger_tx: Arc<TriggerSender>,
         logger: Arc<StructuredLogger>,
         config: Arc<ConfigProvider>,
+        target_fingerprint: String,
     ) -> Self {
         DaemonControlHandlers {
             inner,
             trigger_tx,
             logger,
             config,
+            target_fingerprint,
         }
     }
 }
@@ -133,7 +141,9 @@ impl ControlHandlers for DaemonControlHandlers {
     fn reload(&self) -> Result<(), ControlError> {
         // FIX2: config 리로드 성공 후 로거 캐시 레벨을 명시 재적용(체이닝).
         self.config
-            .reload()
+            .reload_guarded(|candidate| {
+                crate::target_binding::validate_target(candidate, &self.target_fingerprint)
+            })
             .map_err(|err| ControlError::ReloadFailed(err.to_string()))?;
         let _ = self.logger.reload();
         Ok(())

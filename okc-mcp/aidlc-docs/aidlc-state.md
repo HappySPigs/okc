@@ -2,10 +2,10 @@
 
 ## Project Information
 - **Project Type**: Brownfield
-- **Project**: Installable local Obsidian MCP that authors the best possible input Vault for OKC
+- **Project**: Installable MCP for published OKC knowledge and local Obsidian source authoring
 - **Start Date**: 2026-09-06 (original); v1 workflow resumed 2026-09-08
 - **Current Phase**: CONSTRUCTION
-- **Current Stage**: CONSTRUCTION — **Build and Test COMPLETE & VERIFIED GREEN** (2026-09-09, macOS Node v24.13.1). `npm run check` exit 0 → typecheck PASS · **tests 48/48 pass** · build PASS (`dist/` emitted). Two defects in generated-but-unrun test/code fixed during first execution (see audit 2026-09-09). Construction phase fully complete. **Next AI-DLC stage: Operations (placeholder in v1 — no deploy/monitoring work defined).**
+- **Current Stage**: CONSTRUCTION COMPLETE — user-selected session capture verified (2026-09-09 KST): source/test type checks, 103 tests, build and package inclusion passed. See construction/build-and-test/session-capture-summary.md. Previous web/local-install work is preserved.
 - **Unit 2 `okc-mcp-retrieval-unit` (NEW, 2026-09-09)**: Requirements delta + Functional Design DRAFTED, then a **REDUCED scope IMPLEMENTED & VERIFIED GREEN** (2026-09-09) per the user's recommended choice: **REQ-015 `fold` + REQ-017 `outline_note` (ATX-only) + BR-VISIBLE-1 latent-bug fix** shipped in `src/`; then per an explicit go/no-go (2026-09-09): **REQ-016 `list_backlinks` IMPLEMENTED** and **REQ-014 BM25 DROPPED** (untraced to success criteria + muted IDF). Adversarial verification found a latent defect in ALREADY-SHIPPED code (`visibleMarkdown` astral masking → BR-VISIBLE-1), now fixed. Artifacts: `inception/requirements/requirements-retrieval-unit.md`, `construction/okc-mcp-retrieval-unit/functional-design/{business-rules,business-logic-model}.md`. 7 open questions pending (BM25 go/no-go [untraced], rank+fold composition, folding default, backlinks subset, setext, cross-Unit edits, concrete params).
 
 ## Framework
@@ -15,14 +15,14 @@
 ## Workspace State
 - **Existing Code**: Yes — TypeScript (`src/cli.ts`, `config.ts`, `guide.ts`, `notes.ts`, `server.ts`, `vault.ts`), `tests/`, `package.json`.
 - **Build System**: npm (package.json), TypeScript.
-- **Workspace Root**: /mnt/c/Users/wlsgu/project/okc-mcp
+- **Workspace Root**: /Users/sihun/workspace/projects/okc/okc-mcp
 - **Reverse Engineering**: Deferred (not run). Prior research drafts exist (`aidlc-docs/inception/existing-mcp-research.md`, `okc-vault-design.md`, `repository-ux.md`). No formal artifacts under `aidlc-docs/inception/reverse-engineering/`. The review proposal explicitly states existing code must NOT be used to infer or fix product scope retroactively, so deriving requirements from the draft code is intentionally avoided. Can be run on request.
 
 ## Product Gate (LIFTED 2026-09-08 by explicit user instruction)
 - **Construction Code Generation is APPROVED** — lifted by the user's explicit "aidlc 확인해서 진행해 … 구현 … autopilot 모드로 너가 계속 진행해" (2026-09-08), NOT auto-lifted by autopilot. Rationale: requirements explicitly approved + all design stages complete + git-reversible/local/unpublished work. See audit.md.
 - The pre-existing `src/`/`tests/` were **unapproved drafts**; they are being regenerated to conform to the approved design (drafts are reference-only, not authoritative).
 - No stage approval or execution history may be created retroactively (this lift is recorded prospectively).
-- MVP scope guard still in force: no move/rename/merge, multi-Vault, real OKC ingestion, semantic search, remote HTTP, delete, auto-approval.
+- Active scope: the 2026-09-09 web knowledge delta supersedes the former remote-HTTP/compiled-reader exclusion for configured fixed-endpoint publication reads only. No move/rename/merge, multi-source authoring, semantic search, delete, automatic review approval or internal AI invocation.
 
 ## Code Location Rules
 - **Application Code**: Workspace root (NEVER in aidlc-docs/)
@@ -59,7 +59,7 @@ Recorded from `requirement-verification-questions.md` answers (2026-09-08):
 - **resiliency-baseline** — **Enabled** (Q10=A) as directional design-time guidance. Load `.aidlc-rule-details/extensions/resiliency/baseline/resiliency-baseline.md` when generating requirements/NFR/design.
 - **property-based-testing** — **Enabled: Partial** (Q11=B) — PBT for pure functions + serialization round-trips only. Load `.aidlc-rule-details/extensions/testing/property-based/property-based-testing.md` at testing/design stages.
 
-## Session Resume Point
+## Historical Session Resume Points (superseded by the active web follow-up)
 - **Last Completed Stage**: Workspace Detection
 - **Next Action**: User answers the questions in `aidlc-docs/inception/plans/story-generation-plan.md`. Then analyze answers for ambiguity (Step 9-10), get plan approval, then Part 2 generation (`user-stories/stories.md` + `user-stories/personas.md`). Assessment recorded in `aidlc-docs/inception/plans/user-stories-assessment.md`.
 - **Resiliency answers on file** (`requirements-resiliency-questions.md`): Q1=A (single pre-change external backup + manual recovery), Q2=A (lightweight release governance: tag + CHANGELOG + release notes).
@@ -68,3 +68,35 @@ Recorded from `requirement-verification-questions.md` answers (2026-09-08):
 - **Do NOT use the Workflow tool** — it triggers a permission prompt the user reads as "asking" (rejected 2026-09-08). Author artifacts directly.
 - **Verification answers on file** (`requirement-verification-questions.md`): Q1=C, Q2=A, Q3=A, Q4=B, Q5=A, Q6=A, Q7=A, Q8=A, Q9=B, Q10=A, Q11=B.
 - **Clarification answers on file** (`requirements-clarification-questions.md`): Q1=A (first-Unit "정리·구조화" = in-note tidying only, no file move/rename/merge), Q2=A (security extension off = extra ruleset only; REQ-008/011 remain in scope). Final contradiction check: no remaining contradictions.
+
+## Active Web Knowledge Follow-up — 2026-09-09
+
+- [x] Workspace/state/prior requirement/design/code verification; preceding root integration review identified the gaps.
+- [x] Requirements/stories and scoped application/functional/NFR design: `inception/requirements/requirements-web-knowledge.md`, `construction/okc-mcp-web-knowledge/`.
+- [x] Workflow/code generation plan executed: `construction/plans/okc-mcp-web-knowledge-code-generation-plan.md`.
+- [x] Configured web-first read tools, explicit local reads, local-only authoring, web-only readonly startup, revision/provenance/stale metadata, bounded HTTP, new source initialization/template resource.
+- [x] Existing missing fast-check framework repaired; shrinking/fixed-seed PBT active in npm test.
+- [x] Full verification: typecheck/build pass; 76 tests pass, no skip/fail. Synthetic real HTTP plus real stdio/doctor included. Scope-specific regression covers core original legacy paths.
+- [x] README English/Korean, examples, build/test summary and audit updated.
+- Infrastructure design / additional decomposition: skipped (one local client; no deployment change). Operations: placeholder; no external publication performed.
+- Root coordinator reported actual integration PASS: MCP authoring → Rust hooks CBOR → real core/web → private revision-pinned MCP read/verify/explain (`scripts/test_integration.py`). Any newly reported defects remain part of the root initiative; aggregate evidence stays in root AI-DLC.
+
+## Active Session Capture Follow-up — 2026-09-09
+
+- [x] Module workspace detection, scoped baseline and prior-contract review.
+- [x] Requirements/stories, application/functional/NFR design and code-generation plan.
+- [x] Local discovery, marker/section persistence and MCP workflow.
+- [x] Domain/PBT/stdio verification, documentation and final checks (103 tests, build/type checks and package inclusion passed).
+- Plan: [session capture](construction/plans/okc-mcp-session-capture-code-generation-plan.md).
+- Existing tool and source/web contracts remain; new local placement helpers are authorized. No new provider or infrastructure.
+
+## Active Local Install Follow-up (Root Unit U2) — 2026-09-09
+
+- [x] Construction (Functional Design + Code Generation) for root-initiative **Unit U2** (`../../aidlc-docs/inception/plans/local-install-unit-of-work.md`), requirements LIR-M1..M5 (`../../aidlc-docs/inception/requirements/local-install-requirements.md`). Design: [functional-design](construction/local-install/functional-design/functional-design.md).
+- [x] Added optional `agents` enum (`claude`|`codex`, deduped) to the strict zod config. New credential-isolated `src/install.ts`: `runSetup` (0600 config at `${XDG_CONFIG_HOME|~/.config}/okc-mcp/config.json`, best-effort non-blocking web validation via reused `WebVault`, official-CLI registration with print-only fallback, injectable `CommandRunner`), `runUnregister` (`--purge` removes only the generated config; never the Vault), shared `clientConfigSnippet`. Wired `setup`/`unregister` in `cli.ts`. Examples + README/README_KOR updated.
+- [x] Tests: `agents` config round-trip PBT (NFR-4) + `tests/install.test.ts` (argv, CLI-absent fallback, web-warn, 0600, token-never-logged, idempotent, unregister+purge). Verification: `npm run typecheck` PASS · `npm run build` PASS · 19/19 U2-relevant tests green · full suite 82/83 (the 1 failure is pre-existing/unrelated — `server.test.ts` US-IN-06 session-capture tool-surface drift, not touched by U2). Real-CLI smoke confirmed 0600 write, web warning, token redaction, `client-config` regression.
+- Security Baseline applicable rules enforced (SECURITY-03/05/06/09/10/11/12/13/15); no new dependency; `package-lock.json` unchanged. No commit/push/publish performed. Aggregate cross-module verification remains root-owned.
+
+### Session capture trigger clarification
+
+User explicitly selects the session/content to record. No always-on recording or lifecycle triggers. Both capture tools require a per-call userSelected=true declaration (default false); prior captures never enable later ones. Relevance/placement remains automatic within the selected content. REQ-030 and negative domain/stdio tests passed; final re-verification complete. See [session capture verification](construction/build-and-test/session-capture-summary.md).

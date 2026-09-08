@@ -31,3 +31,10 @@ Verify each hop with `GET /api/projects/{id}/status` (checkpoint should advance 
 - Dev: `cd frontend && npm run dev` proxies `/api` and `/u` to `:8000`; exercise the demo path in the browser.
 - Prod: `npm run build` then serve via the backend; the SPA history-fallback makes deep-links/refresh and the contributor `/upload/{token}` entry load correctly (`tests/test_spa_fallback.py`).
 - Error contract: the SPA branches on `{code, category}` (401→login, `PROJECT_BUSY`→retry, validation→inline) — never on the message string.
+
+## 4. Hooks receiver and repeated source revisions
+
+Use [continuous-sync verification](continuous-sync-verification.md) for actual
+Rust CBOR fixtures through authenticated HTTP routes and native source rebinding.
+Commit responses indicate completed registration; semantic review and publication
+remain the separate flow in section 2.

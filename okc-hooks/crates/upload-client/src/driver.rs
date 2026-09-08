@@ -11,14 +11,15 @@
 //! transport(AuthTransport)/blob-source/store IO 를 seam 을 통해 위임하는 오케스트레이션 모듈이므로
 //! 순수 lint-gate 를 두지 않는다(단, 패닉 경로 없음 — unwrap/expect/panic/인덱싱 회피).
 
-use std::io::{self, Read};
+use std::fs::File;
+use std::io::{self, Read, Seek, SeekFrom};
 use std::sync::Arc;
 
 use auth_consent::{AuthTransport, Body, Headers, HttpMethod, OkcRequest};
 use content_core::{ContentAddressing, LimitVerdict, LimitViolation, SafetyLimitsValidator};
 use foundation::{
     ActiveCondition, ByteCount, LimitReport, Manifest, ManifestEntry, Sha256Digest, StatusSink,
-    decode, encode,
+    TransportErrorClass, decode, encode,
 };
 
 use crate::blob_source::BlobSource;
@@ -66,7 +67,12 @@ pub struct UploadProtocolDriver {
     status: Arc<dyn StatusSink>,
     chunk_threshold_bytes: u64,
     chunk_size_bytes: u64,
+    session_id: Option<String>,
+    server_offsets: std::collections::BTreeMap<Sha256Digest, ByteCount>,
 }
+
+/// 서버와 공유하는 한 프레임의 원본 바이트 상한(8 MiB).
+pub const MAX_FRAME_BYTES: u64 = 8 * 1024 * 1024;
 
 impl UploadProtocolDriver {
     /// 주입 협력자(유일 HTTP 경로 `AuthTransport` + `BlobSource` + `SyncStore` + `StatusSink`)와
@@ -84,8 +90,10 @@ impl UploadProtocolDriver {
             blobs,
             store,
             status,
-            chunk_threshold_bytes,
-            chunk_size_bytes,
+            chunk_threshold_bytes: chunk_threshold_bytes.min(MAX_FRAME_BYTES),
+            chunk_size_bytes: chunk_size_bytes.clamp(1, MAX_FRAME_BYTES),
+            session_id: None,
+            server_offsets: std::collections::BTreeMap::new(),
         }
     }
 
@@ -130,14 +138,15 @@ impl UploadProtocolDriver {
 
         // (2) no-op digest 조기 종료(R-NOOP-01). 마지막 커밋 존재 + digest 동일 시 서버 왕복 없음.
         if let Some(last) = self.store.last_committed_manifest()
-            && manifest.manifest_digest == last.manifest_digest {
-                phases.push(CyclePhase::NoOp);
-                phases.push(CyclePhase::Done);
-                return Ok(CommitOutcome {
-                    server_vault_content_id: None,
-                    committed: false,
-                });
-            }
+            && manifest.manifest_digest == last.manifest_digest
+        {
+            phases.push(CyclePhase::NoOp);
+            phases.push(CyclePhase::Done);
+            return Ok(CommitOutcome {
+                server_vault_content_id: None,
+                committed: false,
+            });
+        }
 
         // (3) Negotiate — 매니페스트 제시 -> WantSet.
         phases.push(CyclePhase::Negotiate);
@@ -159,7 +168,9 @@ impl UploadProtocolDriver {
     }
 
     /// have/want 협상(R-WANT-*). 순수 차집합 `compute_want` 로 want 를 로컬 계산한다(D-14).
-    fn negotiate(&self, manifest: &Manifest) -> Result<WantSet, UploadError> {
+    fn negotiate(&mut self, manifest: &Manifest) -> Result<WantSet, UploadError> {
+        self.session_id = None;
+        self.server_offsets.clear();
         let request = NegotiateRequest {
             manifest_digest: manifest.manifest_digest,
             entries: negotiate_entries(manifest),
@@ -170,13 +181,34 @@ impl UploadProtocolDriver {
             .send(OkcRequest {
                 method: HttpMethod::Post,
                 path: NEGOTIATE_PATH.to_string(),
-                headers: Headers::new(),
+                headers: self.protocol_headers(),
                 body: Body::from_bytes(body),
             })
             .map_err(UploadError::Transport)?;
         let negotiate: NegotiateResponse =
             decode(response.body.as_bytes()).map_err(|_| UploadError::Aborted)?;
-        Ok(compute_want(&manifest_hashes(manifest), &negotiate.server_has))
+        let want = compute_want(&manifest_hashes(manifest), &negotiate.server_has);
+        if let Some(session_id) = negotiate.session_id {
+            if session_id.is_empty() || session_id.contains(['\r', '\n']) {
+                return Err(UploadError::Aborted);
+            }
+            let offsets: std::collections::BTreeMap<_, _> =
+                negotiate.resume_offsets.into_iter().collect();
+            for entry in &manifest.entries {
+                if want.blobs.contains(&entry.raw_sha256) {
+                    let offset = offsets
+                        .get(&entry.raw_sha256)
+                        .copied()
+                        .unwrap_or(ByteCount::new(0));
+                    if offset.get() > entry.size.get() {
+                        return Err(UploadError::Aborted);
+                    }
+                }
+            }
+            self.session_id = Some(session_id);
+            self.server_offsets = offsets;
+        }
+        Ok(want)
     }
 
     /// want blob 을 경로 오름차순 canonical 순서로 순차 전송한다(R-WANT-03: 서버 보유분 미전송).
@@ -203,12 +235,20 @@ impl UploadProtocolDriver {
 
     /// 단일 blob 전송 — 전송 직전 재-읽기+재-해시 가드(R-REVERIFY-01) 후 단일/청크 전송한다.
     fn transfer_blob(&mut self, entry: &ManifestEntry) -> Result<(), UploadError> {
-        // --- Reverify 패스: 재-읽기 + 스트리밍 재-해시(전량 적재 없음) ---
+        // 원본을 한 번만 열어 임시 파일에 고정한다. 검증과 전송은 같은 고정 바이트를 사용한다.
         let reader = self
             .blobs
             .open(&entry.relative_path)
             .map_err(|_| UploadError::Aborted)?;
-        let actual = ContentAddressing::hash_stream(reader).map_err(|_| UploadError::Aborted)?;
+        let mut spool = tempfile::tempfile().map_err(|_| UploadError::Aborted)?;
+        let copied = io::copy(
+            &mut reader.take(entry.size.get().saturating_add(1)),
+            &mut spool,
+        )
+        .map_err(|_| UploadError::Aborted)?;
+        spool.rewind().map_err(|_| UploadError::Aborted)?;
+        let actual =
+            ContentAddressing::hash_stream(&mut spool).map_err(|_| UploadError::Aborted)?;
         if actual != entry.raw_sha256 {
             // 열거~해시~전송 간 파일 변경(TOCTOU) -> 커밋 미발행, 다음 사이클 재스냅샷(R-REVERIFY-02).
             return Err(UploadError::HashMismatch {
@@ -217,28 +257,39 @@ impl UploadProtocolDriver {
                 actual,
             });
         }
+        if copied != entry.size.get() {
+            return Err(UploadError::Aborted);
+        }
+        spool.rewind().map_err(|_| UploadError::Aborted)?;
 
         // --- 전송 패스(별도 재-읽기, R-REVERIFY-03) ---
-        let resume = self
-            .store
-            .resume_offset(&entry.raw_sha256)
-            .map(|offset| offset.get())
-            .unwrap_or(0);
-        // R-XFER-01: size <= S 이며 재개 오프셋이 없으면 단일 요청, 그 외(> S 또는 재개)는 청크.
-        // MVP: 단일 요청 실패 시 청크 폴백은 도입하지 않는다(drive-not-sleep, U4 가 사이클 재시도).
-        if resume == 0 && entry.size.get() <= self.chunk_threshold_bytes {
-            self.send_single(entry)
+        let resume = if self.session_id.is_some() {
+            self.server_offsets.get(&entry.raw_sha256).copied()
         } else {
-            self.send_chunked(entry, resume)
+            self.store.resume_offset(&entry.raw_sha256)
+        }
+        .map(|offset| offset.get())
+        .unwrap_or(0);
+        // R-XFER-01: size <= S 이며 재개 오프셋이 없으면 단일 요청, 그 외(> S 또는 재개)는 청크.
+        if resume == 0 && entry.size.get() <= self.chunk_threshold_bytes {
+            match self.send_single(entry, &mut spool) {
+                Err(UploadError::Transport(error))
+                    if matches!(
+                        error.class,
+                        TransportErrorClass::Timeout | TransportErrorClass::Network
+                    ) =>
+                {
+                    self.send_chunked(entry, 0, &mut spool)
+                }
+                result => result,
+            }
+        } else {
+            self.send_chunked(entry, resume, &mut spool)
         }
     }
 
     /// 단일 요청 전송(`size <= S`) — blob 전량을 하나의 프레임으로 보낸다.
-    fn send_single(&self, entry: &ManifestEntry) -> Result<(), UploadError> {
-        let mut reader = self
-            .blobs
-            .open(&entry.relative_path)
-            .map_err(|_| UploadError::Aborted)?;
+    fn send_single(&self, entry: &ManifestEntry, reader: &mut File) -> Result<(), UploadError> {
         let mut bytes = Vec::new();
         reader
             .read_to_end(&mut bytes)
@@ -257,21 +308,21 @@ impl UploadProtocolDriver {
     }
 
     /// 재개 가능 청크 전송(`size > S` 또는 재개) — 고정 `chunk_size` 로 스트리밍 분할·전송한다.
-    fn send_chunked(&mut self, entry: &ManifestEntry, resume: u64) -> Result<(), UploadError> {
+    fn send_chunked(
+        &mut self,
+        entry: &ManifestEntry,
+        resume: u64,
+        reader: &mut File,
+    ) -> Result<(), UploadError> {
         let blob = entry.raw_sha256;
         let total = entry.size.get();
         let step = self.chunk_size_bytes.max(1);
-        let mut reader = self
-            .blobs
-            .open(&entry.relative_path)
-            .map_err(|_| UploadError::Aborted)?;
-
-        // 재개 구간 `[0, resume)` 을 건너뛴다(Read 는 seek 불가 -> 읽어 폐기; MVP). 재조립 동치는
-        // 서버가 `[0, resume)` 을 이미 보유하는 것으로 성립한다(R-CHUNK-02).
         let mut offset = resume.min(total);
-        if offset > 0 {
-            let mut skip = (&mut *reader).take(offset);
-            io::copy(&mut skip, &mut io::sink()).map_err(|_| UploadError::Aborted)?;
+        reader
+            .seek(SeekFrom::Start(offset))
+            .map_err(|_| UploadError::Aborted)?;
+        if total == 0 {
+            return self.send_single(entry, reader);
         }
 
         while offset < total {
@@ -316,7 +367,7 @@ impl UploadProtocolDriver {
             .send(OkcRequest {
                 method: HttpMethod::Put,
                 path,
-                headers: Headers::new(),
+                headers: self.protocol_headers(),
                 body: Body::from_bytes(body),
             })
             .map_err(UploadError::Transport)?;
@@ -335,11 +386,20 @@ impl UploadProtocolDriver {
             .send(OkcRequest {
                 method: HttpMethod::Post,
                 path: COMMIT_PATH.to_string(),
-                headers: Headers::new(),
+                headers: self.protocol_headers(),
                 body: Body::from_bytes(body),
             })
             .map_err(UploadError::Transport)?;
         decode(response.body.as_bytes()).map_err(|_| UploadError::Aborted)
+    }
+
+    fn protocol_headers(&self) -> Headers {
+        let mut headers = Headers::new();
+        headers.push("Content-Type", "application/cbor");
+        if let Some(session_id) = &self.session_id {
+            headers.push("X-OKC-Upload-Session", session_id);
+        }
+        headers
     }
 }
 

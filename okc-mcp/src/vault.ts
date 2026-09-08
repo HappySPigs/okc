@@ -339,6 +339,17 @@ export class Vault {
     return note;
   }
 
+  /** Inspect a prospective capture target without creating parent directories. */
+  async inspectWriteTarget(notePath: string): Promise<Note | null> {
+    portableRelative(notePath, true); // Validate every component, including missing parents.
+    await this.assertRoots();
+    try { return await this.read(notePath); }
+    catch (error) {
+      if (errorCode(error) === 'ENOENT' || (error instanceof VaultError && error.code === 'NOTE_NOT_FOUND')) return null;
+      throw error;
+    }
+  }
+
   private contentBytes(content: string): Buffer {
     if (typeof content !== 'string') fail('INVALID_CONTENT', 'Note content must be a string.');
     const bytes = Buffer.from(content, 'utf8');

@@ -105,6 +105,15 @@ impl ConfigProvider {
     /// R-OBSERVER-03). 검증 실패 시 스왑에 도달하지 않아 이전 스냅샷을 유지하며(keep-last-good)
     /// `Err(ConfigError)` 만 반환한다. 최초 load 미완료 상태에서의 호출은 `Discovery` 이슈로 거부.
     pub fn reload(&self) -> Result<(), ConfigError> {
+        self.reload_guarded(|_| Ok(()))
+    }
+
+    /// 검증된 새 스냅샷에 추가 불변식 검사를 적용한 뒤 원자적으로 교체한다.
+    /// 검사 실패 시 기존 스냅샷은 유지되며 디스크 파일을 두 번 읽지 않는다.
+    pub fn reload_guarded(
+        &self,
+        validate: impl FnOnce(&WatcherConfig) -> Result<(), ConfigError>,
+    ) -> Result<(), ConfigError> {
         let guard = self.lock_reload();
         let path = match &guard.resolved_path {
             Some(path) => path.clone(),
@@ -117,6 +126,7 @@ impl ConfigProvider {
 
         // 검증 실패 시 여기서 조기 반환 -> 활성 스냅샷 불변(keep-last-good).
         let config = loader::read_and_validate(&path, &self.known_keys_refs())?;
+        validate(&config)?;
 
         // 검증 성공: 원자적 스왑 후 동일 임계구역 안에서 결정적 fan-out.
         self.active.store(Some(Arc::new(config)));

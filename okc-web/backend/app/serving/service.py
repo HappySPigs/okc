@@ -9,6 +9,7 @@ and the okc-mcp consumption contract. All engine access is through the U0
 
 from __future__ import annotations
 
+import hashlib
 import os
 from typing import Any
 
@@ -26,6 +27,7 @@ from app.serving.models import (
     ServingProvenanceView,
     ServingVerifyView,
 )
+from app.serving.snapshots import SnapshotStore, project_fingerprint
 from app.serving.store import PublicationRow, ServingStateStore
 from app.shared.error import EngineError, EngineErrorCategory, EngineErrorCode
 from app.shared.state import StateDb
@@ -50,6 +52,7 @@ class ServingService:
         self._config = config
         self._store = store
         self._projects = projects
+        self.snapshots = SnapshotStore(db)
 
     # --- helpers ---
 
@@ -71,15 +74,44 @@ class ServingService:
         still served, but labelled so consumers do not mistake it for fresh."""
         if row.status == "offline":
             return "offline", False
+        snapshot = self.snapshots.current(row.project_id)
+        if snapshot:
+            return self._snapshot_status(row, snapshot)
         current = self._projects.source_set_fingerprint(row.project_id)
         if row.bound_corpus_hash and current != row.bound_corpus_hash:
             return "stale", True
         return "live", False
 
+    def _snapshot_status(self, row: PublicationRow, snapshot: dict[str, Any]) -> tuple[str, bool]:
+        stale = self._snapshot_stale(row.project_id, snapshot)
+        return ("stale" if stale else "live"), stale
+
+    def _snapshot_stale(self, project_id: str, snapshot: dict[str, Any]) -> bool:
+        project = self._projects.get(project_id)
+        return bool(snapshot.get("source_fingerprint") != self._projects.source_set_fingerprint(project_id)
+                 or snapshot.get("project_fingerprint") != project_fingerprint(project.engine_root_abs_path)
+                 or snapshot.get("decision_fingerprint") != self.snapshots.decision_fingerprint(project_id))
+
+    def _read_context(self, project_id: str, revision: str | None = None) -> tuple[PublicationRow, dict[str, Any]]:
+        row = self._require_published(project_id)
+        snapshot = (self.snapshots.get(project_id, revision, published_only=True) if revision
+                    else self.snapshots.current(project_id))
+        if snapshot is None:
+            if revision:
+                raise EngineError.not_found("published revision not found")
+            # Existing installations may have pre-receipt publication rows. They
+            # stay readable, but new version-pinned clients require republishing.
+            return row, {"path": row.compiled_vault_path, "revision": None, "file_hashes": {}}
+        return row, snapshot
+
+    def _context_status(self, row: PublicationRow, snapshot: dict[str, Any]) -> tuple[str, bool]:
+        return self._snapshot_status(row, snapshot) if snapshot.get("revision") else self._effective_status(row)
+
     def _resolve_served_path(self, vault_root: str, rel_path: str) -> str:
         """Return the absolute path of ``rel_path`` iff it is an existing file under
         one of the three served roots. Any traversal / out-of-root / miss → 404."""
-        if not rel_path or rel_path.startswith(("/", "\\")) or "\x00" in rel_path:
+        if (not rel_path or rel_path.startswith(("/", "\\")) or "\x00" in rel_path
+                or "\\" in rel_path or any(p in ("", ".", "..") for p in rel_path.split("/"))):
             raise EngineError.not_found("file not found")
         vault_real = os.path.realpath(vault_root)
         target = os.path.realpath(os.path.join(vault_root, rel_path))
@@ -99,6 +131,11 @@ class ServingService:
                 continue
         if not under_served_root or not os.path.isfile(target):
             raise EngineError.not_found("file not found")
+        current = vault_root
+        for part in rel_path.split("/"):
+            current = os.path.join(current, part)
+            if os.path.islink(current):
+                raise EngineError.not_found("file not found")
         return target
 
     def _list_files(self, vault_root: str) -> list[str]:
@@ -141,45 +178,17 @@ class ServingService:
             return "application/json"
         return "text/plain; charset=utf-8"
 
-    def _compiled_vault_path(self, project_id: str, manifest: Any) -> str | None:
-        """Determine the compiled vault directory. Best-effort peek at the engine
-        manifest for an output-path key; otherwise the newest dir under the U3
-        compile convention ``{projects_root}/{project_id}/compiled/{run}``."""
-        if isinstance(manifest, dict):
-            for key in ("output_path", "compiled_vault_path", "vault_path", "path"):
-                val = manifest.get(key)
-                if isinstance(val, str) and os.path.isdir(val):
-                    return os.path.abspath(val)
-        base = os.path.join(self._config.projects_root, project_id, "compiled")
-        if os.path.isdir(base):
-            subdirs = [
-                os.path.join(base, d)
-                for d in os.listdir(base)
-                if os.path.isdir(os.path.join(base, d))
-            ]
-            if subdirs:
-                return os.path.abspath(max(subdirs, key=os.path.getmtime))
-        return None
-
-    @staticmethod
-    def _manifest_identity(manifest: Any) -> tuple[str | None, str | None]:
-        if isinstance(manifest, dict):
-            plan = manifest.get("integration_plan_id")
-            tax = manifest.get("taxonomy_hash")
-            return (
-                plan if isinstance(plan, str) else None,
-                tax if isinstance(tax, str) else None,
-            )
-        return None, None
-
     def _publication_view(self, project_id: str) -> PublicationView:
         row = self._store.get(project_id)
         if row is None:
             self._projects.get(project_id)  # 404 if the project itself is unknown
             return PublicationView(project_id=project_id, status="offline")
         status, stale = self._effective_status(row)
+        snapshot = self.snapshots.current(project_id)
         return PublicationView(
             project_id=project_id, status=status, stale=stale,
+            revision=snapshot["revision"] if snapshot else None,
+            access=self.snapshots.mode(project_id),
             compiled_vault_path=row.compiled_vault_path,
             bound_integration_plan_id=row.bound_integration_plan_id,
             bound_corpus_hash=row.bound_corpus_hash,
@@ -192,27 +201,36 @@ class ServingService:
     async def publish(self, project_id: str, published_by: str | None) -> PublicationView:
         row = self._projects.get(project_id)  # 404 if unknown project
         engine = self._require_engine()
-        status = await engine.read(lambda e: e.status(row.engine_root_abs_path))
-        if str(status.checkpoint) != "verified":
-            raise EngineError(
-                EngineErrorCode.APPROVAL_REQUIRED, EngineErrorCategory.APPROVAL,
-                "project is not Verified; compile the merged vault before publishing",
-            )
-        manifest: Any = None
-        try:
-            manifest = await engine.read(lambda e: e.manifest(row.engine_root_abs_path))
-        except EngineError:
-            manifest = None
-        vault_path = self._compiled_vault_path(project_id, manifest)
-        if vault_path is None:
-            raise EngineError.not_found("no compiled vault found for this project; compile first")
-        plan_id, tax_hash = self._manifest_identity(manifest)
-        self._store.publish(
-            project_id=project_id, compiled_vault_path=vault_path,
-            bound_integration_plan_id=plan_id,
-            bound_corpus_hash=self._projects.source_set_fingerprint(project_id),
-            bound_taxonomy_hash=tax_hash, published_by=published_by,
-        )
+        def activate(e: Any) -> None:
+            status = e.status(row.engine_root_abs_path)
+            if str(status.checkpoint) != "verified":
+                raise EngineError(EngineErrorCode.APPROVAL_REQUIRED, EngineErrorCategory.APPROVAL,
+                                  "project is not Verified; compile before publishing")
+            snapshot = self.snapshots.latest_compiled(project_id)
+            if snapshot is None:
+                raise EngineError.not_found("no recorded compilation; compile through this service first")
+            if self._snapshot_stale(project_id, snapshot):
+                raise EngineError(EngineErrorCode.APPROVAL_STALE, EngineErrorCategory.APPROVAL,
+                                  "compilation inputs changed; compile again before publishing")
+            verified = e.verify(snapshot["path"])
+            if not verified.valid or verified.manifest != snapshot["manifest"]:
+                raise EngineError(EngineErrorCode.VERIFICATION_FAILED, EngineErrorCategory.VERIFICATION,
+                                  "compiled artifact no longer matches its receipt")
+            self.snapshots.activate(project_id, snapshot, published_by)
+        await engine.call(activate)
+        return self._publication_view(project_id)
+
+    async def restore(self, project_id: str, revision: str, published_by: str | None) -> PublicationView:
+        self._projects.get(project_id)
+        snapshot = self.snapshots.get(project_id, revision, published_only=True)
+        if snapshot is None:
+            raise EngineError.not_found("previously published revision not found")
+        def activate(e: Any) -> None:
+            verified = e.verify(snapshot["path"])
+            if not verified.valid or verified.manifest != snapshot["manifest"]:
+                raise EngineError.validation("snapshot failed verification")
+            self.snapshots.activate(project_id, snapshot, published_by)
+        await self._require_engine().call(activate)
         return self._publication_view(project_id)
 
     def unpublish(self, project_id: str) -> PublicationView:
@@ -225,50 +243,59 @@ class ServingService:
 
     # --- E5-S2: machine read-only file list / body ---
 
-    def list_files(self, project_id: str) -> ServingFileListView:
-        row = self._require_published(project_id)
-        status, stale = self._effective_status(row)
+    def list_files(self, project_id: str, revision: str | None = None) -> ServingFileListView:
+        row, snapshot = self._read_context(project_id, revision)
+        status, stale = self._context_status(row, snapshot)
         return ServingFileListView(
             project_id=project_id, status=status, stale=stale,
-            bound_integration_plan_id=row.bound_integration_plan_id,
-            files=self._list_files(row.compiled_vault_path),
+            revision=snapshot["revision"], file_hashes=snapshot["file_hashes"],
+            bound_integration_plan_id=snapshot.get("manifest", {}).get("integration_plan_id", row.bound_integration_plan_id),
+            files=sorted(snapshot["file_hashes"]) if snapshot["revision"] else self._list_files(snapshot["path"]),
         )
 
-    def read_file(self, project_id: str, rel_path: str) -> tuple[bytes, str]:
-        row = self._require_published(project_id)
-        target = self._resolve_served_path(row.compiled_vault_path, rel_path)
+    def read_file(self, project_id: str, rel_path: str, revision: str | None = None) -> tuple[bytes, str]:
+        _row, snapshot = self._read_context(project_id, revision)
+        if snapshot["revision"] and rel_path not in snapshot["file_hashes"]:
+            raise EngineError.not_found("file not in published manifest")
+        target = self._resolve_served_path(snapshot["path"], rel_path)
         with open(target, "rb") as f:
-            return f.read(), self._media_type(target)
+            content = f.read(64 * 1024 * 1024 + 1)
+        if len(content) > 64 * 1024 * 1024:
+            raise EngineError.validation("file exceeds serving read limit")
+        if snapshot["revision"] and hashlib.sha256(content).hexdigest() != snapshot["file_hashes"][rel_path]:
+            raise EngineError(EngineErrorCode.VERIFICATION_FAILED, EngineErrorCategory.VERIFICATION,
+                              "published file changed on disk")
+        return content, self._media_type(target)
 
     # --- E5-S3: verify / explain (non-reserving engine reads) ---
 
-    async def verify(self, project_id: str) -> ServingVerifyView:
-        row = self._require_published(project_id)
+    async def verify(self, project_id: str, revision: str | None = None) -> ServingVerifyView:
+        row, snapshot = self._read_context(project_id, revision)
         engine = self._require_engine()
-        status, stale = self._effective_status(row)
-        vr = await engine.read(lambda e: e.verify(row.compiled_vault_path))
+        status, stale = self._context_status(row, snapshot)
+        vr = await engine.read(lambda e: e.verify(snapshot["path"]))
         return ServingVerifyView(
             project_id=project_id, status=status, stale=stale, valid=vr.valid,
-            artifact_path=vr.artifact_path or row.compiled_vault_path, manifest=vr.manifest,
+            revision=snapshot["revision"], artifact_path=vr.artifact_path or snapshot["path"], manifest=vr.manifest,
         )
 
-    async def explain(self, project_id: str, rel_path: str) -> ServingProvenanceView:
-        row = self._require_published(project_id)
-        target = self._resolve_served_path(row.compiled_vault_path, rel_path)
+    async def explain(self, project_id: str, rel_path: str, revision: str | None = None) -> ServingProvenanceView:
+        row, snapshot = self._read_context(project_id, revision)
+        self._resolve_served_path(snapshot["path"], rel_path)
         engine = self._require_engine()
-        status, stale = self._effective_status(row)
-        pv = await engine.read(lambda e: e.explain(row.compiled_vault_path, target))
+        status, stale = self._context_status(row, snapshot)
+        pv = await engine.read(lambda e: e.explain(snapshot["path"], rel_path))
         return ServingProvenanceView(
             project_id=project_id, status=status, stale=stale, file_path=rel_path,
-            artifact_path=pv.artifact_path or row.compiled_vault_path, record=pv.record,
-            owner_labels=self._owner_labels(project_id),
+            revision=snapshot["revision"], artifact_path=pv.artifact_path or snapshot["path"], record=pv.record,
+            owner_labels=snapshot.get("owner_labels", self._owner_labels(project_id)),
         )
 
     # --- E5-S4: okc-mcp consumption contract (location + format only) ---
 
-    def contract(self, project_id: str, read_api_base: str) -> McpContractView:
-        row = self._require_published(project_id)
-        status, stale = self._effective_status(row)
+    def contract(self, project_id: str, read_api_base: str, revision: str | None = None) -> McpContractView:
+        row, snapshot = self._read_context(project_id, revision)
+        status, stale = self._context_status(row, snapshot)
         endpoints = [
             ContractEndpoint(
                 method="GET", path=f"/api/serving/{project_id}/files",
@@ -293,11 +320,12 @@ class ServingService:
         ]
         return McpContractView(
             project_id=project_id, status=status, stale=stale,
+            revision=snapshot["revision"], access=self.snapshots.mode(project_id),
             location=ContractLocation(
-                local_dir=row.compiled_vault_path, read_api_base=read_api_base
+                local_dir=snapshot["path"], read_api_base=read_api_base
             ),
-            bound_integration_plan_id=row.bound_integration_plan_id,
-            bound_corpus_hash=row.bound_corpus_hash,
-            bound_taxonomy_hash=row.bound_taxonomy_hash,
+            bound_integration_plan_id=snapshot.get("manifest", {}).get("integration_plan_id", row.bound_integration_plan_id),
+            bound_corpus_hash=snapshot.get("manifest", {}).get("corpus_hash", row.bound_corpus_hash),
+            bound_taxonomy_hash=snapshot.get("manifest", {}).get("taxonomy_hash", row.bound_taxonomy_hash),
             endpoints=endpoints,
         )

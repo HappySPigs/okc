@@ -1,5 +1,7 @@
 # Module Integration Guide — okc-web ↔ okc-core · okc-mcp · Obsidian hook
 
+> Historical design handoff. The 2026-09-09 implementation now uses a Rust hooks daemon, authenticated CBOR sync, stable source revisions, and an implemented MCP web reader. Current shared contracts and verification are in the [root integration report](../../../aidlc-docs/construction/build-and-test/build-and-test-summary.md); module-local continuations remain linked there. The original decisions below are preserved as history.
+
 **목적**: okc-web을 형제 모듈(okc-core, okc-mcp, Obsidian hook 플러그인)과 **단일 모노레포**로 합칠 때 참조하는 핸드오프 문서. 각 모듈의 경계·계약·합치기 절차·현재 상태를 한 곳에 모은다.
 **대상 독자**: 나중에 repo를 합치고 통합 데모를 세팅할 개발자(= 미래의 나/팀).
 **상태**: 2판 (2026-09-08). 외부 계약·모노레포 레이아웃 안정. **okc-web 내부 컴포넌트 상세 확정** → Application Design 산출물(`aidlc-docs/inception/application-design/`: components.md·component-methods.md·services.md·component-dependency.md·application-design.md) 참조. 아래 §2에 모듈 맵 반영.

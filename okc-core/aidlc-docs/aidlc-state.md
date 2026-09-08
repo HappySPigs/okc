@@ -95,6 +95,8 @@ extension opt-in.
 
 ## Current Status
 
+- **Integration continuation verification**: Full Rust suite 130/130 and installed Python public API suite 12/12 passed in the current workspace. See [integration-continuation-verification.md](construction/build-and-test/integration-continuation-verification.md). No application code or product policy changed; remote release gates remain open.
+
 - **Lifecycle Phase**: CONSTRUCTION
 - **Artifact Status**: Complete through Construction; reviewed for repository integration on 2026-09-08
 - **Product Release Status**: Development only; stable 0.3.0 publication remains prohibited

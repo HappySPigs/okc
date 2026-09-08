@@ -3,6 +3,18 @@ export const AUTHORING_GUIDE = `# OKC 입력 Vault 작성 지침
 이 서버는 편집 가능한 Obsidian 원본 Vault를 관리합니다. OKC가 봉인한 스냅샷,
 *.okc-project 또는 compiled artifact를 편집하는 도구가 아닙니다.
 
+사용자가 기록할 세션/내용을 선택해 요청한 경우에만 okc://guide/session-capture
+절차를 사용하세요. 모든 세션을 기록하거나 작업 진행·종료 때 자동 실행하지 마세요.
+prepare_session_capture로 로컬 관련 후보와 기존 기록을 찾고, 에이전트가 반영할
+노트/구역을 선택한 뒤 apply_session_capture로 사전 검사·저장·검증합니다.
+사용자가 파일 위치나 생성/수정 여부를 고르게 하지 마세요.
+
+web 설정이 있으면 조회는 게시된 통합 Vault가 기본이며, 없으면 local을 조회합니다.
+web 오류 시 local로 자동 전환하지 않습니다. source와 revision, stale 및 provenance를
+근거에 함께 기록하세요. 이전 페이지의 revision을 다음 조회에 전달하면 같은 게시본을 봅니다.
+작성 도구는 항상 local 원본을 수정합니다. 편집 전 read_note(source="local")로 현재
+원본과 SHA-256을 확인하세요. 변경이 통합 Vault에 보이려면 hooks 업로드와 병합·게시가 필요합니다.
+
 - 기존 폴더를 유지하세요. 새 Vault는 inbox/, notes/, sources/, maps/ 정도로
   시작할 수 있지만 폴더명은 OKC 정책이나 승인 상태가 아닙니다.
 - 한 노트는 분명한 주제, 한 문단은 추적 가능한 주장에 집중하세요.

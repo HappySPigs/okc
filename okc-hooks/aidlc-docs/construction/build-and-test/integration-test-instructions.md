@@ -1,5 +1,9 @@
 # Integration Test Instructions
 
+## Integration repair addendum
+
+The latest module tests include actual threaded retry scheduling, temporary-file snapshot spooling, and persistent target identity checks. Run `PROPTEST_RNG_SEED=20260909 cargo test --workspace --features proptest-support` for the full 250-test suite. Use the `upload-client` example `protocol-fixture` to generate exact Rust CBOR requests for the root/web receiver tests; see [watcher-setup.md](watcher-setup.md) for the agreed contract and commands. Earlier statements below that the server does not exist describe the original construction baseline, not the current root integration implementation.
+
 ## Purpose
 
 유닛 간 상호작용(트리거 -> 사이클 -> 전송 -> 상태/히스토리 표면화, 제어면 위임, config 합류)이 함께 올바로

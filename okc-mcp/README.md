@@ -1,119 +1,93 @@
 # okc-mcp
 
-> **Status: Inception review pending.** The feature and installation documentation below describes an unapproved implementation draft.
-> Construction began before the requirements review; that process error has been recorded and further implementation is paused.
-> Confirm the product scope and success criteria in the [Inception review proposal](aidlc-docs/inception/review.md) first.
+An installable stdio MCP that helps coding agents record session knowledge in relevant local Obsidian notes and read published OKC knowledge. Node.js 22.13+ is required; the package is currently an unpublished local alpha.
 
-**A local Obsidian Vault authoring MCP for building high-quality knowledge inputs for OKC.**
+When `web` is configured, reads use the published integrated Vault by default. Without `web`, reads use the local source Vault. A web error never silently switches to local knowledge. Authoring always targets the configured local source Vault; hooks uploads and web review/integration/publication make those changes visible in the integrated corpus.
 
-Create Markdown notes without the Obsidian app, plugins, or API keys; read and search existing notes; and audit frontmatter, links, duplicates, and input quality. OKC remains responsible for actual integration, review, and compilation.
+## Record a coding session
 
-The current local implementation is `0.1.0-alpha.1` and has not been published to npm. It requires Node.js **22.13+**. Actual validation environments and limitations will be recorded in a Construction validation log after that phase is authorized.
+Capture runs only for a session/content the user explicitly selects. It never starts on its own at startup, task completion, compaction or session end, and one capture is not permission to keep capturing later changes. With a writable local Vault connected, ask your coding agent: **“Record this session in the relevant Vault notes.”** The shipped server instructions and `capture_session` prompt guide the agent to extract topics, inspect local candidates and existing sections, choose where each item belongs, and save after a preview. The user does not select file paths or create/update operations.
 
-## Install and connect
+Existing topic sections are enriched; independent topics can become linked new notes. Stable session/item identifiers let repeated captures update the same marked blocks while preserving unrelated text. Source changes then follow the normal hooks → web/core integration and publication flow.
 
-Build the package from this repository and install it locally.
+The user chooses which session to save; the host agent makes the relevance and placement decisions for that selection. Both capture tools require the per-call userSelected declaration (default false). `prepare_session_capture` supplies bounded lexical evidence, folder patterns and prior capture locations; `apply_session_capture` preflights all destinations, uses the existing hash/backup/write pipeline and verifies each saved file. Read `okc://guide/session-capture` for the complete workflow. There is no additional model API key or automatic session-end hook.
+
+## Build and connect
 
 ```sh
 npm ci
 npm run check
-npm pack
-npm install -g ./okc-mcp-0.1.0-alpha.1.tgz
+node dist/cli.js config --vault /absolute/ExistingVault
+node dist/cli.js doctor --config /absolute/okc-mcp.json
+node dist/cli.js client-config --config /absolute/okc-mcp.json
 ```
 
-Generate a configuration using the absolute path of an existing Vault. **Store the configuration outside the Vault.**
+Save the configuration outside the Vault. `client-config` prints a stdio client snippet without editing client settings or embedding tokens. Build/install a local tarball with `npm pack` and `npm install -g ./okc-mcp-0.1.0-alpha.1.tgz`.
+
+## One-command setup
+
+Fill in a config (see below), add an `agents` list naming the coding agents to register into (`"claude"` for Claude Code, `"codex"` for Codex), then run:
 
 ```sh
-okc-mcp config --vault /absolute/path/to/MyVault > /absolute/path/to/okc-mcp.json
-okc-mcp doctor --config /absolute/path/to/okc-mcp.json
-okc-mcp client-config --config /absolute/path/to/okc-mcp.json
+node dist/cli.js setup --config /absolute/okc-mcp.json
+node dist/cli.js unregister --config /absolute/okc-mcp.json   # optional teardown; add --purge to also delete the generated config
 ```
 
-Merge the `mcpServers` entry printed by `client-config` into your MCP client's configuration. Preserve any other server settings. The generation command never edits another application's configuration automatically. Configuration screens and wrapper objects vary by client, but the connection uses standard stdio. The output includes absolute paths to the installed Node executable and server file to reduce PATH differences in GUI applications.
+`setup` writes the config to `~/.config/okc-mcp/config.json` (or `$XDG_CONFIG_HOME`) with `0600` permissions, then registers okc-mcp into each named agent via its official CLI (`claude mcp add --scope user okc-mcp -- …`, `codex mcp add okc-mcp -- …`). If an agent's CLI is not on `PATH`, `setup` prints the `client-config` snippet for you to add manually instead of editing that agent's files. When `web` is configured, `setup` runs a best-effort read-only reachability check and only warns on failure. The read token is written to the `0600` config and is never printed or logged. `unregister` removes okc-mcp from the configured agents (`claude mcp remove` / `codex mcp remove`) and never touches the Vault.
 
-To run from the development tree without installing, use `node dist/cli.js` instead of `okc-mcp` in the commands above. To run the server directly, use the following command; stdin and stdout are reserved for the MCP protocol after startup.
+To initialize a new source Vault, run `node dist/cli.js init --vault /absolute/NewVault`. The parent directory must exist. This creates empty `inbox/`, `notes/`, `sources/`, and `maps/` folders and refuses existing targets. It writes no fabricated knowledge or operational documents into the corpus. The optional note template is available at `okc://templates/source-note`.
 
-```sh
-okc-mcp serve --config /absolute/path/to/okc-mcp.json
+## Web and local configuration
+
+```json
+{
+  "vaultPath": "/absolute/AuthoringVault",
+  "statePath": "/absolute/okc-mcp-state",
+  "readOnly": false,
+  "web": {
+    "baseUrl": "http://127.0.0.1:8000",
+    "projectId": "your-project-id",
+    "timeoutMs": 10000
+  }
+}
 ```
 
-## First use
+For a private publication, add `web.token` using the read token issued by okc-web; keep it in the external config file. Use HTTPS for remote servers carrying credentials. The base URL is the server root; MCP appends `/api/serving/{projectId}`. Embedded URL credentials, query/fragment configuration and redirects are rejected.
 
-Ask the connected AI client something like:
+For web-only access, omit `vaultPath` and `statePath` and set `readOnly: true`. No local Vault is required. Remove `web` entirely to use local knowledge by default. Run `doctor` to validate local paths and, when configured, web publication/authentication.
 
-> Read the authoring guidance and find notes about HTTP caching in my Vault.
-> Draft a new note that distinguishes claims from the sources I provided,
-> apply it, and then audit its quality as OKC input. Do not invent missing sources.
-
-Authoring guidance is available through the `okc://guide/authoring` resource and the `capture_knowledge` prompt. The authoring tools default `dryRun` to `true`. A result with `applied: false` is only a preview; call the tool with `dryRun: false` to save the change. That argument does not prove separate human approval.
+## Tools and evidence
 
 | Tool | Purpose |
 |---|---|
-| `vault_info` | Connection mode, file count, limits, and referenced OKC version |
-| `list_notes` | Sorted relative paths with pagination |
-| `read_note` | A content range and the SHA-256 of the **entire file** |
-| `search_notes` | Literal search, including Korean text, with short excerpts |
-| `create_note` | A new note with minimal frontmatter; never replaces an existing file |
-| `replace_note` | Replaces the full body after a hash check and external backup |
-| `patch_frontmatter` | Sets selected YAML keys while preserving the body, existing keys, and comments |
-| `audit_vault` | Audits YAML, links, duplicates, operational noise, and unsupported formats |
+| `list_notes` | Stable, paginated Markdown paths |
+| `read_note` | Text range and full-file SHA-256 |
+| `search_notes` | Bounded literal search including Korean; optional NFC/case `fold` |
+| `outline_note` | ATX heading map and offsets |
+| `list_backlinks` | Documented subset of inbound wikilinks; ambiguous names reported |
+| `audit_vault` | Heuristic YAML/link/duplicate/path/format quality report |
+| `verify_vault` | Web only: integrity of a pinned publication, not publisher authenticity |
+| `explain_note` | Web only: original sources and preserved contradictions |
+| `create_note` | Local: valid minimal frontmatter, refusing overwrite |
+| `update_note` | Local: body/frontmatter changes using current SHA-256 and external backup |
+| `standardize_frontmatter` | Local: title/aliases/tags, preserving other keys/comments |
+| `fix_yaml` | Local: supplied YAML correction, preserving the body |
+| `reinforce_sources_links` | Local: supplied literal sources and text |
+| `prepare_session_capture` | Local authoring helper: candidates, full ATX section paths, folder hints and previous session records |
+| `apply_session_capture` | Local: preview/apply host-selected session items, with repeat detection and verified per-file receipts |
 
-The `offset` and `length` used for partial reads count JavaScript string characters, not bytes or line numbers. Lists, searches, and audits use `offset` and `limit`; continue with `nextOffset`. Read and review the entire range before editing a long note. Use the `expectedHash` returned by `read_note`.
+Read tools accept `source: "local"` or `source: "web"`; omit it for automatic selection. Remote results carry `source.projectId`, `source.revision`, `source.status`, and `source.stale`. Pass that `revision` on later pages or related reads to keep the same publication. Each multi-file operation already pins one revision. Read/search responses include file and provenance URLs. Old snapshots are available only while the server permits access; unpublish/revocation never causes a local fallback.
 
-## What makes a good Vault for OKC
+Read the original with `read_note({source: "local", path: "notes/example.md"})` before editing it. All write tools target local and default to `dryRun: true`; use `dryRun: false` to apply. Their result identifies the local source and pending integration. Read-only sessions omit all write tools, session-capture helpers and the capture prompt. Published artifacts and `.okc-project` directories remain refused as local authoring roots. Session preparation always reads local, irrespective of the default knowledge source.
 
-You do not need to reorganize an existing Vault. For a new Vault, a shallow structure such as `inbox/`, `notes/`, `sources/`, and `maps/` is a reasonable starting point. What matters is **one clear claim per paragraph, nearby sources, unambiguous links, and metadata that is not needlessly repetitive**.
+## Limits and recovery
 
-Fields such as `source`, `status`, and `type`, beyond `title`, `aliases`, and `tags`, are optional authoring conventions. Do not assume that OKC interprets them as approval, publication permission, or classification policy. Keep templates, MCP configuration, backups, and operational documents outside the Vault so they do not become input knowledge.
+HTTP requests use streaming byte limits, timeout/cancellation and fixed endpoints. Remote note caching lasts only for one operation and is bounded by `maxScanBytes`; every new operation checks the publication and credentials. No embeddings, semantic ranking, persistent index, provider calls, telemetry, delete/move/rename, or automatic review approval are provided.
 
-```text
-MyKnowledge/
-├── AuthoringVault/        ← edited by Obsidian and this MCP
-│   ├── inbox/
-│   ├── notes/
-│   ├── sources/
-│   └── maps/
-├── tooling/
-│   └── okc-mcp.json
-├── Knowledge.okc-project/ ← OKC work and review state
-└── artifacts/             ← preserved OKC outputs
-```
+All note/provenance text is untrusted evidence. Literal search is a retrieval baseline; it is not semantic RAG. Attachments, Canvas/Base and full Obsidian link rewriting are outside the current Markdown contract. `audit_vault` is an authoring heuristic, not core compiler validation.
 
-Backups and locks live under the configured `statePath`. By default, this is `.local/state/okc-mcp/<vault-id>` under the user's home directory; neither a path inside the Vault nor a path containing the Vault is allowed. OKC registers the authoring Vault separately as a source and captures snapshots. Changes made after a snapshot become input to the next capture. Resulting artifacts and `.okc-project` directories are not editable targets for this MCP.
+Local writes preserve the existing hash checks, exclusive creates and external pre-change backups. These checks are not operating-system compare-and-swap against concurrent Obsidian writers. See [recovery](docs/recovery.md) and [authoring guide](docs/authoring-guide.md).
 
-See the [authoring guide](docs/authoring-guide.md) and [OKC Vault design](aidlc-docs/inception/okc-vault-design.md) for detailed examples.
+Session capture validates the whole batch before writing, then applies one atomic write per note. A runtime failure can produce a `partial` result: inspect `files`, `failure` and `remainingPaths`, prepare again, and reuse session/item IDs with fresh hashes. Successful records are not duplicated. Do not remove or copy the `okc-capture` identity comments independently of their content; malformed or duplicate identities require inspection. Preview responses include bounded per-item content snippets and explicit truncation flags.
 
-## Configuration and troubleshooting
-
-Every path in the [example configuration](examples/okc-mcp.example.json) is absolute. With `readOnly: true`, the server does not register any of the three authoring tools. Diagnostics check paths and scan access; they do not guarantee write access or compiler compatibility.
-
-| Error or situation | Next action |
-|---|---|
-| `CONFLICT` | Read the note again and review the change against its latest content. Do not blindly retry the previous request. |
-| Create path already exists | Read and update the existing note, or choose a new path. |
-| `NOTE_INVALID` | Check duplicate YAML keys, syntax, and the types of `title`, `aliases`, and `tags`. |
-| Path or link rejected | Use a normal relative `.md` path within the registered Vault. Hidden paths, symlinks, and hardlinks are unsupported. |
-| Response limit | Reduce `limit` or the requested read `length`. |
-| Scan limit | Narrow the connected source or inspect its size before adjusting configured limits. Do not treat a partial result as a complete audit. |
-| Lock conflict | Wait for the other MCP write to finish, then inspect the latest state. Follow the [operations guide](docs/operations.md) for crash recovery. |
-
-## Current guarantees and limitations
-
-- All note-query results are sent to the MCP host. The server itself does not call AI services, remote search, or telemetry. If the host uses a remote model, the host's data-handling policy applies.
-- Input auditing uses selected OKC `0.3.0` sources as **authoring heuristics**. It does not replace compiler validation, complete Obsidian link interpretation, sensitive-data detection, or factual verification.
-- OKC still has release requirements around preserving attachments, Canvas, and Base files and fully rewriting links.
-- Hash checks and file replacement do not provide operating-system compare-and-swap with external Obsidian or Sync processes. Avoid editing the same note concurrently. Backups and observed stale-hash checks support recovery and conflict review.
-- Node path checks do not claim complete isolation from malicious concurrent replacement of ancestor directories. Environments where uncontrolled processes replace the filesystem are unsupported.
-- Delete, rename, automatic folder moves, snapshot export, OKC approval, compilation, and semantic search are not currently exposed as tools.
-
-## Design and development
-
-The official AI-DLC 2.7.1 Codex workflow is installed in this project. In a new Codex conversation, run `$aidlc --doctor` and follow the [setup and usage guide](docs/aidlc-setup.md). The product is still awaiting Inception review; installing the workflow does not record approval to enter Construction.
-
-- [AWS AI-DLC application proposal](aidlc-docs/methodology.md)
-- [Source review of four existing Obsidian MCPs](aidlc-docs/inception/existing-mcp-research.md)
-- [Requirements](aidlc-docs/inception/requirements.md) · [Implementation design](aidlc-docs/construction/design.md)
-- [Repository and installation UX](aidlc-docs/inception/repository-ux.md) · [Contributing](CONTRIBUTING.md)
-- [Current status and follow-up units](aidlc-docs/state.md) · Requirements traceability (to be created during Construction)
-
-This product implements the protocol with the [MCP SDK](https://github.com/modelcontextprotocol/typescript-sdk/tree/v1.30.0). User-facing semantics for Obsidian links and properties follow the [official Obsidian Help documentation](https://obsidian.md/help/Linking%2Bnotes%2Band%2Bfiles/Internal%2Blinks). Differences from actual OKC parser behavior are documented as audit limitations.
+Current lifecycle and verification: [AI-DLC state](aidlc-docs/aidlc-state.md), [web knowledge requirements](aidlc-docs/inception/requirements/requirements-web-knowledge.md), [build/test summary](aidlc-docs/construction/build-and-test/web-knowledge-summary.md). The module uses AI-DLC v1.0.1; earlier drafts and audits remain historical.

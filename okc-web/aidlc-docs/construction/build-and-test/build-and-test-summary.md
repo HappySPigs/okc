@@ -1,5 +1,11 @@
 # Build & Test — Summary (W5)
 
+## Current continuation results — 2026-09-09
+
+Final backend: **114 pytest passed**, Ruff clean, mypy clean (55 files). Frontend: **8 tests passed**, typecheck and Vite build passed. The full synthetic-provider/real-core success path and actual four-module bridge now pass. Unicode aliases, native validation, source/DB/chunk-crash recovery, version pinning and publication-storage recovery are covered. See [versioned serving](../u5-serving/code/versioned-serving.md) and the [root evidence](../../../../aidlc-docs/construction/build-and-test/build-and-test-summary.md).
+
+The original W5 results below remain historical. Live-provider quality, installed native services, screenshots and remotely run CI were not verified. Root CI now includes hooks and the integration bridge; dependency sync preserves the separately built native wheel.
+
 **Scope**: okc-web, both stacks. Backend = FastAPI (Python 3.11+) consuming okc-core via the `okc-compiler` 0.3.0 Python binding; Frontend = React/Vite SPA. okc-core stays Rust and unmodified.
 
 ## Exit artifacts (hard-MUST) — status
@@ -30,3 +36,13 @@
 
 ## Documents
 `build-instructions.md` · `unit-test-instructions.md` · `integration-test-instructions.md` · `performance-test-instructions.md` (this dir).
+
+## Continuous upload extension — 2026-09-09
+
+Upload/adapter/foundation/production-spine focused aggregate: **63 pytest passed**, Ruff
+clean, mypy clean for 16 owned files. The Rust-generated CBOR fixture ran and passed.
+Real add/rebind, durable session/receipt retries, deletion/rename, empty Vaults,
+token rotation, stale-base rejection, and DB failure recovery are covered. These
+results extend the historical W5 evidence above. Full module integration and serving
+verification are separately coordinated by the root initiative.
+Details: [continuous-sync verification](continuous-sync-verification.md).

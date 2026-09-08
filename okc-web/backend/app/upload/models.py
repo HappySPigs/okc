@@ -34,6 +34,7 @@ class IssuedToken(BaseModel):
     owner_kind: str | None = None
     created_at: str
     expires_at: str | None = None
+    sync_endpoint: str = "/api/sync"
 
 
 class TokenSummary(BaseModel):

@@ -33,12 +33,15 @@ For a cross-module initiative, keep the coordination plan and shared acceptance 
 | Module | Module AI-DLC docs | Agent instructions | Status |
 |---|---|---|---|
 | `okc-core` | [`okc-core/aidlc-docs/`](../okc-core/aidlc-docs/) | [`okc-core/AGENTS.md`](../okc-core/AGENTS.md), [`okc-core/CLAUDE.md`](../okc-core/CLAUDE.md) | Existing |
+| `okc-hooks` | [`okc-hooks/aidlc-docs/`](../okc-hooks/aidlc-docs/) | [`okc-hooks/CLAUDE.md`](../okc-hooks/CLAUDE.md) | Existing daemon implementation |
+| `okc-mcp` | [`okc-mcp/aidlc-docs/`](../okc-mcp/aidlc-docs/) | [`okc-mcp/CLAUDE.md`](../okc-mcp/CLAUDE.md) | Existing local authoring/retrieval implementation |
+| `okc-web` | [`okc-web/aidlc-docs/`](../okc-web/aidlc-docs/) | [`okc-web/CLAUDE.md`](../okc-web/CLAUDE.md) | Existing backend/frontend implementation |
 
 When another `okc-*` module is added, preserve its `aidlc-docs/` directory and add it to this registry. Do not rename generated AI-DLC paths during the merge.
 
 ## Root workflow state
 
-The root `aidlc-state.md` and `audit.md` are intentionally not pre-created by installation. AI-DLC creates them when the first repository-wide integration workflow starts. Their absence does not affect any module's existing state.
+The root state and audit track the 2026-09-09 cross-module review and completed implementation. See [aidlc-state.md](aidlc-state.md), [audit.md](audit.md), the [original gap review](inception/reverse-engineering/integration-gap-review.md), and the [final implementation/verification report](construction/build-and-test/build-and-test-summary.md). Module states remain independent.
 
 ## Framework pin
 

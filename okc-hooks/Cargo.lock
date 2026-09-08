@@ -1119,7 +1119,9 @@ dependencies = [
  "foundation",
  "proptest",
  "serde",
+ "serde_json",
  "sync-state",
+ "tempfile",
  "thiserror",
 ]
 
@@ -1232,6 +1234,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sync-state",
+ "tempfile",
  "thiserror",
  "upload-client",
 ]

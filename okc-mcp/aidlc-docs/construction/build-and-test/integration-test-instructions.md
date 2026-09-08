@@ -1,5 +1,7 @@
 # Integration Test Instructions — okc-mcp (first Unit)
 
+Current web follow-up: `npm test` also runs `tests/web.test.ts`, using real loopback HTTP and MCP clients (in-memory protocol plus actual stdio CLI). It covers web default/explicit local, web-only JSON config and doctor, authoring during remote 403, revision pinning, provenance, errors/bounds/cancellation and core path compatibility. No live external service or user Vault is used. Root real-module integration invokes `scripts/mcp-integration-client.mjs`; see [current summary](web-knowledge-summary.md).
+
 ## Purpose
 This first Unit is a single local process (one MCP server over stdio); there are no separate services to wire together. "Integration" here means the **end-to-end path from a real MCP client over stdio through the surface → services → core components → filesystem**, plus the CLI setup path. These are covered by `tests/server.test.ts`, which spawns the actual `serve` process and drives it with the MCP SDK `Client` over a `StdioClientTransport`.
 
@@ -33,3 +35,9 @@ Temp directories are removed by each test's `t.after`. Manual runs: delete the c
 
 ## Actual result in this environment (2026-09-08)
 **NOT EXECUTED** — requires Node ≥ 22.13 (host has 16.17.1). Run on a compliant host.
+
+## Session capture follow-up
+
+Run node --import tsx --test tests/capture.test.ts tests/server.test.ts, then npm run check. The actual stdio scenario loads the capture guide/prompt, discovers the local destination while web points to an unavailable endpoint, previews/applies/recaptures and verifies unrelated sections. A scripted host selects from candidate paths; no test claims live-model semantic accuracy. Existing real HTTP web regressions remain in the full suite.
+
+User-selection regression: capture calls require userSelected=true for the current selected session. Tests cover omitted/false selection, no scanning/writing before selection, ordinary reads without capture, and no standing permission after a completed save. Final full suite: 103/103 pass; see session-capture-summary.md.

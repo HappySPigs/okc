@@ -123,13 +123,14 @@ class UploadTokenStore:
             conn.execute(
                 text(
                     "INSERT INTO upload_tokens(id, project_id, slot_index, selector, verifier_hash,"
-                    " verifier_salt, owner_display_name, owner_kind, created_by, created_at, expires_at)"
-                    " VALUES (:id,:pid,:slot,:sel,:vh,:salt,:odn,:ok,:by,:ca,:ea)"
+                    " verifier_salt, owner_display_name, owner_kind, created_by, created_at, expires_at, source_identity)"
+                    " VALUES (:id,:pid,:slot,:sel,:vh,:salt,:odn,:ok,:by,:ca,:ea,:sid)"
                 ),
                 {
                     "id": token_id, "pid": project_id, "slot": slot_index, "sel": selector,
                     "vh": verifier_hash, "salt": verifier_salt, "odn": owner_display_name,
                     "ok": owner_kind, "by": created_by, "ca": created_at, "ea": expires_at,
+                    "sid": f"src_{token_id[4:]}",
                 },
             )
 
@@ -284,12 +285,21 @@ class UploadTokenService:
                 owner_display_name=_opt_str(row.get("owner_display_name")),
                 owner_kind=_opt_str(row.get("owner_kind")),
             )
-            return self._issue(
+            replacement = self._issue(
                 actor,
                 project_id,
                 req,
                 preferred_slot=cast(int, row["slot_index"]),
             )
+            # A rotated secret continues to address the same logical Vault.
+            with self._db.engine.begin() as conn:
+                conn.execute(
+                    text("UPDATE upload_tokens SET source_identity=:sid, registered_source_id=:registered"
+                         " WHERE id=:id"),
+                    {"sid": row.get("source_identity") or row.get("registered_source_id") or f"src_{token_id[4:]}",
+                     "registered": row.get("registered_source_id"), "id": replacement.token_id},
+                )
+            return replacement
 
     def slot_usage(self, project_id: str) -> SlotUsage:
         return SlotUsage(used=self._registered_source_count(project_id))

@@ -154,3 +154,16 @@
 ---
 
 _다음 단계 후보_: **User Stories**(다중 페르소나: admin/contributor/viewer/okc-mcp → 실행 권장) → Workflow Planning → Application Design → Units Generation.
+
+## 12. 2026-09-09 연속 업로드 확장
+
+사용자의 모듈 간 기능 공백 구현 요청에 따라 FR-UP-1..4를 확장한다. 업로드
+토큰은 고정된 Vault/source identity를 가지며, 재업로드는 새 소스 추가 대신
+해당 소스의 immutable full snapshot revision을 갱신한다. rename/delete 및
+빈 Vault를 반영하고, 토큰 회전 후에도 identity를 유지한다. hooks의 Bearer
+인증 CBOR negotiate/blob/commit API와 세션별 base revision, 서버 기준 재개
+offset, 완료 후에만 반환하는 멱등 commit receipt를 제공한다.
+
+이는 기존 curator 승인 및 freeze-then-run 정책을 유지하면서 소스 수신을
+확장하는 것이다. 증분 semantic 재통합이나 자동 승인·자동 공개를 뜻하지 않는다.
+세부 계약과 검증: [continuous-sync.md](../../construction/u2-upload/code/continuous-sync.md).

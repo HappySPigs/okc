@@ -1,0 +1,29 @@
+name: hooks-ci
+on:
+  push:
+    paths: ["okc-hooks/**", ".github/workflows/hooks-ci.yml"]
+  pull_request:
+    paths: ["okc-hooks/**", ".github/workflows/hooks-ci.yml"]
+permissions:
+  contents: read
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        toolchain: ["1.89.0", "1.97.1"]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: okc-hooks
+    env:
+      PROPTEST_RNG_SEED: "20260909"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ matrix.toolchain }}
+          components: clippy
+      - run: cargo clippy --locked --workspace --all-targets --features proptest-support -- -D warnings
+      - run: cargo test --locked --workspace --features proptest-support

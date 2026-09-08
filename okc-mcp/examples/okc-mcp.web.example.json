@@ -1,0 +1,9 @@
+{
+  "readOnly": true,
+  "agents": ["claude", "codex"],
+  "web": {
+    "baseUrl": "http://127.0.0.1:8000",
+    "projectId": "your-project-id",
+    "timeoutMs": 10000
+  }
+}

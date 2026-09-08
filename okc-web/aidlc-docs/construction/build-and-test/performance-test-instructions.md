@@ -17,3 +17,7 @@ cd backend && .venv/bin/python -c "from app.main import create_app; create_app()
 
 ## Explicitly out of scope (MVP)
 Concurrency load tests, throughput/latency SLAs, multi-process scaling, and provider-latency benchmarks. The design constraints (single org, single process, ≤10 sources/project, HTTP polling not SSE) make a formal load harness low-value for the demo. Revisit if productionized.
+
+Continuous upload verification now checks 13 revisions within one source and updates
+at the ten-source cap, plus bounded CBOR requests and snapshot size. See
+[continuous-sync verification](continuous-sync-verification.md). No throughput SLA is claimed.

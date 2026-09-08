@@ -328,6 +328,27 @@ def test_valid_zip_lands_and_registers(harness: Harness) -> None:
     assert r.json()["source_id"] in [s["source_id"] for s in manifest["sources"]]
 
 
+@pytest.mark.parametrize("entries", [
+    [("Caf\u00e9.md", b"composed"), ("Cafe\u0301.md", b"decomposed")],
+    [("Caf\u00e9", b"file"), ("Cafe\u0301/note.md", b"ancestor alias")],
+    [("NOTE.md", b"upper"), ("note.md", b"lower")],
+])
+def test_zip_platform_aliases_rejected_before_materialization(harness: Harness, entries: list[tuple[str, bytes]]) -> None:
+    token = _issue(harness)["token"]
+    original = _upload_md(harness, token, "keep.md", b"# Existing knowledge")
+    assert _poll(harness, token, original.json()["job_id"])["state"] == "completed"
+    before = OkcEngineImpl(build_client([])).manifest(harness.engine_root)["sources"]
+    response = harness.client.post(f"/u/{token}/upload", files={
+        "file": ("aliases.zip", _make_zip(entries), "application/zip"),
+    })
+    assert response.status_code == 400, response.text
+    assert response.json()["code"] == "PATH_UNSAFE"
+    assert OkcEngineImpl(build_client([])).manifest(harness.engine_root)["sources"] == before
+    assert _sources_count(harness) == 1
+    revision_parent = os.path.dirname(before[0]["path"])
+    assert len(os.listdir(revision_parent)) == 1
+
+
 # --- E2-S5: ≤10 source cap enforced ahead of core ---
 
 
@@ -365,9 +386,9 @@ def test_duplicate_source_idempotent(harness: Harness) -> None:
     assert _sources_count(harness) == 1  # idempotent — no second registration
 
 
-def test_concurrent_duplicate_jobs_commit_once_with_unique_reservations(harness: Harness) -> None:
+def test_concurrent_duplicate_jobs_commit_once_with_stable_reservation(harness: Harness) -> None:
     """Both HTTP pre-checks may pass while the writer is busy; the serialized
-    authoritative check must commit exactly one source and release the other slot."""
+    authoritative check must commit exactly one revision of the stable source."""
     token = _issue(harness)["token"]
     started = Event()
     release = Event()
@@ -384,10 +405,11 @@ def test_concurrent_duplicate_jobs_commit_once_with_unique_reservations(harness:
     body = b"# Same\n\nqueued twice before either source commits.\n"
     try:
         first = _upload_md(harness, token, "first.md", body)
-        second = _upload_md(harness, token, "second.md", body)
+        second = _upload_md(harness, token, "first.md", body)
         assert first.status_code == 200, first.text
         assert second.status_code == 200, second.text
-        assert {first.json()["slot_index"], second.json()["slot_index"]} == {0, 1}
+        assert {first.json()["slot_index"], second.json()["slot_index"]} == {0}
+        assert first.json()["source_id"] == second.json()["source_id"]
     finally:
         release.set()
 
@@ -398,10 +420,7 @@ def test_concurrent_duplicate_jobs_commit_once_with_unique_reservations(harness:
     assert second_snap["error"]["code"] == "DUPLICATE_SOURCE"
     assert _sources_count(harness) == 1
 
-    rejected_path = os.path.join(
-        harness.state.config.projects_root,
-        PROJECT_ID,
-        "sources",
-        second.json()["source_id"],
-    )
-    assert not os.path.exists(rejected_path)
+    # Rejected bytes never replace the successful revision's native binding.
+    sources = OkcEngineImpl(build_client([])).manifest(harness.engine_root)["sources"]
+    assert len(sources) == 1
+    assert os.path.isfile(os.path.join(sources[0]["path"], "first.md"))

@@ -1,0 +1,9 @@
+{
+  "vault_path": "/absolute/path/to/your/vault",
+  "server_endpoint": "https://okc.example.com/api/sync",
+  "token": "PASTE-YOUR-OKC-WEB-UPLOAD-TOKEN-HERE",
+  "data_dir": "/absolute/path/to/watcher-state",
+  "debounce_ms": 2000,
+  "reconciliation_interval_s": 900,
+  "chunk_size_bytes": 1048576
+}

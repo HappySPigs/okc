@@ -1,7 +1,19 @@
 # AI-DLC State Tracking
 
-## Current Execution Snapshot (AUTHORITATIVE)
+## Current Integration Snapshot (AUTHORITATIVE — 2026-09-09)
 
+- Stage: CONSTRUCTION COMPLETE for the root-coordinated four-module continuation.
+- Implemented: authenticated CBOR hooks uploads; stable source revisions/deletion/rename/empty snapshots; session/DB/crash recovery; Unicode portable path collision protection; structured native validation errors; verified compile receipts; pinned serving revisions/provenance/history/restore; optional private read tokens.
+- Verification: backend 114 tests passed, Ruff clean, mypy clean across 55 source/test files; frontend 8 tests plus typecheck/Vite build passed. Actual MCP/Rust/core/web bridge passed under root orchestration.
+- Records: [sync verification](construction/build-and-test/continuous-sync-verification.md), [serving implementation](construction/u5-serving/code/versioned-serving.md), [aggregate report](../../aidlc-docs/construction/build-and-test/build-and-test-summary.md).
+- Limits: provider responses in tests are synthetic; no live-model quality, native service deployment, screenshot capture, or remotely executed CI is claimed. CI is now at the repository root. No commit/push performed.
+- Existing extension opt-outs and contradiction-preserving curator policy remain unchanged. The explicit cross-module user requests authorize the new sync/retrieval integration scope.
+
+## Earlier W0–W5 Snapshot (historical; superseded above)
+
+- **2026-09-09 continuation**: CONSTRUCTION resumed for root-coordinated integration gaps. Upload work follows `construction/plans/u2-continuous-sync-code-generation-plan.md`; serving work is separately coordinated. Existing completion evidence below remains historical and does not verify the new changes.
+- **Continuous-upload unit complete**: native rebind + stable source identity, token rotation, canonical full snapshot hashes, authenticated CBOR sessions/chunks/commit, durable receipts, base-revision conflicts, and final-chunk crash recovery. All U2 continuation plan checkboxes complete. Focused aggregate **63 pytest passed**, Ruff clean, mypy clean for 16 owned files, including native validation error mapping. Rust CBOR fixture ran successfully. Root aggregate verification remains in progress.
+- **Versioned-serving continuation**: implementation is under `construction/plans/u5-versioned-serving-code-generation-plan.md`: verified compilation receipts, pinned revisions and file hashes, source/config/decision staleness, immutable history/restore, public/private access, and separate revocable read tokens. Parent reported 18 initial serving tests and one four-module integration test passing; independent review found and then reverified fixes for two same-revision recovery regressions (2/2 passed). Final full-suite counts are pending root verification.
 - **Workspace Scope**: `okc-web` module only; artifacts remain in `okc-web/aidlc-docs/`.
 - **Current Phase / Stage**: **CONSTRUCTION COMPLETE** (W0–W5 done). OPERATIONS = placeholder/SKIP → workflow complete.
 - **Last Completed**: **W5 Build and Test** — build/test instruction docs (`construction/build-and-test/` ×5), CI both stacks (`.github/workflows/backend-ci.yml` + `frontend-ci.yml`), `README.md`, `aidlc-docs/PROCESS.md`, secret scan (0 hardcoded), `screenshots/` capture guide + Playwright script. Lockfiles already present (`backend/uv.lock` + `frontend/package-lock.json`).

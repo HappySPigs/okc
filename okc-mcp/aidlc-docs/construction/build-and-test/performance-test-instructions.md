@@ -1,5 +1,7 @@
 # Performance Test Instructions — okc-mcp (first Unit)
 
+Web follow-up (2026-09-09): HTTP is bounded by per-request timeout and cancellation, streamed per-response bytes, maxFiles and per-snapshot maxScanBytes. A transient note cache exists only within one operation. `tests/web.test.ts` checks these bounds; no production throughput/latency claim is made. First-unit local-only statements below are historical.
+
 ## Applicability
 **Largely N/A for the first Unit.** This is a local, single-process, on-demand stdio tool with **no throughput/latency SLA**, no concurrent users, no network, and no deployed service (NFR-PERF-1, NFR-SCALE-1, NFR-AVAIL-1). Formal load/stress testing is deferred (RESILIENCY-14 → Operations).
 
@@ -22,3 +24,7 @@ time node dist/cli.js doctor --config /absolute/okc-mcp.json     # list/scan wit
 
 ## Deferred (follow-up Units / Operations)
 Real load/stress/scalability testing on large user Vaults and OS matrices (requirements §7 follow-up 4; RESILIENCY-14).
+
+## Session capture bounds
+
+Session scanning inherits maxFiles/maxScanBytes/maxNoteBytes. Topic, query, item and candidate counts are bounded. Captures reserve receipt response space before any write; preview snippets report truncation. Bounds and cancellation have deterministic regressions in capture.test.ts. There is no new latency SLA or hosted inference benchmark.

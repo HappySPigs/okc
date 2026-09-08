@@ -1,5 +1,10 @@
 # Build and Test Summary — okc-mcp (first Unit)
 
+Current session-capture follow-up (2026-09-09): user-selected-only trigger, source/test type checks, 103 tests, build and package checks passed. See [session capture verification](session-capture-summary.md). Existing historical results below are retained.
+
+
+Current 2026-09-09 web-knowledge follow-up: typecheck/build pass and 76/76 tests pass. See [web knowledge verification](web-knowledge-summary.md). The first-unit evidence below is retained without rewriting its historical tally.
+
 ## Build Status
 - **Build Tool**: npm + TypeScript (`tsc`).
 - **Type-check** (`npm run typecheck`, src + tests): **PASS** (0 diagnostics).

@@ -32,7 +32,7 @@ T = TypeVar("T")
 # Ops that reserve/mutate the project (go through the single writer). Everything
 # else (taxonomy/clusters/manifest/verify/explain) is a non-reserving read.
 RESERVING_OPS = frozenset({
-    "status", "add_source", "replace_sources", "set_ai_route", "preflight",
+    "status", "add_source", "rebind_source", "replace_sources", "set_ai_route", "preflight",
     "integrate", "approve_taxonomy", "approve_cluster", "regenerate_cluster", "compile",
 })
 

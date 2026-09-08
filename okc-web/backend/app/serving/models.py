@@ -23,6 +23,8 @@ class PublicationView(BaseModel):
     bound identity fields say WHICH compiled manifest the URL is pinned to."""
 
     project_id: str
+    revision: str | None = None
+    access: str = "public"
     status: ServingStatus
     stale: bool = False
     compiled_vault_path: str | None = None
@@ -37,6 +39,8 @@ class ServingFileListView(BaseModel):
     """E5-S2 file list + E5-S5 served-manifest identity/stale label."""
 
     project_id: str
+    revision: str | None = None
+    file_hashes: dict[str, str] = Field(default_factory=dict)
     status: ServingStatus
     stale: bool = False
     bound_integration_plan_id: str | None = None
@@ -47,6 +51,7 @@ class ServingVerifyView(BaseModel):
     """E5-S3 verify() — integrity/internal-consistency, NOT publisher authenticity."""
 
     project_id: str
+    revision: str | None = None
     status: ServingStatus
     stale: bool = False
     valid: bool = False
@@ -63,6 +68,7 @@ class ServingProvenanceView(BaseModel):
     is a decorative, unverified label supplied at upload time)."""
 
     project_id: str
+    revision: str | None = None
     status: ServingStatus
     stale: bool = False
     file_path: str
@@ -98,6 +104,9 @@ class McpContractView(BaseModel):
     vector-index/query) and the MCP tool surface are okc-mcp's job and OUT of scope."""
 
     project_id: str
+    revision: str | None = None
+    protocol_version: int = 1
+    access: str = "public"
     status: ServingStatus
     stale: bool = False
     location: ContractLocation
@@ -110,5 +119,13 @@ class McpContractView(BaseModel):
         "RAG retrieval (chunking, embedding, vector index, query) and the MCP tool"
         " surface are okc-mcp's responsibility and are out of scope here. okc-web"
         " serves read-only Markdown only; core embeddings are ephemeral, so the"
-        " consumer MUST re-embed the served artifacts."
+        " consumer may use lexical search or re-embed artifacts for semantic search."
     )
+
+
+class AccessRequest(BaseModel):
+    mode: str
+
+
+class RestoreRequest(BaseModel):
+    revision: str = Field(pattern=r"^[a-f0-9]{64}$")

@@ -440,3 +440,45 @@ Timestamps use ISO 8601 (UTC). This file is APPEND-ONLY — never overwritten.
 **Context**: ✅ CONSTRUCTION COMPLETE (W0–W5). okc-web MVP built end-to-end via AI-DLC: 6 backend units + React SPA, both stacks green, full traceable `aidlc-docs/` trail, CI/README/PROCESS/lockfiles/secret-scan in place. Remaining follow-ups are optional and user-directed (commit/PR, provider-run + screenshots, CI hoist).
 
 ---
+
+## Continuous synchronization — Construction resumption
+**Timestamp**: 2026-09-08T17:01:39Z
+**User Input**: "AIDLC 모두 확인해서 검증하고, 없는 부분들 구현해"
+**AI Response**: Reviewed the existing requirements, approved contradiction-preserving review decision, U2 upload design and implementation, and recorded build/test limits. Created the continuous-sync code-generation plan before implementation. The root initiative coordinates modules; this module owns its upload and serving changes and history. Proceeding under the explicit implementation request and standing authorized workflow. The existing extension opt-outs remain unchanged: Security Baseline, Resiliency Baseline, and Property-Based Testing rules are skipped.
+**Context**: U2 repeated source revisions and hooks CBOR receiver; U5 publication verification is coordinated separately. No claim of live-provider verification or deployment is made.
+
+---
+
+## Continuous synchronization — user steering
+**Timestamp**: 2026-09-08T17:12:00Z
+**User Input**: "위에서 내 요구사항에 맞게 모든 모듈들이 잘 구현됐는지 확인해서 기능이 공백이 있으면 AIDLC를 이용해 설계 구현해"
+**AI Response**: Continued the authorized design and implementation of the identified module gaps. Added durable upload sessions and revision history, stable per-token source identities, native source rebinding, canonical snapshot hashes, and the authenticated hooks CBOR receiver. Existing source-set fingerprints change when a revision changes. Next step is real-binding and wire-contract verification.
+**Context**: U2 Code Generation; source files remain immutable and review/compile/publication remain separate authorized operations.
+
+---
+
+## Continuous synchronization — Code Generation and Build/Test complete
+**Timestamp**: 2026-09-08T17:17:01Z
+**User Input**: (no new user input; continuing the explicit implementation request)
+**AI Response**: Completed all U2 continuous-sync plan steps. Added stable source identity and token-rotation continuity, authoritative full-snapshot hashes, native rebinding, durable revision/session records, bounded Bearer-authenticated CBOR negotiation/chunks/commit, restart offsets, stale-base rejection, and idempotent completed receipts. Ran 52 upload/foundation/production-spine tests with real native bindings, including the Rust-generated CBOR fixture and a database-failure recovery case; all passed. Ruff and mypy passed for the owned files. Updated requirements, implementation contract, and build/test documentation. An empty metadata directory allows delete-all snapshots through the existing core API without adding a note. Extension rules remain disabled/N/A, with functional constraints verified by tests.
+**Context**: U2 complete; root aggregate and independently-owned serving verification remain in progress. No deployment or live-provider result is asserted.
+
+---
+
+## Integration review — publication recovery and native adapter validation
+**Timestamp**: 2026-09-08T17:26:30Z
+**User Input**: (no new user input; continuing authorized implementation and independent verification)
+**AI Response**: Reviewed versioned-serving receipts, pinned read routes, public/private read tokens, compilation capture, and the four-module integration test. Two concrete recovery tests failed because unchanged-revision receipt inserts retained obsolete paths/fingerprints. The serving owner changed receipt upsert behavior; both independent recovery tests then passed. Corrected the adapter's synchronous native validation boundary across public methods and client construction, with nine real-binding/HTTP tests proving structured validation errors. Corrected an invalid pseudo-link in design-system.md without changing its UI specification. A separate reviewer identified the final-chunk fsync-to-cache-publication crash window; negotiation now verifies/promotes complete partial files or resets corrupt ones to zero, covered by two restart regressions. Latest owned aggregate: 63 pytest passed, Ruff clean, mypy clean across 16 files. Root previously reported 18 serving checks and one four-module integration test passing; final aggregate verification is still owned by the root workflow.
+**Context**: Continuous-upload plan steps 9–10 complete. Serving now records verified compiled manifest identities and supports revision-pinned reads, history/restore, explicit public/private access, and hashed revocable project-read tokens. Current-source, project-config, and decision fingerprints preserve stale-state visibility. No hosted-provider quality or production deployment claim is made.
+
+---
+
+## Integration continuation — Final module verification
+
+**Timestamp**: 2026-09-08T17:32:02Z
+
+**AI Response**: Completed continuous upload and versioned serving under the user's existing explicit instructions. Added NFC/casefold collision checks for CBOR and ZIP while retaining original path bytes in hashes, with five regressions preserving existing sources. Final full backend: 114 passed, Ruff clean and mypy clean across 55 files; frontend: 8 passed and build/typecheck passed. Root's actual MCP author → Rust hooks frames → web/core integration/approval/compile → published private MCP read/verify/explain test passed. The deterministic provider is synthetic; no live AI quality/deployment claim is made. Updated latest state, continuation plans, serving implementation record, README, requirements and final build/test evidence. Native error mapping and same-revision crash/recompile recovery are verified. Root CI retains native wheel installation and adds aggregate tests; remote CI was not run.
+
+**Context**: CONSTRUCTION complete. Optional module extensions remain disabled as originally selected. Existing source and artifact histories preserved; no deployment, commit or push.
+
+---

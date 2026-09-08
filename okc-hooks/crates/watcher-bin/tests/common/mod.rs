@@ -13,9 +13,9 @@ use auth_consent::ConsentDecision;
 use change_detect::{Availability, GuardVerdict};
 use foundation::{
     ActiveCondition, ByteCount, CriticalEventSink, CycleId, CycleOutcome, HistorySink, LimitReport,
-    LivenessSignal, LogFields, LogLevel, LogRecord, Logger, Manifest, ManifestDigest, ManifestEntry,
-    OperationalState, RelativePath, RollbackReason, Sha256Digest, StatusSink, Timestamp,
-    TransportError, UploadHistoryRecord, Version,
+    LivenessSignal, LogFields, LogLevel, LogRecord, Logger, Manifest, ManifestDigest,
+    ManifestEntry, OperationalState, RelativePath, RollbackReason, Sha256Digest, StatusSink,
+    Timestamp, TransportError, UploadHistoryRecord, Version,
 };
 use ops_control::{RunMode, RunState, StopMode};
 use sync_state::{BackoffConfig, RetryBackoffController};
@@ -324,6 +324,14 @@ pub struct Handles {
 
 /// 시나리오로 코디네이터를 조립하고 검사 핸들을 반환한다.
 pub fn build(scenario: Scenario) -> (SyncCycleCoordinator, Handles) {
+    build_custom(scenario, None, BackoffConfig::default())
+}
+
+pub fn build_custom(
+    scenario: Scenario,
+    driver: Option<Box<dyn CycleDriver>>,
+    backoff: BackoffConfig,
+) -> (SyncCycleCoordinator, Handles) {
     let status = Arc::new(RecordingStatus::new());
     let logger = Arc::new(RecordingLogger::new());
     let history = Arc::new(RecordingHistory::new());
@@ -347,9 +355,11 @@ pub fn build(scenario: Scenario) -> (SyncCycleCoordinator, Handles) {
         consent: Arc::new(FakeConsent {
             decision: scenario.consent,
         }),
-        driver: Box::new(FakeDriver {
-            calls: driver_calls.clone(),
-            succeed: scenario.driver_succeeds,
+        driver: driver.unwrap_or_else(|| {
+            Box::new(FakeDriver {
+                calls: driver_calls.clone(),
+                succeed: scenario.driver_succeeds,
+            })
         }),
         run_state: Arc::new(FakeRunState {
             mode: if scenario.paused {
@@ -366,7 +376,7 @@ pub fn build(scenario: Scenario) -> (SyncCycleCoordinator, Handles) {
         history: history.clone(),
         critical: critical.clone(),
     };
-    let retry = RetryBackoffController::new(&BackoffConfig::default(), 3, 0);
+    let retry = RetryBackoffController::new(&backoff, 3, 0);
     let coordinator =
         SyncCycleCoordinator::new(ports, sinks, retry, Arc::new(AtomicBool::new(false)));
 

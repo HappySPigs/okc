@@ -5,9 +5,9 @@ name: backend-ci
 
 on:
   push:
-    paths: ["okc-web/backend/**", "okc-core/**", ".github/workflows/web-backend-ci.yml"]
+    paths: ["okc-web/backend/**", "okc-core/**", "okc-hooks/**", "okc-mcp/**", "scripts/**", ".github/workflows/web-backend-ci.yml"]
   pull_request:
-    paths: ["okc-web/backend/**", "okc-core/**"]
+    paths: ["okc-web/backend/**", "okc-core/**", "okc-hooks/**", "okc-mcp/**", "scripts/**", ".github/workflows/web-backend-ci.yml"]
   workflow_dispatch: {}
 
 jobs:
@@ -37,7 +37,9 @@ jobs:
           VIRTUAL_ENV=okc-web/backend/.venv uv pip install okc-core/bindings/python/dist/okc_compiler-0.3.0-*.whl
 
       - name: Install backend deps (locked)
-        run: VIRTUAL_ENV=.venv uv sync --frozen || VIRTUAL_ENV=.venv uv sync
+        # The unpublished native wheel is built above and intentionally outside
+        # the PyPI lock. Retain it and install the optional validation tools.
+        run: VIRTUAL_ENV=.venv uv sync --frozen --extra dev --inexact
 
       - name: Lint (ruff)
         run: .venv/bin/python -m ruff check app tests
@@ -47,6 +49,25 @@ jobs:
 
       - name: Test (pytest, real binding)
         run: .venv/bin/python -m pytest -q
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: okc-mcp/package-lock.json
+
+      - name: Build actual MCP and hooks protocol fixture
+        working-directory: .
+        run: |
+          npm --prefix okc-mcp ci
+          npm --prefix okc-mcp run build
+          cargo build --locked --manifest-path okc-hooks/Cargo.toml -p upload-client --example protocol-fixture
+
+      - name: Four-module integration and current AI-DLC links
+        working-directory: .
+        run: |
+          okc-web/backend/.venv/bin/python -m pytest -c okc-web/backend/pyproject.toml scripts/test_integration.py -q
+          node scripts/verify-aidlc.mjs
 
       - name: Secret scan (no hardcoded secrets)
         run: |

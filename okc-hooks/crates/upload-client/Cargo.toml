@@ -17,12 +17,14 @@ sync-state.workspace = true
 auth-consent.workspace = true
 serde.workspace = true      # 프로토콜 봉투(NegotiateRequest/CommitRequest 등) CBOR round-trip
 thiserror.workspace = true  # UploadError/BlobSourceError 운영 오류 파생
+tempfile.workspace = true   # immutable verified blob spooling without unbounded memory
 # proptest 는 optional: 오직 `proptest-support` feature 가 켜졌을 때만 빌드 그래프에 유입.
 proptest = { workspace = true, optional = true }
 
 # 자기 크레이트 테스트가 proptest-support feature 를 켜고 U0 도메인 제너레이터를 재사용한다.
 [dev-dependencies]
 proptest.workspace = true
+serde_json.workspace = true
 
 [features]
 # NON-DEFAULT: default features 비어 있음 -> proptest 는 프로덕션 빌드 그래프에 유입되지 않음(PBT-07).

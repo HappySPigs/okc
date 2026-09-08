@@ -93,15 +93,24 @@ pub struct NativeServiceOps {
     data_dir: PathBuf,
     /// 볼트 루트 — 삭제 이중 방어 기준(하위는 절대 삭제 안 함).
     vault_root: PathBuf,
+    /// 실제 로드된 config 경로 — `uninstall --purge-token` 의 ConfigToken 정리 대상.
+    /// `setup` 이 사용자 레벨 경로에 기록한 config 도 이 경로로 제거된다(data_dir 관례가 아님).
+    config_path: PathBuf,
 }
 
 impl NativeServiceOps {
-    /// 조립 루트(U8)가 해소한 경로로 구성한다.
-    pub fn new(exec_path: PathBuf, data_dir: PathBuf, vault_root: PathBuf) -> Self {
+    /// 조립 루트(U8)가 해소한 경로로 구성한다. `config_path` 는 정리 대상 config 파일의 실제 경로다.
+    pub fn new(
+        exec_path: PathBuf,
+        data_dir: PathBuf,
+        vault_root: PathBuf,
+        config_path: PathBuf,
+    ) -> Self {
         NativeServiceOps {
             exec_path,
             data_dir,
             vault_root,
+            config_path,
         }
     }
 }
@@ -123,7 +132,7 @@ impl ServiceOps for NativeServiceOps {
             Box::new(StdFileSystem),
             Box::new(UnsupportedTokenPurge),
         );
-        let artifacts = assemble_artifact_set(&self.data_dir);
+        let artifacts = assemble_artifact_set(&self.data_dir, &self.config_path);
         match uninstaller.uninstall(opts, artifacts, &self.vault_root) {
             Ok(report) => Ok(format!(
                 "제거 완료: {}개 삭제, {}개 skip",
@@ -136,7 +145,10 @@ impl ServiceOps for NativeServiceOps {
 }
 
 /// data-dir 관례로 정리 대상 아티팩트 집합을 조립한다(vault_root 하위 배제는 U7a 가 재검사, R-U7B-02).
-fn assemble_artifact_set(data_dir: &std::path::Path) -> ArtifactSet {
+///
+/// ConfigToken 은 실제 로드된 `config_path` 를 대상으로 한다 — `setup` 이 사용자 레벨 경로에 기록한
+/// config 도 이 경로로 정리된다(data_dir 하위의 관례 경로가 아님).
+fn assemble_artifact_set(data_dir: &std::path::Path, config_path: &std::path::Path) -> ArtifactSet {
     ArtifactSet(vec![
         Artifact {
             kind: ArtifactKind::UploadHistory,
@@ -152,7 +164,7 @@ fn assemble_artifact_set(data_dir: &std::path::Path) -> ArtifactSet {
         },
         Artifact {
             kind: ArtifactKind::ConfigToken,
-            path: data_dir.join("config.json"),
+            path: config_path.to_path_buf(),
         },
     ])
 }

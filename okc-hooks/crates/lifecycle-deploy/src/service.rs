@@ -39,17 +39,28 @@ pub struct ServiceSpec {
     pub account: ServiceAccount,
     /// 부팅/로그인 자동시작 여부(기본 `true`, FR-21 core).
     pub autostart: bool,
+    /// 생성될 서비스 유닛이 데몬을 바인딩할 config 경로(선택). `Some` 이면 유닛이
+    /// `<exec> run <config>` 로 데몬을 그 config 에 명시 바인딩해 코어 기본 발견(`/etc/...`)에
+    /// 의존하지 않는다(LIR-H1). `None` 이면 인자 없이 기동해 기존 `install` 동작(기본 발견)을 유지한다.
+    pub config_path: Option<PathBuf>,
 }
 
 impl ServiceSpec {
-    /// 기본값(`account = CurrentUser`, `autostart = true`)으로 스펙을 구성한다.
+    /// 기본값(`account = CurrentUser`, `autostart = true`, `config_path = None`)으로 스펙을 구성한다.
     pub fn new(exec_path: PathBuf, working_dir: PathBuf) -> Self {
         ServiceSpec {
             exec_path,
             working_dir,
             account: ServiceAccount::CurrentUser,
             autostart: true,
+            config_path: None,
         }
+    }
+
+    /// 생성될 서비스 유닛이 데몬을 바인딩할 명시 config 경로를 설정한다(`setup` 경로, LIR-H1).
+    pub fn with_config_path(mut self, config_path: PathBuf) -> Self {
+        self.config_path = Some(config_path);
+        self
     }
 }
 
@@ -230,11 +241,20 @@ impl LaunchdController {
         let exec = spec.exec_path.display();
         let wd = spec.working_dir.display();
         let run_at_load = if spec.autostart { "true" } else { "false" };
+        // config_path 가 있으면 `run <config>` 인자를 추가해 데몬을 그 config 에 바인딩한다(LIR-H1).
+        // 각 인자는 개별 `<string>` 이라 경로 내 공백(예: macOS Application Support)도 안전하다.
+        let program_args = match &spec.config_path {
+            Some(config) => format!(
+                "<string>{exec}</string><string>run</string><string>{}</string>",
+                config.display()
+            ),
+            None => format!("<string>{exec}</string>"),
+        };
         format!(
             "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
              <plist version=\"1.0\"><dict>\n\
              <key>Label</key><string>{SERVICE_LABEL}</string>\n\
-             <key>ProgramArguments</key><array><string>{exec}</string></array>\n\
+             <key>ProgramArguments</key><array>{program_args}</array>\n\
              <key>WorkingDirectory</key><string>{wd}</string>\n\
              <key>RunAtLoad</key><{run_at_load}/>\n\
              <key>KeepAlive</key><true/>\n\
@@ -321,11 +341,15 @@ impl SystemdController {
     }
 
     fn unit_contents(spec: &ServiceSpec) -> String {
-        let exec = spec.exec_path.display();
         let wd = spec.working_dir.display();
+        // config_path 가 있으면 `run <config>` 로 데몬을 그 config 에 바인딩한다(LIR-H1).
+        let exec_start = match &spec.config_path {
+            Some(config) => format!("{} run {}", spec.exec_path.display(), config.display()),
+            None => spec.exec_path.display().to_string(),
+        };
         format!(
             "[Unit]\nDescription=okc-hooks Watcher\n\n\
-             [Service]\nExecStart={exec}\nWorkingDirectory={wd}\nRestart=on-failure\n\n\
+             [Service]\nExecStart={exec_start}\nWorkingDirectory={wd}\nRestart=on-failure\n\n\
              [Install]\nWantedBy=default.target\n"
         )
     }
@@ -412,7 +436,15 @@ struct WindowsScmController;
 
 impl ServiceController for WindowsScmController {
     fn register(&self, spec: &ServiceSpec) -> Result<(), ServiceError> {
-        let bin = format!("binPath= {}", spec.exec_path.display());
+        // config_path 가 있으면 `run <config>` 로 데몬을 그 config 에 바인딩한다(LIR-H1).
+        let bin = match &spec.config_path {
+            Some(config) => format!(
+                "binPath= {} run {}",
+                spec.exec_path.display(),
+                config.display()
+            ),
+            None => format!("binPath= {}", spec.exec_path.display()),
+        };
         run(Command::new("sc.exe")
             .arg("create")
             .arg(SERVICE_LABEL)
@@ -549,5 +581,38 @@ mod tests {
         // running -> registered, pid.is_some() -> running (R-SM-03).
         assert!(!reg.running || reg.registered);
         assert!(reg.pid.is_none() || reg.running);
+    }
+
+    #[test]
+    fn plist_binds_config_when_set() {
+        // config_path 지정 시 launchd plist 는 `run <config>` 인자로 데몬을 바인딩한다(LIR-H1).
+        let cfg = abs("/cfg/config.json");
+        let spec = ServiceSpec::new(abs("/bin/watcher"), abs("/data")).with_config_path(cfg.clone());
+        let plist = LaunchdController::plist_contents(&spec);
+        assert!(plist.contains("<string>run</string>"));
+        assert!(plist.contains(&format!("<string>{}</string>", cfg.display())));
+    }
+
+    #[test]
+    fn plist_omits_run_arg_when_config_absent() {
+        // config_path 미지정 시 기존 install 동작(인자 없는 기동, 기본 발견)을 유지한다.
+        let spec = ServiceSpec::new(abs("/bin/watcher"), abs("/data"));
+        let plist = LaunchdController::plist_contents(&spec);
+        assert!(!plist.contains("<string>run</string>"));
+    }
+
+    #[test]
+    fn systemd_unit_binds_config_when_set() {
+        let cfg = abs("/cfg/config.json");
+        let spec = ServiceSpec::new(abs("/bin/watcher"), abs("/data")).with_config_path(cfg.clone());
+        let unit = SystemdController::unit_contents(&spec);
+        assert!(unit.contains(&format!("ExecStart={} run {}", abs("/bin/watcher").display(), cfg.display())));
+    }
+
+    #[test]
+    fn systemd_unit_omits_run_arg_when_config_absent() {
+        let spec = ServiceSpec::new(abs("/bin/watcher"), abs("/data"));
+        let unit = SystemdController::unit_contents(&spec);
+        assert!(unit.contains(&format!("ExecStart={}\n", abs("/bin/watcher").display())));
     }
 }

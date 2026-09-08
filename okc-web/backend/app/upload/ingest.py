@@ -1,9 +1,10 @@
-"""``upload.ingest`` — U2 UploadIngestService: the ONE mutating flow (E2-S3..S6).
+"""``upload.ingest`` — U2 multipart snapshot ingestion (E2-S3..S6).
 
 Capability-authenticated, ordered, fail-fast pipeline. Every step BEFORE
-``add_source`` guarantees okc-core is untouched on rejection (C-1). ``add_source``
-runs on the U0 single-writer worker (NFR-CONC-1); commit / SourceRegistry.record /
-mark_used happen strictly AFTER it succeeds, on that same worker thread.
+the source binding guarantee okc-core is untouched on rejection (C-1). Native
+add/rebind runs on the U0 single writer. Each capability owns one stable source;
+new immutable revisions update that source after computing canonical file hashes.
+The revision committer is shared with the hooks CBOR receiver.
 
 Supported formats: ``.zip`` (story-canonical vault archive, full hostile-input
 defenses) and a single ``.md`` file (one-note vault). ``tar.zst`` is recognized
@@ -24,7 +25,6 @@ from fastapi import Request, UploadFile
 from sqlalchemy import text
 from ulid import ULID
 
-from app.adapter import dto
 from app.adapter.engine import OkcEngineImpl
 from app.adapter.queue import EngineWorker
 from app.config import AppConfig
@@ -33,6 +33,14 @@ from app.shared.error import EngineError, EngineErrorCategory, EngineErrorCode
 from app.shared.jobs import JobId
 from app.shared.state import StateDb
 from app.upload.models import SOURCE_CAP, CheckResult, IngestAccepted, ValidationReport
+from app.upload.revisions import (
+    commit_revision,
+    current_source,
+    directory_manifest,
+    portable_path_key,
+    safe_path,
+    source_identity,
+)
 from app.upload.tokens import UploadTokenStore, _now
 
 _CHUNK = 64 * 1024
@@ -91,6 +99,7 @@ class SourceRow:
 class SlotReservation:
     project_id: str
     slot_index: int
+    source_id: str | None = None
 
 
 class SourceRegistry:
@@ -150,9 +159,17 @@ class SlotAccountant:
         self._registry = registry
         self._guard = Lock()
         self._reserved: set[tuple[str, int]] = set()
+        self._pending_sources: dict[str, tuple[SlotReservation, int]] = {}
 
-    def reserve(self, project_id: str) -> SlotReservation:
+    def reserve(self, project_id: str, source_id: str | None = None,
+                existing_slot: int | None = None) -> SlotReservation:
         with self._guard:
+            if source_id and source_id in self._pending_sources:
+                reservation, count = self._pending_sources[source_id]
+                self._pending_sources[source_id] = (reservation, count + 1)
+                return reservation
+            if existing_slot is not None:
+                return SlotReservation(project_id, existing_slot, source_id)
             if self._registry.count(project_id) >= SOURCE_CAP:
                 raise self._cap_error()
             used = self._registry.used_slot_indices(project_id)
@@ -160,7 +177,10 @@ class SlotAccountant:
                 key = (project_id, slot_index)
                 if slot_index not in used and key not in self._reserved:
                     self._reserved.add(key)
-                    return SlotReservation(project_id=project_id, slot_index=slot_index)
+                    reservation = SlotReservation(project_id, slot_index, source_id)
+                    if source_id:
+                        self._pending_sources[source_id] = (reservation, 1)
+                    return reservation
         raise self._cap_error()
 
     def commit(self, reservation: SlotReservation, row: SourceRow) -> None:
@@ -169,6 +189,12 @@ class SlotAccountant:
 
     def release(self, reservation: SlotReservation) -> None:
         with self._guard:
+            if reservation.source_id in self._pending_sources:
+                _, count = self._pending_sources[reservation.source_id]
+                if count > 1:
+                    self._pending_sources[reservation.source_id] = (reservation, count - 1)
+                    return
+                del self._pending_sources[reservation.source_id]
             self._reserved.discard((reservation.project_id, reservation.slot_index))
 
     @staticmethod
@@ -239,14 +265,21 @@ class ArchiveValidator:
         total_uncompressed = 0
         total_files = 0
         markdown_files = 0
+        file_keys: set[str] = set()
+        directory_keys: set[str] = set()
         try:
             with zipfile.ZipFile(staged.temp_path) as zf:
                 for info in zf.infolist():
                     name = info.filename
                     if info.is_dir():
                         _assert_safe_relpath(name)
+                        directory_keys.add(portable_path_key(name.rstrip("/")))
                         continue
                     _assert_safe_relpath(name)
+                    key = portable_path_key(safe_path(name))
+                    if key in file_keys:
+                        raise _path_unsafe("duplicate or platform-equivalent archive file paths")
+                    file_keys.add(key)
                     if _is_symlink(info):
                         raise _path_unsafe(f"symlink entry rejected: {name}")
                     total_files += 1
@@ -261,6 +294,12 @@ class ArchiveValidator:
                         raise _too_large(f"compression ratio too high for {name} — possible zip bomb")
                     if name.lower().endswith(".md"):
                         markdown_files += 1
+                if file_keys & directory_keys:
+                    raise _path_unsafe("archive file path overlaps a directory")
+                for key in file_keys | directory_keys:
+                    parts = key.split("/")
+                    if any("/".join(parts[:i]) in file_keys for i in range(1, len(parts))):
+                        raise _path_unsafe("archive file path overlaps a directory ancestor")
         except zipfile.BadZipFile as exc:
             raise EngineError(
                 EngineErrorCode.VALIDATION_FAILED,
@@ -366,25 +405,24 @@ class UploadIngestService:
         okind = _validate_owner_kind(owner_kind if owner_kind is not None else ctx.owner_kind)
 
         # 2. atomically reserve an in-flight slot (source ≤10) — fast 429.
-        reservation = self._slots.reserve(ctx.project_id)
+        source_id = source_identity(self._db, ctx)
+        current = current_source(self._db, source_id)
+        reservation = self._slots.reserve(ctx.project_id, source_id,
+                                          current["slot_index"] if current else None)
         staged: StagedUpload | None = None
         landed: str | None = None
         try:
             # 3. receive: stream to temp with a hard byte cap + incremental hash.
             staged = await self._receiver.receive(file, request)
-            # 4a. duplicate content: idempotent no-op (retry-safe) → DUPLICATE_SOURCE.
-            if self._registry.exists_content(ctx.project_id, staged.content_hash):
-                raise EngineError(
-                    EngineErrorCode.DUPLICATE_SOURCE,
-                    EngineErrorCategory.VALIDATION,
-                    "identical content is already registered for this project",
-                )
             # 4b. hostile-input validation (blocking failures raise here).
             report = self._validator.inspect(staged)
 
             # 5. land to an absolute directory under the sources root (disk THEN register).
-            source_id = f"src_{ULID()}"
-            landed = self._lander.land(ctx.project_id, source_id, staged)
+            landed = self._lander.land(ctx.project_id, f"{source_id}/revisions/{ULID()}", staged)
+            staged.content_hash, _entries = directory_manifest(landed)
+            if self._registry.exists_content(ctx.project_id, staged.content_hash):
+                raise EngineError(EngineErrorCode.DUPLICATE_SOURCE, EngineErrorCategory.VALIDATION,
+                                  "identical vault content is already registered for this project")
             # 6+7. add_source on the single-writer worker; commit/record/mark_used AFTER.
             job_id = self._enqueue_add_source(
                 ctx=ctx, root=root, source_id=source_id, landed=landed,
@@ -420,43 +458,18 @@ class UploadIngestService:
         assert self._engine is not None  # guarded by caller
 
         def run(engine: OkcEngineImpl, _progress) -> None:  # noqa: ANN001 - progress sink typed in queue
-            # Authoritative cap + duplicate checks run on the serialized writer.
-            # This closes the window where two uploads pass the synchronous
-            # pre-check before either one has committed its SourceRegistry row.
             try:
-                if self._registry.count(ctx.project_id) >= SOURCE_CAP:
-                    raise SlotAccountant._cap_error()
                 if self._registry.exists_content(ctx.project_id, content_hash):
-                    raise EngineError(
-                        EngineErrorCode.DUPLICATE_SOURCE,
-                        EngineErrorCategory.VALIDATION,
-                        "identical content is already registered for this project",
-                    )
-            except BaseException:
-                self._slots.release(reservation)
-                _safe_rmtree(landed)
-                raise
-
-            try:
-                cmd = dto.AddSourceCmd(
-                    source_id=source_id, absolute_path=landed,
-                    owner_display_name=owner_display_name,
-                )
-                engine.add_source(root, cmd)  # okc-core mutation via the adapter
-                # Strictly AFTER add_source succeeds, on this same worker thread:
-                row = SourceRow(
-                    source_id=source_id, project_id=ctx.project_id,
+                    raise EngineError(EngineErrorCode.DUPLICATE_SOURCE, EngineErrorCategory.VALIDATION,
+                                      "identical vault content is already registered for this project")
+                commit_revision(
+                    self._db, engine, ctx, source_id=source_id, root=root, landed=landed,
+                    content_hash=content_hash, slot_index=reservation.slot_index,
                     owner_display_name=owner_display_name, owner_kind=owner_kind,
-                    content_hash=content_hash, absolute_path=landed,
-                    slot_index=reservation.slot_index, upload_token_id=ctx.token_id,
                 )
-                self._slots.commit(reservation, row)  # SourceRegistry.record
-                self._tokens.mark_used(ctx.token_id, source_id, _now())
-            except BaseException:
-                # Preserve landed bytes if the core call may have mutated state;
-                # releasing only the in-memory reservation avoids a leaked slot.
+            finally:
+                # Immutable revisions are retained even on uncertain core/DB outcomes.
                 self._slots.release(reservation)
-                raise
 
         return self._engine.enqueue("add_source", ctx.project_id, ctx.token_id, run)
 

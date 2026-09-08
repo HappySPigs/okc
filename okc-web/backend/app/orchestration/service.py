@@ -32,6 +32,7 @@ from app.orchestration.models import (
     RouteBoundaryView,
     RunIntegrationRequest,
 )
+from app.serving.snapshots import SnapshotStore, compilation_receipt
 from app.shared.authz import AdminPrincipal
 from app.shared.error import EngineError, EngineErrorCategory, EngineErrorCode
 from app.shared.jobs import JobProgress
@@ -56,6 +57,7 @@ class OrchestrationService:
         self._registry = registry
         self._engine = engine
         self._config = config
+        self._snapshots = SnapshotStore(registry._db)
 
     # --- helpers ---
 
@@ -286,12 +288,34 @@ class OrchestrationService:
         self._require_current_freeze(row)
         engine = self._require_engine()
         status = await engine.read(lambda e: e.status(row.engine_root_abs_path))
-        if str(status.checkpoint) != "ready_to_compile":
+        if str(status.checkpoint) not in {"ready_to_compile", "verified"}:
             raise EngineError(
                 EngineErrorCode.APPROVAL_REQUIRED, EngineErrorCategory.APPROVAL,
                 "project is not ready to compile (approvals incomplete)",
             )
-        cv = await engine.call(lambda e: e.compile(row.engine_root_abs_path, output))
+        def compile_and_record(e: OkcEngineImpl) -> dto.CompileView:
+            # Recheck inside the serialized writer: an upload may have queued
+            # while the HTTP handler was awaiting the checkpoint read.
+            self._require_current_freeze(self._registry.get(project_id))
+            cv = e.compile(row.engine_root_abs_path, output)
+            verified = e.verify(cv.path)
+            if not verified.valid or not isinstance(verified.manifest, dict):
+                raise EngineError(EngineErrorCode.VERIFICATION_FAILED, EngineErrorCategory.VERIFICATION,
+                                  "compiled artifact failed verification")
+            receipt = compilation_receipt(cv.path, verified.manifest,
+                self._registry.source_set_fingerprint(project_id), row.engine_root_abs_path)
+            receipt["decision_fingerprint"] = self._snapshots.decision_fingerprint(project_id)
+            with self._registry._db.engine.connect() as conn:
+                from sqlalchemy import text
+                labels = conn.execute(text(
+                    "SELECT source_id,owner_display_name,owner_kind,document_id FROM sources WHERE project_id=:pid"
+                ), {"pid": project_id}).mappings().all()
+                receipt["owner_labels"] = {r["source_id"]: {
+                    "display_name": r["owner_display_name"], "owner_kind": r["owner_kind"],
+                    "document_id": r["document_id"]} for r in labels}
+            self._snapshots.record(project_id, receipt)
+            return cv
+        cv = await engine.call(compile_and_record)
         return CompileResultView(
             project_id=project_id, path=cv.path,
             integration_plan_id=cv.integration_plan_id, file_count=cv.file_count,

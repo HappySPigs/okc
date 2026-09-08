@@ -1,12 +1,24 @@
 {
   "name": "okc-mcp",
   "version": "0.1.0-alpha.1",
-  "description": "Local Obsidian authoring MCP for evidence-rich OKC source Vaults",
+  "description": "Coding-session knowledge capture, local Obsidian authoring and published OKC retrieval MCP",
   "type": "module",
   "license": "MIT",
-  "engines": { "node": ">=22.13.0" },
-  "bin": { "okc-mcp": "dist/cli.js" },
-  "files": ["dist", "README.md", "LICENSE", "docs/authoring-guide.md", "docs/recovery.md", "examples/okc-mcp.example.json"],
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "bin": {
+    "okc-mcp": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "docs/authoring-guide.md",
+    "docs/recovery.md",
+    "examples/okc-mcp.example.json",
+    "examples/okc-mcp.web.example.json"
+  ],
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.tests.json",
@@ -21,6 +33,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "fast-check": "^4.9.0",
     "tsx": "^4.20.0",
     "typescript": "5.9.3"
   }

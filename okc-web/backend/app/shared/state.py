@@ -82,7 +82,8 @@ CREATE TABLE IF NOT EXISTS upload_tokens (
     expires_at           TEXT,
     revoked_at           TEXT,
     last_used_at         TEXT,
-    registered_source_id TEXT
+    registered_source_id TEXT,
+    source_identity      TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_tokens_project ON upload_tokens(project_id, revoked_at);
 
@@ -100,6 +101,29 @@ CREATE TABLE IF NOT EXISTS sources (
     registered_at      TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_sources_project ON sources(project_id);
+
+-- U2: immutable revision history plus resumable hooks transfer sessions.
+CREATE TABLE IF NOT EXISTS source_revisions (
+    source_id     TEXT NOT NULL,
+    revision_hash TEXT NOT NULL,
+    absolute_path TEXT NOT NULL,
+    registered_at TEXT NOT NULL,
+    PRIMARY KEY (source_id, revision_hash)
+);
+CREATE TABLE IF NOT EXISTS upload_sync_sessions (
+    id              TEXT PRIMARY KEY,
+    token_id        TEXT NOT NULL REFERENCES upload_tokens(id),
+    project_id      TEXT NOT NULL REFERENCES projects(id),
+    source_id       TEXT NOT NULL,
+    base_revision   TEXT,
+    manifest_digest TEXT NOT NULL,
+    entries_json    TEXT NOT NULL,
+    status          TEXT NOT NULL CHECK (status IN ('pending','committed')) DEFAULT 'pending',
+    landed_path     TEXT,
+    created_at      TEXT NOT NULL,
+    committed_at    TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_sync_token ON upload_sync_sessions(token_id, created_at);
 
 -- U0: jobs (the id clients poll — Q7) + companion job_events append log
 CREATE TABLE IF NOT EXISTS jobs (
@@ -168,6 +192,7 @@ CREATE TABLE IF NOT EXISTS serving_publications (
 _CONTROL_PLANE_TABLES = (
     "accounts", "sessions", "projects", "upload_tokens", "sources",
     "jobs", "job_events", "curator_decisions", "serving_publications",
+    "source_revisions", "upload_sync_sessions",
 )
 
 
@@ -224,8 +249,19 @@ class StateDb:
             try:
                 driver: sqlite3.Connection = raw.driver_connection  # type: ignore[assignment]
                 driver.executescript(MIGRATION_0001_INIT)
+                token_columns = {row[1] for row in driver.execute("PRAGMA table_info(upload_tokens)")}
+                if "source_identity" not in token_columns:
+                    driver.execute("ALTER TABLE upload_tokens ADD COLUMN source_identity TEXT")
+                driver.execute(
+                    "UPDATE upload_tokens SET source_identity = COALESCE(registered_source_id, 'src_' || substr(id, 5))"
+                    " WHERE source_identity IS NULL"
+                )
                 driver.execute(
                     "INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES (1, ?)",
+                    (_utc_now_iso(),),
+                )
+                driver.execute(
+                    "INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES (2, ?)",
                     (_utc_now_iso(),),
                 )
                 raw.commit()

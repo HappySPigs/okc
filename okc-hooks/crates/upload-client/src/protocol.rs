@@ -1,12 +1,17 @@
 //! Protocol — U3 도입 값 타입(협상/커밋 봉투·청크 프레이밍)과 순수 프로토콜 함수.
 //!
-//! 프로토콜 봉투는 서버 계약 미확정([blocked-on-server], DEP-03/D-14)이므로 **잠정 mock 계약**이며,
+//! 프로토콜 봉투는 okc-web `/api/sync` 수신 계약(DEP-03)이며,
 //! 본문 바이트는 U0 CBOR 코덱(`encode`/`decode`)으로 직렬화되어 `OkcRequest.body`/`OkcResponse.body`
 //! 에 실린다. 이 모듈의 순수 함수(`compute_want`/`plan_chunks`/`frame_chunks`/`reassemble`)는 전송과
 //! 분리되어 PBT(PROP-U3-01..05)를 transport 없이 검증할 수 있게 한다.
 //!
 //! 순수 리프 모듈로서 panic-free-total 을 컴파일타임 clippy lint-gate 로 강제한다.
-#![deny(clippy::unwrap_used, clippy::expect_used, clippy::indexing_slicing, clippy::panic)]
+#![deny(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::indexing_slicing,
+    clippy::panic
+)]
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -14,11 +19,11 @@ use content_core::ContentAddressing;
 use foundation::{ByteCount, Manifest, ManifestDigest, RelativePath, Sha256Digest};
 use serde::{Deserialize, Serialize};
 
-/// 협상 요청 엔드포인트 상대경로(잠정, [blocked-on-server]).
+/// 협상 요청 엔드포인트 상대경로.
 pub const NEGOTIATE_PATH: &str = "/negotiate";
-/// 커밋 요청 엔드포인트 상대경로(잠정, [blocked-on-server]).
+/// 커밋 요청 엔드포인트 상대경로.
 pub const COMMIT_PATH: &str = "/commit";
-/// blob 청크 전송 엔드포인트 상대경로 접두(`{BLOB_PATH}/{blob}/{offset}`, 잠정).
+/// blob 청크 전송 엔드포인트 상대경로 접두(`{BLOB_PATH}/{blob}/{offset}`).
 pub const BLOB_PATH: &str = "/blob";
 
 // ---------------------------------------------------------------------------
@@ -42,7 +47,7 @@ pub struct PathHashMap {
     pub entries: BTreeMap<RelativePath, Sha256Digest>,
 }
 
-/// 협상 요청 — 매니페스트를 서버에 제시한다(잠정 mock 계약).
+/// 협상 요청 — 매니페스트를 서버에 제시한다.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NegotiateRequest {
     /// 로컬 no-op 판별자(참고용, 권위 아님).
@@ -51,14 +56,20 @@ pub struct NegotiateRequest {
     pub entries: Vec<(RelativePath, Sha256Digest, ByteCount)>,
 }
 
-/// 협상 응답 — 서버가 보유한 blob 해시 집합(`WantSet` 계산 입력, 잠정 mock 계약).
+/// 협상 응답 — 서버 보유 blob, 세션 identity, 권위 재개 오프셋.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NegotiateResponse {
     /// 서버 보유 blob 해시 집합.
     pub server_has: BTreeSet<Sha256Digest>,
+    /// 서버가 현재 source revision에 바인딩한 업로드 세션.
+    #[serde(default)]
+    pub session_id: Option<String>,
+    /// 세션이 실제 보유한 blob별 연속 prefix 길이(누락 blob은 0).
+    #[serde(default)]
+    pub resume_offsets: Vec<(Sha256Digest, ByteCount)>,
 }
 
-/// 커밋 요청 — 권위 경로->해시 맵 + no-op 판별자(잠정 mock 계약).
+/// 커밋 요청 — 권위 경로->해시 맵 + no-op 판별자.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CommitRequest {
     /// 권위 경로->해시 맵.
@@ -97,7 +108,11 @@ pub struct ChunkPlan {
 impl ChunkPlan {
     /// `[start_offset, total)` 를 `chunk_size` 로 분할한 `(offset, len)` 시퀀스를 반환한다.
     pub fn segments(&self) -> Vec<(u64, u64)> {
-        plan_chunks(self.total.get(), self.chunk_size.get(), self.start_offset.get())
+        plan_chunks(
+            self.total.get(),
+            self.chunk_size.get(),
+            self.start_offset.get(),
+        )
     }
 }
 
@@ -137,7 +152,11 @@ pub fn compute_want(
 
 /// 매니페스트 엔트리의 `raw_sha256` 을 정렬 집합으로 투영한다(협상 입력·dedup).
 pub fn manifest_hashes(manifest: &Manifest) -> BTreeSet<Sha256Digest> {
-    manifest.entries.iter().map(|entry| entry.raw_sha256).collect()
+    manifest
+        .entries
+        .iter()
+        .map(|entry| entry.raw_sha256)
+        .collect()
 }
 
 /// 매니페스트를 협상 요청 엔트리(`(경로, 해시, 크기)`)로 투영한다.

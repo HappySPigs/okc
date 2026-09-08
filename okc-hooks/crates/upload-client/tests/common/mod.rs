@@ -18,8 +18,8 @@ use auth_consent::{
 use content_core::ContentAddressing;
 use foundation::{
     ActiveCondition, ByteCount, ConfigSnapshot, LivenessSignal, LogLevel, Manifest, ManifestEntry,
-    OperationalState, RelativePath, Sha256Digest, StatusSink, Timestamp, TokenSecret, WatcherConfig,
-    encode,
+    OperationalState, RelativePath, Sha256Digest, StatusSink, Timestamp, TokenSecret,
+    WatcherConfig, encode,
 };
 use upload_client::{
     BlobSource, BlobSourceError, CommitOutcome, NegotiateResponse, SyncStore, UploadError,
@@ -53,7 +53,12 @@ impl ScriptedHttpTransport {
     /// 서버 보유 해시 집합 + 커밋 결과로 스크립트를 만든다(전송 실패 없음).
     pub fn new(server_has: BTreeSet<Sha256Digest>, commit: CommitOutcome) -> Self {
         ScriptedHttpTransport {
-            negotiate_body: encode(&NegotiateResponse { server_has }).expect("encode negotiate"),
+            negotiate_body: encode(&NegotiateResponse {
+                server_has,
+                session_id: None,
+                resume_offsets: Vec::new(),
+            })
+            .expect("encode negotiate"),
             commit_body: encode(&commit).expect("encode commit"),
             fail: None,
             calls: Mutex::new(Vec::new()),
@@ -63,6 +68,20 @@ impl ScriptedHttpTransport {
     /// 지정 지점에서 전송 실패(`HttpError::Io`)를 내는 변형.
     pub fn with_failure(mut self, at: FailAt) -> Self {
         self.fail = Some(at);
+        self
+    }
+
+    pub fn with_session(
+        mut self,
+        session_id: &str,
+        resume_offsets: Vec<(Sha256Digest, ByteCount)>,
+    ) -> Self {
+        self.negotiate_body = encode(&NegotiateResponse {
+            server_has: BTreeSet::new(),
+            session_id: Some(session_id.to_string()),
+            resume_offsets,
+        })
+        .expect("encode session response");
         self
     }
 

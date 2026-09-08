@@ -10,7 +10,7 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 
 const projectRoot = fileURLToPath(new URL('../', import.meta.url));
 const cliPath = path.join(projectRoot, 'src', 'cli.ts');
-const mutations = ['create_note', 'update_note', 'standardize_frontmatter', 'fix_yaml', 'reinforce_sources_links'];
+const mutations = ['create_note', 'update_note', 'standardize_frontmatter', 'fix_yaml', 'reinforce_sources_links', 'apply_session_capture'];
 const readTools = ['audit_vault', 'list_backlinks', 'list_notes', 'outline_note', 'read_note', 'search_notes'];
 const digest = (content: string): string => createHash('sha256').update(content).digest('hex');
 type ToolResult = Awaited<ReturnType<Client['callTool']>>;
@@ -48,6 +48,7 @@ async function connect(t: TestContext, options: {
   readOnly?: boolean;
   maxResponseBytes?: number;
   files?: Record<string, string>;
+  web?: { baseUrl: string; projectId: string; timeoutMs?: number };
 } = {}): Promise<{ client: Client; vaultPath: string; statePath: string; stderr: () => string }> {
   const directory = await mkdtemp(path.join(tmpdir(), 'okc-mcp-stdio-'));
   const vaultPath = path.join(directory, 'vault');
@@ -61,7 +62,8 @@ async function connect(t: TestContext, options: {
   }
   const configPath = path.join(configDirectory, 'okc-mcp.json');
   await writeFile(configPath, JSON.stringify({ vaultPath, statePath,
-    readOnly: options.readOnly ?? false, maxResponseBytes: options.maxResponseBytes ?? 65_536 }));
+    readOnly: options.readOnly ?? false, maxResponseBytes: options.maxResponseBytes ?? 65_536,
+    ...(options.web ? { web: options.web } : {}) }));
   const client = new Client({ name: 'okc-mcp-integration-test', version: '1.0.0' });
   const transport = new StdioClientTransport({ command: process.execPath,
     args: ['--import', 'tsx', cliPath, 'serve', '--config', configPath], cwd: projectRoot, stderr: 'pipe' });
@@ -82,7 +84,7 @@ test('initialization exposes exactly the design tool surface, guide resource and
   assert.deepEqual(client.getServerVersion(), { name: 'okc-mcp', version: '0.1.0-alpha.1' });
   assert.match(client.getInstructions() ?? '', /untrusted data/u);
   const tools = (await client.listTools()).tools;
-  assert.deepEqual(tools.map(tool => tool.name).sort(), [...readTools, ...mutations].sort());
+  assert.deepEqual(tools.map(tool => tool.name).sort(), [...readTools, ...mutations, 'prepare_session_capture'].sort());
   // No shell/http/delete/approve/AI tool exists (REQ-011 / BR-TRUST-1).
   for (const forbidden of ['delete_note', 'run_shell', 'http_get', 'approve', 'invoke_ai']) {
     assert.ok(!tools.some(tool => tool.name === forbidden), forbidden);
@@ -98,6 +100,80 @@ test('initialization exposes exactly the design tool surface, guide resource and
   const listed = await success<{ notes: string[] }>(client, 'list_notes');
   assert.deepEqual(listed.notes, ['notes/첫 노트.md']);
   assert.equal(stderr(), '', 'normal protocol traffic must not produce parser failures or startup logs');
+});
+
+test('session capture through actual stdio discovers LOCAL sections, previews, applies and updates the same record (SC-1..6)', { timeout: 20_000 }, async t => {
+  const original = '---\ntitle: 인증\naliases: [JWT]\n---\n# 인증\n\n## 토큰\n\n기존 근거.\n\n## 권한\n\n보존할 내용.\n';
+  const { client, vaultPath } = await connect(t, { files: { 'projects/auth.md': original },
+    web: { baseUrl: 'http://127.0.0.1:9', projectId: 'unreachable', timeoutMs: 100 } });
+  assert.match(client.getInstructions() ?? '', /prepare_session_capture/u);
+  const guide = await client.readResource({ uri: 'okc://guide/session-capture' });
+  assert.ok(guide.contents.some(item => 'text' in item && item.text.includes('사용자가 파일 경로')));
+  const prompt = await client.getPrompt({ name: 'capture_session', arguments: { context: 'JWT 토큰 재발급 문제를 해결했다.' } });
+  assert.ok(prompt.messages.some(message => message.content.type === 'text' && message.content.text.includes('JWT 토큰')));
+  type Prepared = { sessionId: string; source: { kind: string }; existingItems: { id: string; path: string; sha256: string }[];
+    topics: { candidates: { path: string; sha256: string; sections: string[][] }[] }[] };
+  const topics = [{ id: 'jwt', summary: '토큰 재발급 문제 해결', queries: ['JWT', '토큰'] }];
+  const prepared = await success<Prepared>(client, 'prepare_session_capture', { userSelected: true, topics });
+  assert.equal(prepared.source.kind, 'local');
+  const candidate = prepared.topics[0]!.candidates[0]!;
+  const item = { id: 'jwt', path: candidate.path, expectedHash: candidate.sha256,
+    section: candidate.sections.find(section => section.at(-1) === '토큰')!,
+    content: '재발급 재시도 수정. 근거: src/auth.ts, 실제 테스트 통과.', rationale: '기존 토큰 구역의 문제 해결 근거를 보강한다.' };
+  type Receipt = { status: string; files: { path: string; sha256: string; verified: boolean; applied: boolean }[];
+    previews?: { items: { content: string }[] }[] };
+  const preview = await success<Receipt>(client, 'apply_session_capture', { userSelected: true, sessionId: prepared.sessionId, items: [item] });
+  assert.equal(preview.status, 'preview');
+  assert.equal(preview.previews![0]!.items[0]!.content, item.content);
+  assert.equal(await readFile(path.join(vaultPath, candidate.path), 'utf8'), original);
+  const saved = await success<Receipt>(client, 'apply_session_capture', { userSelected: true, sessionId: prepared.sessionId, items: [item], dryRun: false });
+  assert.equal(saved.status, 'applied');
+  assert.ok(saved.files[0]!.verified);
+  const replay = await success<Receipt>(client, 'apply_session_capture', { userSelected: true, sessionId: prepared.sessionId, items: [item], dryRun: false });
+  assert.equal(replay.status, 'unchanged');
+  const again = await success<Prepared>(client, 'prepare_session_capture', { userSelected: true, sessionId: prepared.sessionId, topics });
+  assert.equal(again.existingItems[0]!.path, candidate.path);
+  const revised = '후속 검증에서 재시도 상한도 확인했다. 기존 수정의 이유를 유지한다.';
+  const updated = await success<Receipt>(client, 'apply_session_capture', { userSelected: true, sessionId: prepared.sessionId,
+    items: [{ ...item, expectedHash: again.existingItems[0]!.sha256, content: revised }], dryRun: false });
+  assert.equal(updated.status, 'applied');
+  const final = await readFile(path.join(vaultPath, candidate.path), 'utf8');
+  assert.ok(final.includes(revised));
+  assert.ok(!final.includes(item.content));
+  assert.ok(final.includes('기존 근거.'));
+  assert.ok(final.endsWith('## 권한\n\n보존할 내용.\n'));
+});
+
+test('stdio requires explicit user selection; ordinary reads never start session capture', { timeout: 20_000 }, async t => {
+  const original = '# Original\n\nKeep this knowledge.\n';
+  const { client, vaultPath, statePath } = await connect(t, { files: { 'original.md': original } });
+  assert.match(client.getInstructions() ?? '', /Session capture is user-selected only/u);
+  assert.match(client.getInstructions() ?? '', /Never automatically record a session/u);
+  const tools = (await client.listTools()).tools;
+  for (const name of ['prepare_session_capture', 'apply_session_capture']) {
+    const schema = tools.find(tool => tool.name === name)!.inputSchema;
+    const property = schema.properties!.userSelected as { default?: boolean };
+    assert.equal(property.default, false);
+  }
+  await success(client, 'list_notes');
+  await success(client, 'read_note', { path: 'original.md' });
+  await failure(client, 'prepare_session_capture', { topics: [{ id: 'topic', summary: 'Not selected', queries: ['knowledge'] }] }, 'CAPTURE_SELECTION_REQUIRED');
+  await failure(client, 'apply_session_capture', { sessionId: 'unselected', dryRun: false,
+    items: [{ id: 'topic', path: 'new.md', expectedHash: null, title: 'New', content: 'Not requested.', rationale: 'Must not save.' }] }, 'CAPTURE_SELECTION_REQUIRED');
+  assert.equal(await readFile(path.join(vaultPath, 'original.md'), 'utf8'), original);
+  assert.deepEqual(await readdir(vaultPath), ['original.md']);
+  await assert.rejects(access(statePath), { code: 'ENOENT' });
+  const prompt = await client.getPrompt({ name: 'capture_session', arguments: { sessionId: 'selected-history', context: 'Only this selected session.' } });
+  assert.ok(prompt.messages.some(message => message.content.type === 'text' && message.content.text.includes('selected-history') && message.content.text.includes('If none was selected')));
+});
+
+test('readonly connections omit session-writing workflow and new capture tools', { timeout: 20_000 }, async t => {
+  const { client } = await connect(t, { readOnly: true, files: { 'note.md': '# Original\n' } });
+  const tools = (await client.listTools()).tools;
+  assert.ok(!tools.some(tool => tool.name === 'prepare_session_capture' || tool.name === 'apply_session_capture'));
+  assert.ok(!(await client.listPrompts()).prompts.some(prompt => prompt.name === 'capture_session'));
+  const result = await client.callTool({ name: 'apply_session_capture', arguments: { sessionId: 's', items: [] } });
+  assert.equal(result.isError, true);
 });
 
 test('create_note previews by default, applies explicitly, refuses overwrite; read returns full hash (US-AU-06, US-IN-08, US-RV-01)', { timeout: 20_000 }, async t => {

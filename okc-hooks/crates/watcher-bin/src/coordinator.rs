@@ -12,7 +12,12 @@
 //!
 //! 순수-이하 오케스트레이션 표면으로서 panic-free 를 컴파일타임으로 강제한다(어떤 경로에서도
 //! `unwrap`/`expect`/`panic`/인덱싱을 쓰지 않는다).
-#![deny(clippy::unwrap_used, clippy::expect_used, clippy::indexing_slicing, clippy::panic)]
+#![deny(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::indexing_slicing,
+    clippy::panic
+)]
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -45,6 +50,8 @@ pub enum CycleTrigger {
     Reconcile(TriggerSignal),
     /// `ControlPlane` sync-now 엣지 이벤트(핸들러가 직접 push, run_state 폴링 아님).
     SyncNow,
+    /// 백오프 만료 후 외부 이벤트 없이 실행하는 재시도.
+    Retry,
 }
 
 /// graceful 종료 플래그 — 신호 핸들러가 set 하고 루프들이 관측한다(공유 `AtomicBool`).
@@ -115,42 +122,150 @@ pub struct WiringEdge {
 
 /// U8 데몬 배선 그래프의 하향 주입 간선 집합(domain-entities §6). 전부 상위 -> 하위 방향이다.
 pub const WIRING_EDGES: &[WiringEdge] = &[
-    WiringEdge { from: "daemon", to: "coordinator" },
-    WiringEdge { from: "daemon", to: "control_plane" },
-    WiringEdge { from: "daemon", to: "watcher" },
-    WiringEdge { from: "daemon", to: "scheduler" },
-    WiringEdge { from: "coordinator", to: "store" },
-    WiringEdge { from: "coordinator", to: "guard" },
-    WiringEdge { from: "coordinator", to: "manifest_source" },
-    WiringEdge { from: "coordinator", to: "consent" },
-    WiringEdge { from: "coordinator", to: "driver" },
-    WiringEdge { from: "coordinator", to: "run_state" },
-    WiringEdge { from: "coordinator", to: "retry" },
-    WiringEdge { from: "coordinator", to: "logger" },
-    WiringEdge { from: "coordinator", to: "status" },
-    WiringEdge { from: "coordinator", to: "history" },
-    WiringEdge { from: "coordinator", to: "critical" },
-    WiringEdge { from: "driver", to: "transport" },
-    WiringEdge { from: "driver", to: "blob_source" },
-    WiringEdge { from: "driver", to: "store" },
-    WiringEdge { from: "driver", to: "status" },
-    WiringEdge { from: "transport", to: "credential" },
-    WiringEdge { from: "transport", to: "config" },
-    WiringEdge { from: "credential", to: "config" },
-    WiringEdge { from: "consent", to: "status" },
-    WiringEdge { from: "run_state", to: "status" },
-    WiringEdge { from: "critical", to: "logger" },
-    WiringEdge { from: "critical", to: "status" },
-    WiringEdge { from: "critical", to: "tray" },
-    WiringEdge { from: "history", to: "logger" },
-    WiringEdge { from: "logger", to: "config" },
-    WiringEdge { from: "control_plane", to: "handlers" },
-    WiringEdge { from: "handlers", to: "status" },
-    WiringEdge { from: "handlers", to: "history" },
-    WiringEdge { from: "handlers", to: "consent" },
-    WiringEdge { from: "handlers", to: "config" },
-    WiringEdge { from: "handlers", to: "run_state" },
-    WiringEdge { from: "handlers", to: "logger" },
+    WiringEdge {
+        from: "daemon",
+        to: "coordinator",
+    },
+    WiringEdge {
+        from: "daemon",
+        to: "control_plane",
+    },
+    WiringEdge {
+        from: "daemon",
+        to: "watcher",
+    },
+    WiringEdge {
+        from: "daemon",
+        to: "scheduler",
+    },
+    WiringEdge {
+        from: "coordinator",
+        to: "store",
+    },
+    WiringEdge {
+        from: "coordinator",
+        to: "guard",
+    },
+    WiringEdge {
+        from: "coordinator",
+        to: "manifest_source",
+    },
+    WiringEdge {
+        from: "coordinator",
+        to: "consent",
+    },
+    WiringEdge {
+        from: "coordinator",
+        to: "driver",
+    },
+    WiringEdge {
+        from: "coordinator",
+        to: "run_state",
+    },
+    WiringEdge {
+        from: "coordinator",
+        to: "retry",
+    },
+    WiringEdge {
+        from: "coordinator",
+        to: "logger",
+    },
+    WiringEdge {
+        from: "coordinator",
+        to: "status",
+    },
+    WiringEdge {
+        from: "coordinator",
+        to: "history",
+    },
+    WiringEdge {
+        from: "coordinator",
+        to: "critical",
+    },
+    WiringEdge {
+        from: "driver",
+        to: "transport",
+    },
+    WiringEdge {
+        from: "driver",
+        to: "blob_source",
+    },
+    WiringEdge {
+        from: "driver",
+        to: "store",
+    },
+    WiringEdge {
+        from: "driver",
+        to: "status",
+    },
+    WiringEdge {
+        from: "transport",
+        to: "credential",
+    },
+    WiringEdge {
+        from: "transport",
+        to: "config",
+    },
+    WiringEdge {
+        from: "credential",
+        to: "config",
+    },
+    WiringEdge {
+        from: "consent",
+        to: "status",
+    },
+    WiringEdge {
+        from: "run_state",
+        to: "status",
+    },
+    WiringEdge {
+        from: "critical",
+        to: "logger",
+    },
+    WiringEdge {
+        from: "critical",
+        to: "status",
+    },
+    WiringEdge {
+        from: "critical",
+        to: "tray",
+    },
+    WiringEdge {
+        from: "history",
+        to: "logger",
+    },
+    WiringEdge {
+        from: "logger",
+        to: "config",
+    },
+    WiringEdge {
+        from: "control_plane",
+        to: "handlers",
+    },
+    WiringEdge {
+        from: "handlers",
+        to: "status",
+    },
+    WiringEdge {
+        from: "handlers",
+        to: "history",
+    },
+    WiringEdge {
+        from: "handlers",
+        to: "consent",
+    },
+    WiringEdge {
+        from: "handlers",
+        to: "config",
+    },
+    WiringEdge {
+        from: "handlers",
+        to: "run_state",
+    },
+    WiringEdge {
+        from: "handlers",
+        to: "logger",
+    },
 ];
 
 /// 코디네이터가 의존하는 하위 seam(port) 묶음 — 조립 편의 + 생성자 인자 수 축소.
@@ -232,21 +347,33 @@ impl SyncCycleCoordinator {
     /// 각 반복은 종료 플래그와 run-state stop 신호를 관측해 정지하며(R-U8-10), 폭주 트리거는
     /// drain-to-latest 로 합쳐 최신 하나만 사이클을 유발한다(DEC-U8-02).
     pub fn run_loop(&mut self, rx: Receiver<CycleTrigger>, shutdown: &ShutdownFlag) {
+        let mut pending = None;
+        let mut retry_at: Option<Instant> = None;
         loop {
             if shutdown.is_set() || self.stop_requested() {
                 break;
             }
-            match rx.recv_timeout(Duration::from_millis(250)) {
+            let now = Instant::now();
+            let ready = retry_at.is_none_or(|deadline| now >= deadline);
+            if ready && let Some(trigger) = pending.take() {
+                self.cycle_in_progress.store(true, Ordering::SeqCst);
+                let outcome = self.run_cycle(trigger);
+                self.cycle_in_progress.store(false, Ordering::SeqCst);
+                retry_at = self.after_cycle(&outcome);
+                if retry_at.is_some() {
+                    pending = Some(CycleTrigger::Retry);
+                }
+                continue;
+            }
+            let timeout = retry_at
+                .map(|deadline| deadline.saturating_duration_since(now))
+                .unwrap_or(Duration::from_millis(250))
+                .min(Duration::from_millis(250));
+            match rx.recv_timeout(timeout) {
                 Ok(mut trigger) => {
                     coalesce_to_latest(&rx, &mut trigger);
-                    // 종료가 합류 대기 중 도착했으면 새 사이클을 시작하지 않는다.
-                    if shutdown.is_set() {
-                        break;
-                    }
-                    self.cycle_in_progress.store(true, Ordering::SeqCst);
-                    let outcome = self.run_cycle(trigger);
-                    self.cycle_in_progress.store(false, Ordering::SeqCst);
-                    self.after_cycle(&outcome);
+                    // 백오프 중 편집은 deadline을 앞당기지 않고 최신 상태로 합쳐진다.
+                    pending = Some(trigger);
                 }
                 Err(RecvTimeoutError::Timeout) => continue,
                 Err(RecvTimeoutError::Disconnected) => break,
@@ -293,7 +420,10 @@ impl SyncCycleCoordinator {
 
         // C5: 마지막 커밋 대비 파괴적-빈-커밋 가드.
         let last = self.store.last_committed_manifest();
-        match self.guard.guard_diff(&new_manifest, last.as_ref(), availability) {
+        match self
+            .guard
+            .guard_diff(&new_manifest, last.as_ref(), availability)
+        {
             GuardVerdict::HoldVaultUnavailable(_) => {
                 self.raise_hold(cycle_id, "cycle.hold.vault_unavailable");
                 return CoordinatorOutcome::HeldVaultUnavailable;
@@ -310,8 +440,12 @@ impl SyncCycleCoordinator {
         let change = ManifestDiffer::diff(&baseline, &new_manifest);
         if change.is_empty() {
             self.status.set_operational(OperationalState::Idle);
-            self.logger
-                .event(LogLevel::Info, "cycle.noop", Some(cycle_id), LogFields::default());
+            self.logger.event(
+                LogLevel::Info,
+                "cycle.noop",
+                Some(cycle_id),
+                LogFields::default(),
+            );
             return CoordinatorOutcome::NoOp;
         }
 
@@ -377,15 +511,17 @@ impl SyncCycleCoordinator {
     }
 
     /// 실패 결과에 대한 변형별 백오프 재예약(FIX4, R-U8-09). `Transport` 만 재시도 분류·백오프한다.
-    fn after_cycle(&mut self, outcome: &CoordinatorOutcome) {
+    fn after_cycle(&mut self, outcome: &CoordinatorOutcome) -> Option<Instant> {
         if let CoordinatorOutcome::Failed(UploadError::Transport(transport_error)) = outcome {
-            let decision = self.retry.on_failure(transport_error, Instant::now());
-            if let Some(delay) = decision.retry_after {
-                // 다음 재시도 시각까지 전체 사이클을 백오프한다(재예약 사이 편집은 다음 재스냅샷 흡수).
-                std::thread::sleep(delay);
-            }
+            let now = Instant::now();
+            return self
+                .retry
+                .on_failure(transport_error, now)
+                .retry_after
+                .and_then(|delay| now.checked_add(delay));
         }
         // HashMismatch/OverLimit/Aborted 및 AuthFailed 클래스는 백오프 없이 종료(다음 트리거 재스냅샷).
+        None
     }
 
     /// run-state stop 신호 관측(휘발성). set 되어 있으면 graceful 종료 대상.
@@ -402,7 +538,8 @@ impl SyncCycleCoordinator {
 
     /// vault-unavailable 계열 보류를 status 조건 + 로그로 1회 push 한다(U2 는 판정만, push 는 U8).
     fn raise_hold(&self, cycle_id: CycleId, event: &str) {
-        self.status.raise_condition(ActiveCondition::VaultUnavailable);
+        self.status
+            .raise_condition(ActiveCondition::VaultUnavailable);
         self.logger
             .event(LogLevel::Warn, event, Some(cycle_id), LogFields::default());
     }
@@ -461,7 +598,8 @@ pub fn wiring_is_acyclic(edges: &[WiringEdge]) -> bool {
     let mut visited: HashSet<&str> = HashSet::new();
     let mut in_stack: HashSet<&str> = HashSet::new();
     for node in nodes {
-        if !visited.contains(node) && has_cycle_from(node, &adjacency, &mut visited, &mut in_stack) {
+        if !visited.contains(node) && has_cycle_from(node, &adjacency, &mut visited, &mut in_stack)
+        {
             return false;
         }
     }
@@ -498,6 +636,7 @@ fn trigger_cause(trigger: &CycleTrigger) -> String {
             signal.cause_summary.clone()
         }
         CycleTrigger::SyncNow => "sync-now (operator)".to_string(),
+        CycleTrigger::Retry => "retry (backoff elapsed)".to_string(),
     }
 }
 
@@ -512,9 +651,10 @@ fn empty_manifest() -> Manifest {
 /// `UploadError` 를 U6 히스토리/critical 이 소비하는 `ClassifiedError` 로 사상한다.
 fn classify_upload_error(error: &UploadError) -> ClassifiedError {
     let (class, detail) = match error {
-        UploadError::Transport(transport_error) => {
-            (transport_error.class.to_error_class(), transport_error.detail.clone())
-        }
+        UploadError::Transport(transport_error) => (
+            transport_error.class.to_error_class(),
+            transport_error.detail.clone(),
+        ),
         UploadError::HashMismatch { .. } => (ErrorClass::Retryable, error.to_string()),
         UploadError::OverLimit(_) => (ErrorClass::Fatal, error.to_string()),
         UploadError::Aborted => (ErrorClass::Fatal, error.to_string()),

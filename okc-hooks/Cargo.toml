@@ -39,6 +39,7 @@ sha2 = "0.10"   # U1 content-core: 스트리밍 SHA-256
 notify = "6"    # U2 change-detect: 크로스플랫폼 파일시스템 감시
 ureq = "3"      # U5 auth-consent: blocking rustls HTTPS 클라이언트
 ctrlc = "3"     # U8 watcher-bin: SIGINT/SIGTERM을 graceful shutdown flag로 합류
+tempfile = "3"  # U3: verified immutable upload spool, automatically removed on close
 # 완성된 W2 라이브러리 크레이트(경로 의존) — 하류 웨이브(W3 U3/U7a, W5 U8)가 소비한다.
 content-core = { path = "crates/content-core" }
 change-detect = { path = "crates/change-detect" }

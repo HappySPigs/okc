@@ -50,13 +50,13 @@
 | **U0** | (없음 — 루트) | `CoreTypes`(의존 0), `ConfigProvider→CoreTypes`(U0 내부, 제외) |
 | **U1** | U0 | ContentAddressing/ManifestBuilder/ManifestDiffer/SafetyLimitsValidator → CoreTypes; VaultScanner → [Foundation] |
 | **U2** | U0 | FilesystemWatcher / ReconciliationScheduler / VaultAvailabilityGuard → [Foundation] |
-| **U3** | U0, U1, U4, U5 | UploadProtocolDriver → [Foundation](U0), ContentAddressing+SafetyLimitsValidator(U1), SyncStateStore(U4), AuthTransport(U5), StatusService+StructuredLogger `[Foundation-contract]`(U0) |
+| **U3** | U0, U1, U4, U5 | UploadProtocolDriver → Foundation (U0), ContentAddressing+SafetyLimitsValidator(U1), SyncStateStore(U4), AuthTransport(U5), StatusService+StructuredLogger `[Foundation-contract]`(U0) |
 | **U4** | U0 | SyncStateStore / RetryBackoffController → [Foundation] |
 | **U5** | U0 | CredentialProvider → [Foundation]; AuthTransport → [Foundation] + StructuredLogger `[FC]`(U0); ConsentGate → [Foundation] + StatusService/StructuredLogger `[FC]`(U0) |
-| **U6** | U0 | StructuredLogger/UploadHistoryStore → [Foundation]; StatusService → CoreTypes; TrayIndicator → [Foundation](StatusService 내부); CriticalErrorNotifier → [Foundation](나머지 내부, TrayIndicator `[optional no-op]` 내부) |
-| **U7a** | U0, U5, U6 | ServiceManager → ConfigProvider/CoreTypes(U0) + StructuredLogger(U6); AutoUpdater → [Foundation](U0) + StatusService/CriticalErrorNotifier/StructuredLogger(U6); Uninstaller → CredentialProvider(U5) + ConfigProvider/CoreTypes(U0) + StructuredLogger(U6) |
-| **U7b** | U0, U5, U6, U7a | RunStateController → ConfigProvider/CoreTypes(U0) + StatusService/StructuredLogger(U6); ControlPlane → ConfigProvider/CoreTypes(U0) + StatusService/UploadHistoryStore/StructuredLogger(U6) + ConsentGate(U5); OperatorCli → [Foundation](U0) + ServiceManager+Uninstaller(**U7a**) |
-| **U8** | U0, U1, U2, U3, U4, U5, U6, U7a, U7b | SingleInstanceLock → [Foundation](U0); SyncCycleCoordinator → [Foundation](U0), U2·U1·U5·U3·U4·U6 협력자; WatcherDaemon → [Foundation](U0), SyncStateStore(U4), FilesystemWatcher/ReconciliationScheduler(U2), StatusService/StructuredLogger(U6), ControlPlane(U7b); **조립 루트로서 U7a(ServiceManager/AutoUpdater) 생성 + watcher-bin이 lifecycle-deploy 크레이트 링크 ⇒ U8→U7a** |
+| **U6** | U0 | StructuredLogger/UploadHistoryStore → [Foundation]; StatusService → CoreTypes; TrayIndicator → Foundation (StatusService 내부); CriticalErrorNotifier → Foundation (나머지 내부, TrayIndicator `[optional no-op]` 내부) |
+| **U7a** | U0, U5, U6 | ServiceManager → ConfigProvider/CoreTypes(U0) + StructuredLogger(U6); AutoUpdater → Foundation (U0) + StatusService/CriticalErrorNotifier/StructuredLogger(U6); Uninstaller → CredentialProvider(U5) + ConfigProvider/CoreTypes(U0) + StructuredLogger(U6) |
+| **U7b** | U0, U5, U6, U7a | RunStateController → ConfigProvider/CoreTypes(U0) + StatusService/StructuredLogger(U6); ControlPlane → ConfigProvider/CoreTypes(U0) + StatusService/UploadHistoryStore/StructuredLogger(U6) + ConsentGate(U5); OperatorCli → Foundation (U0) + ServiceManager+Uninstaller(**U7a**) |
+| **U8** | U0, U1, U2, U3, U4, U5, U6, U7a, U7b | SingleInstanceLock → Foundation (U0); SyncCycleCoordinator → Foundation (U0), U2·U1·U5·U3·U4·U6 협력자; WatcherDaemon → Foundation (U0), SyncStateStore(U4), FilesystemWatcher/ReconciliationScheduler(U2), StatusService/StructuredLogger(U6), ControlPlane(U7b); **조립 루트로서 U7a(ServiceManager/AutoUpdater) 생성 + watcher-bin이 lifecycle-deploy 크레이트 링크 ⇒ U8→U7a** |
 
 **신규 엣지 주목 — U7b → U7a**: `OperatorCli`(U7b)가 `ServiceManager`·`Uninstaller`(U7a)를 직접 호출한다(`watcher install/uninstall` 등의 CLI 경로). U7 분할이 만든 유일한 새 단위 간 엣지이며, 이것이 아래 웨이브에서 U7b를 U7a보다 뒤로 밀어낸다. 역방향(U7a→U7b)은 존재하지 않음 — U7a의 어떤 컴포넌트도 U7b를 참조하지 않으므로 순환 없음.
 

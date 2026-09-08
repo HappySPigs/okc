@@ -12,7 +12,8 @@ from __future__ import annotations
 
 import time
 from collections.abc import Callable
-from typing import Any, Protocol, cast
+from functools import wraps
+from typing import Any, ParamSpec, Protocol, TypeVar, cast
 
 import okc  # the native binding — named ONLY here and in nothing downstream
 
@@ -77,6 +78,21 @@ def map_error(e: okc.OkcError) -> EngineError:
     )
 
 
+_Params = ParamSpec("_Params")
+_Return = TypeVar("_Return")
+
+
+def native_boundary(fn: Callable[_Params, _Return]) -> Callable[_Params, _Return]:
+    """Map binding validation before Job construction as well as Job failures."""
+    @wraps(fn)
+    def call(*args: _Params.args, **kwargs: _Params.kwargs) -> _Return:
+        try:
+            return fn(*args, **kwargs)
+        except okc.OkcError as exc:
+            raise map_error(exc) from exc
+    return call
+
+
 def _map_progress(ev: dict[str, Any]) -> JobProgress:
     return JobProgress(
         sequence=int(ev.get("sequence", 0) or 0),
@@ -120,6 +136,7 @@ class OkcEngine(Protocol):
     def open_project(self, root: str) -> dto.ProjectRefView: ...
     def status(self, root: str) -> dto.StatusView: ...
     def add_source(self, root: str, cmd: dto.AddSourceCmd) -> None: ...
+    def rebind_source(self, root: str, cmd: dto.AddSourceCmd) -> None: ...
     def set_ai_route(self, root: str, profile_name: str, role: str | None = None) -> None: ...
     def preflight(self, root: str) -> dto.PreflightView: ...
     def integrate(self, root: str, disclosure: dto.DisclosureCmd,
@@ -157,6 +174,7 @@ class OkcEngineImpl:
             self._handles[key] = proj
         return proj
 
+    @native_boundary
     def create_project(self, spec: dto.CreateProjectSpec) -> dto.ProjectRefView:
         job = self._client.create_project(
             spec.root_abs_path,
@@ -169,15 +187,18 @@ class OkcEngineImpl:
         self._handles[str(spec.root_abs_path)] = project
         return dto.ProjectRefView(root_abs_path=str(project.path))
 
+    @native_boundary
     def open_project(self, root: str) -> dto.ProjectRefView:
         project = self._handle(root)
         return dto.ProjectRefView(root_abs_path=str(project.path))
 
+    @native_boundary
     def status(self, root: str) -> dto.StatusView:
         payload = _result(self._handle(root).status())
         schema_guard.check(payload.get("interop_schema_version"))
         return dto.StatusView.from_native(payload)
 
+    @native_boundary
     def add_source(self, root: str, cmd: dto.AddSourceCmd) -> None:
         source = okc.SourceInput(
             cmd.source_id, cmd.absolute_path,
@@ -185,13 +206,22 @@ class OkcEngineImpl:
         )
         _result(self._handle(root).add_source(source))
 
+    @native_boundary
+    def rebind_source(self, root: str, cmd: dto.AddSourceCmd) -> None:
+        _result(self._handle(root).rebind_source(
+            cmd.source_id, cmd.absolute_path, snapshot_id=cmd.snapshot_id,
+        ))
+
+    @native_boundary
     def set_ai_route(self, root: str, profile_name: str, role: str | None = None) -> None:
         # `role` is a validated okc AiRole literal at the seam; cast for the stub.
         _result(self._handle(root).set_ai_route(profile_name, role=cast(Any, role)))
 
+    @native_boundary
     def preflight(self, root: str) -> dto.PreflightView:
         return dto.PreflightView.from_native(_result(self._handle(root).preflight()))
 
+    @native_boundary
     def integrate(self, root: str, disclosure: dto.DisclosureCmd,
                   progress: Callable[[JobProgress], None]) -> dto.IntegrationView:
         job = self._handle(root).integrate(
@@ -202,21 +232,25 @@ class OkcEngineImpl:
         schema_guard.check(payload.get("interop_schema_version"))
         return dto.IntegrationView.from_native(payload)
 
+    @native_boundary
     def taxonomy(self, root: str) -> Any:
         payload = _result(self._handle(root).taxonomy())
         schema_guard.check(payload.get("interop_schema_version"))
         return payload
 
+    @native_boundary
     def approve_taxonomy(self, root: str, cmd: dto.ApproveTaxonomyCmd) -> None:
         _result(self._handle(root).approve_taxonomy(
             edited_clusters=cmd.edited_clusters, rationale=cmd.rationale
         ))
 
+    @native_boundary
     def clusters(self, root: str) -> Any:
         payload = _result(self._handle(root).clusters())
         schema_guard.check(payload.get("interop_schema_version"))
         return payload.get("payload", payload)
 
+    @native_boundary
     def approve_cluster(self, root: str, cmd: dto.ApproveClusterCmd) -> None:
         _result(self._handle(root).approve_cluster(
             cmd.cluster_id,
@@ -224,6 +258,7 @@ class OkcEngineImpl:
             minor_waivers=cmd.minor_waivers or None,
         ))
 
+    @native_boundary
     def regenerate_cluster(self, root: str, cmd: dto.RegenerateClusterCmd,
                            progress: Callable[[JobProgress], None]) -> None:
         job = self._handle(root).regenerate_cluster(
@@ -233,21 +268,25 @@ class OkcEngineImpl:
         )
         _drive(job, progress)
 
+    @native_boundary
     def compile(self, root: str, output: str) -> dto.CompileView:
         payload = _result(self._handle(root).compile(output))
         schema_guard.check(payload.get("interop_schema_version"))
         return dto.CompileView.from_native(payload)
 
+    @native_boundary
     def verify(self, artifact_path: str) -> dto.VerificationView:
         payload = _result(self._client.verify_artifact(artifact_path))
         schema_guard.check(payload.get("interop_schema_version"))
         return dto.VerificationView.from_native(payload)
 
+    @native_boundary
     def explain(self, artifact_path: str, output_path: str) -> dto.ProvenanceView:
         payload = _result(self._client.explain_artifact(artifact_path, output_path=output_path))
         schema_guard.check(payload.get("interop_schema_version"))
         return dto.ProvenanceView.from_native(payload)
 
+    @native_boundary
     def manifest(self, root: str) -> Any:
         payload = _result(self._handle(root).manifest())
         schema_guard.check(payload.get("interop_schema_version"))
@@ -262,6 +301,7 @@ _PROVIDER_KINDS = {
 }
 
 
+@native_boundary
 def build_client(specs: list[dto.ProviderSpecView]) -> okc.OkcClient:
     """Build a process ``OkcClient`` from okc-web provider specs (env-var names
     only, never secret values)."""

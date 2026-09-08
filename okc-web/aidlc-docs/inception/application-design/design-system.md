@@ -319,7 +319,7 @@ Upload Shell 3상태: 유효(업로드 폼) · 만료/폐기(차단 카드, FR-U
 - **12.1 계정 메뉴(사이드바 하단):** `DropdownMenu`, 트리거 `Avatar`+이름+역할 `Badge`(admin=`ShieldCheck` accent). 항목: 프로필 · **사용자·역할 관리**(admin, `/settings/users`) · 테마 · 로그아웃. Lucide `CircleUser`,`Users`,`Settings`,`LogOut`. admin일 때 `Info` 라인: "이 계정 ID(`curator_id`)가 통합 감사에 기록됩니다. okc-core는 이 라벨을 검증하지 않습니다."(FR-AUTH-4)
 - **12.2 Command Palette(⌘K):** `Command`(Dialog). 프로젝트/섹션 점프 + 퀵 액션(새 프로젝트, 토큰 발급, 통합 실행). 데모 화면 전환 장치.
 - **12.3 토스트 — Job 이벤트 & 에러(Sonner):** 성공/진행=통합 Job `events` 폴링 토스트. 에러=**`OkcError{code,category}` 분기**(문자열 파싱 금지): `transient`=재시도 액션 토스트, `validation`=인라인 폼 에러, `conflict/approval`=해당 섹션 이동 링크.
-- **12.4 PROJECT_BUSY 배너:** topbar 아래 sticky `Alert`(amber) + `Loader2`(spin) + "다른 통합 작업이 진행 중입니다" + [재시도](NFR-CONC-1 직렬화/큐잉). 토스트가 아니라 **배너**(지속 상태 명확).
+- **12.4 PROJECT_BUSY 배너:** topbar 아래 sticky `Alert`(amber) + `Loader2`(spin) + "다른 통합 작업이 진행 중입니다" + 재시도(NFR-CONC-1 직렬화/큐잉). 토스트가 아니라 **배너**(지속 상태 명확).
 - **12.5 승인 무효화 배너(freeze-then-run):** 소스/설정/taxonomy 변경으로 하위 승인 stale → Overview·Integration·Review 상단 `Alert`(warning) + `History`: "소스가 변경되어 이전 승인이 무효화되었습니다. 다시 통합을 실행하세요."(C-4/FR-INT-2)
 - **12.6 Breadcrumb:** `Project명 ▸ 섹션 ▸ (Cluster #12)`. 마지막 노드 비링크 강조. 프로젝트 노드 클릭 → Overview.
 - **12.7 Run-State Pill(탑바 우측):** 현재 `IntegrationCheckpoint`를 `Badge`+dot로. `NeedsProvider`/`NeedsSources`→회색 / `NeedsDisclosure`/`NeedsTaxonomy`/`NeedsClusters`→accent(작업요망) / `ReadyToCompile`·`Verified`→grass / 차단 findings 존재→destructive("차단 3"). 클릭 → Integration.

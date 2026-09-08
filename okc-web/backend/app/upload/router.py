@@ -24,6 +24,7 @@ from app.upload.ingest import (
     UploadReceiver,
 )
 from app.upload.models import IngestAccepted, IssuedToken, IssueTokenRequest, TokenListView, UploadTargetView
+from app.upload.sync import register_sync
 from app.upload.tokens import UploadTokenResolver, UploadTokenService, UploadTokenStore
 
 if TYPE_CHECKING:  # avoid a runtime import of the app factory (no cycle)
@@ -95,3 +96,4 @@ def register(app: FastAPI, state: AppState) -> None:
         return await ingest_service.ingest(ctx, file, owner_display_name, owner_kind, request)
 
     app.include_router(router)
+    register_sync(app, state.db, state.config, state.engine)

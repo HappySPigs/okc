@@ -15,8 +15,8 @@
 //! - U5 `auth-consent`: `AuthTransport::send`(유일 아웃바운드 HTTP 경로).
 //!
 //! HTTP·blob-source·store IO 는 seam(`AuthTransport` 의 하위 `HttpTransport` · `BlobSource` ·
-//! `SyncStore`)으로 주입되어 테스트가 네트워크/파일시스템/권한 없이 프로토콜을 구동한다. 서버
-//! 프로토콜 미확정 구간([blocked-on-server], DEP-03)은 잠정 mock 계약으로 표현한다(`protocol` 모듈).
+//! `SyncStore`)으로 주입되어 테스트가 네트워크 없이 프로토콜을 구동한다. 검증할 blob은 임시 파일에
+//! 고정해 같은 바이트를 해시·전송한다. 서버 계약은 `protocol` 모듈의 CBOR 봉투와 세션 헤더로 정의한다.
 //!
 //! 규약: 모든 doc 주석은 한국어, 코드 내 화살표는 ASCII `A -> B` 만 사용,
 //! Rust 타입/식별자는 doc 주석에서 백틱으로 감싼다(`Box<dyn Read>`, `Result<CommitOutcome, UploadError>`).

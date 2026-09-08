@@ -23,3 +23,6 @@ npm run build       # tsc typecheck is part of the build gate
 ## Conventions
 - Backend: pytest + FastAPI `TestClient`; each test builds an isolated app (own SQLite temp DB) to avoid cross-test state.
 - Frontend: vitest + Testing Library; stable `data-testid` (`{screen}-{role}`) on interactive elements for future e2e.
+
+The continuous-upload extension adds `tests/test_hooks_sync.py`; its real-binding
+and Rust-wire coverage is described in [continuous-sync verification](continuous-sync-verification.md).

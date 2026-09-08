@@ -2,7 +2,9 @@
 
 A web platform for **permission-gated integration of departmental Obsidian vaults** into a single, verifiable, merged knowledge base — built on top of the [okc-core](../okc-core) engine (OKC = Obsidian Knowledge Compilation).
 
-An admin (curator) collects individual/department vaults via one-time upload tokens, freezes the source set, runs a multi-step human-in-the-loop integration (provider → disclosure → taxonomy → clusters), reviews critic findings (approving, waiving *minor* only, or regenerating *blocking* ones — **there is no "pick a winner"**), compiles a deterministic merged vault, and serves it read-only for an okc-mcp RAG consumer.
+An admin (curator) collects successive individual/department vault revisions via reusable upload tokens (revealed once), freezes the source set, runs a multi-step human-in-the-loop integration (provider → disclosure → taxonomy → clusters), reviews critic findings (approving, waiving *minor* only, or regenerating *blocking* ones), compiles a deterministic merged vault, and serves fixed revisions to okc-mcp.
+
+The hooks daemon now connects through authenticated CBOR `/api/sync`; repeated uploads update the same source. Serving supports revision-pinned reads, publication history/restore, and optional private access with separate read tokens. See [continuous sync](aidlc-docs/construction/u2-upload/code/continuous-sync.md), [versioned serving](aidlc-docs/construction/u5-serving/code/versioned-serving.md), and the [four-module verification](../aidlc-docs/construction/build-and-test/build-and-test-summary.md).
 
 > Hackathon MVP. Single-organization, single long-lived process, local/trusted environment.
 
@@ -31,10 +33,10 @@ An admin (curator) collects individual/department vaults via one-time upload tok
 |---|---|---|
 | U0 | `app/shared`, `app/adapter` | RBAC/error/jobs/state primitives + the single okc binding seam + single-writer worker |
 | U1 | `app/auth` | admin login (argon2id), sessions, RBAC-before-core, account admin |
-| U2 | `app/upload` | one-time upload tokens, capability upload, hostile-input validation, `add_source` |
+| U2 | `app/upload` | upload token lifecycle, multipart and resumable CBOR upload, validation, stable source revisions |
 | U3 | `app/orchestration` | project registry, freeze, checkpoint projection, provider/disclosure, integrate/compile |
 | U4 | `app/review` | taxonomy/cluster review, DecisionGate (no winner-select; blocking→regenerate-only), audit |
-| U5 | `app/serving` | admin publish + read-only machine API (files/verify/explain/contract), staleness |
+| U5 | `app/serving` | verified publication/history/restore, version-pinned read APIs, freshness and optional read-token access |
 | U6 | `frontend/` | the SPA wiring all of the above |
 
 ---
@@ -59,10 +61,10 @@ VIRTUAL_ENV=backend/.venv uv pip install ../okc-core/bindings/python/dist/okc_co
 ### 2. Backend deps + gate
 ```bash
 cd backend
-VIRTUAL_ENV=.venv uv sync           # or: uv pip install fastapi "uvicorn[standard]" pydantic sqlalchemy argon2-cffi python-ulid python-multipart pytest pytest-asyncio httpx ruff mypy
+VIRTUAL_ENV=.venv uv sync --frozen --extra dev --inexact  # retain the locally built okc wheel
 .venv/bin/python -m ruff check app tests
 .venv/bin/python -m mypy app tests
-.venv/bin/python -m pytest -q        # 80 passed
+.venv/bin/python -m pytest -q        # includes real-core deterministic-provider publication regressions
 ```
 
 ### 3. Frontend build
@@ -97,7 +99,7 @@ upload (token) → admin login / create project / freeze sources → run integra
 > **Provider note:** the AI-driven middle of the flow (integrate → taxonomy → synthesis → critic → compile) requires a configured LLM provider. Without one, the app still runs and every non-AI seam works; the engine returns real, typed errors (e.g. `needs_provider`, `PROJECT_INVALID`) rather than mocks.
 
 ## Design honesty (okc-core hard constraints, surfaced in the UI)
-No winner-select (contradictions are preserved, read-only) · Major/Critical findings are waive-forbidden and block compile (regenerate only) · ≤10 sources per project · freeze-then-run: changing inputs invalidates downstream approvals (stale) · read-only compiled vault · okc-mcp retrieval/embedding is out of scope (contract only) · `curator_id` is an unverified audit label — real gating is okc-web RBAC.
+Contradictions are preserved · Major/Critical findings are waive-forbidden and block compile (regenerate only) · ≤10 distinct sources per project (successive revisions do not consume new slots) · freeze-then-run: changing inputs invalidates downstream approvals · read-only compiled vault · retrieval belongs to the implemented sibling okc-mcp module · `curator_id` is an unverified audit label, with actual authorization enforced by okc-web.
 
 ---
 
@@ -105,7 +107,7 @@ No winner-select (contradictions are preserved, read-only) · Major/Critical fin
 This project was produced with the AI-DLC workflow; the full traceable trail lives in [`aidlc-docs/`](aidlc-docs/): requirements → user stories (29) → application design → units → per-unit functional design + code generation, with every decision logged in [`aidlc-docs/audit.md`](aidlc-docs/audit.md) and state in [`aidlc-docs/aidlc-state.md`](aidlc-docs/aidlc-state.md). See [`aidlc-docs/PROCESS.md`](aidlc-docs/PROCESS.md) for the narrative.
 
 ## Testing
-Backend: `ruff` + `mypy` + `pytest` (80 tests, real okc binding via the production `create_app` — no engine mock). Frontend: `tsc` + `vite build` + `vitest`. See [`aidlc-docs/construction/build-and-test/`](aidlc-docs/construction/build-and-test/).
+Backend: `ruff` + `mypy` + `pytest` using the real okc binding and deterministic loopback-provider integration. Frontend: `tsc` + `vite build` + `vitest`. The root integration test runs actual MCP authoring/reading and Rust hooks wire encoding through web/core. See [`aidlc-docs/construction/build-and-test/`](aidlc-docs/construction/build-and-test/) for current results and limits.
 
 ## License / status
 Hackathon MVP. okc-core is a separate dependency and is unmodified.

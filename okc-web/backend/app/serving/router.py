@@ -19,8 +19,10 @@ from fastapi import APIRouter, Depends, FastAPI, Request, Response
 
 from app.orchestration.projects import ProjectRegistry
 from app.serving.models import (
+    AccessRequest,
     McpContractView,
     PublicationView,
+    RestoreRequest,
     ServingFileListView,
     ServingProvenanceView,
     ServingVerifyView,
@@ -62,30 +64,64 @@ def register(app: FastAPI, state: AppState) -> None:
         require(ctx, (Role.ADMIN,))
         return service.publication_status(project_id)
 
-    # --- Machine read-only surface (E5-S2..S5) — UNAUTHENTICATED GET/HEAD only ---
-    machine = APIRouter(prefix="/api/serving/{project_id}")
+    @admin.get("/history")
+    def history(project_id: str, ctx: AuthContext = Depends(admin_context)) -> list[dict]:
+        require(ctx, (Role.ADMIN,))
+        projects.get(project_id)
+        return service.snapshots.history(project_id)
+
+    @admin.post("/restore", response_model=PublicationView)
+    async def restore(project_id: str, body: RestoreRequest,
+                      ctx: AuthContext = Depends(admin_context)) -> PublicationView:
+        require(ctx, (Role.ADMIN,))
+        return await service.restore(project_id, body.revision, cast(AdminPrincipal, ctx.principal).curator_label)
+
+    @admin.put("/access")
+    def access(project_id: str, body: AccessRequest, ctx: AuthContext = Depends(admin_context)) -> dict:
+        require(ctx, (Role.ADMIN,))
+        projects.get(project_id)
+        service.snapshots.set_mode(project_id, body.mode)
+        return {"project_id": project_id, "mode": body.mode}
+
+    @admin.post("/tokens")
+    def issue_token(project_id: str, ctx: AuthContext = Depends(admin_context)) -> dict:
+        require(ctx, (Role.ADMIN,))
+        projects.get(project_id)
+        return service.snapshots.issue_token(project_id)
+
+    @admin.delete("/tokens/{token_id}")
+    def revoke_token(project_id: str, token_id: str, ctx: AuthContext = Depends(admin_context)) -> dict:
+        require(ctx, (Role.ADMIN,))
+        projects.get(project_id)
+        service.snapshots.revoke_token(project_id, token_id)
+        return {"revoked": True}
+
+    def read_access(project_id: str, request: Request) -> None:
+        service.snapshots.authorize(project_id, request.headers.get("Authorization"))
+
+    machine = APIRouter(prefix="/api/serving/{project_id}", dependencies=[Depends(read_access)])
 
     @machine.get("/files", response_model=ServingFileListView)
-    def machine_files(project_id: str) -> ServingFileListView:
-        return service.list_files(project_id)
+    def machine_files(project_id: str, revision: str | None = None) -> ServingFileListView:
+        return service.list_files(project_id, revision)
 
     @machine.get("/file")
-    def machine_file(project_id: str, path: str) -> Response:
-        body, media_type = service.read_file(project_id, path)
-        return Response(content=body, media_type=media_type)
+    def machine_file(project_id: str, path: str, revision: str | None = None) -> Response:
+        body, media_type = service.read_file(project_id, path, revision)
+        return Response(content=body, media_type=media_type, headers={"Cache-Control": "private, no-store"})
 
     @machine.get("/verify", response_model=ServingVerifyView)
-    async def machine_verify(project_id: str) -> ServingVerifyView:
-        return await service.verify(project_id)
+    async def machine_verify(project_id: str, revision: str | None = None) -> ServingVerifyView:
+        return await service.verify(project_id, revision)
 
     @machine.get("/explain", response_model=ServingProvenanceView)
-    async def machine_explain(project_id: str, path: str) -> ServingProvenanceView:
-        return await service.explain(project_id, path)
+    async def machine_explain(project_id: str, path: str, revision: str | None = None) -> ServingProvenanceView:
+        return await service.explain(project_id, path, revision)
 
     @machine.get("/contract", response_model=McpContractView)
-    def machine_contract(project_id: str, request: Request) -> McpContractView:
+    def machine_contract(project_id: str, request: Request, revision: str | None = None) -> McpContractView:
         base = str(request.base_url).rstrip("/") + f"/api/serving/{project_id}"
-        return service.contract(project_id, base)
+        return service.contract(project_id, base, revision)
 
     app.include_router(admin)
     app.include_router(machine)

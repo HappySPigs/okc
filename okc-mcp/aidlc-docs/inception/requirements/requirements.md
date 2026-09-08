@@ -1,5 +1,7 @@
 # Requirements — Obsidian MCP for authoring an OKC input Vault
 
+Current scope note (2026-09-09): the [web knowledge delta](requirements-web-knowledge.md) extends this historical first-unit baseline with configured published retrieval, separate local authoring and initialization. Earlier offline-only exclusions below remain historical first-unit scope, not a prohibition on the explicitly authorized follow-up.
+
 **Status**: Requirements Analysis output — **awaiting explicit user approval**. This document incorporates all answered verification (11), clarification (2), and resiliency-extension (2) questions. It supersedes the draft at [`../requirements.md`](../requirements.md). The **product / Construction gate remains in force**: approving this document approves the requirements only, not implementation, testing, or packaging.
 
 ---

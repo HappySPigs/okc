@@ -18,7 +18,8 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use auth_consent::{AuthTransport, ConfigSource, ConsentGate, CredentialProvider, UreqAdapter};
 use change_detect::{
-    FilesystemWatcher, NotifyBackend, ReconciliationScheduler, TriggerSignal, VaultAvailabilityGuard,
+    FilesystemWatcher, NotifyBackend, ReconciliationScheduler, TriggerSignal,
+    VaultAvailabilityGuard,
 };
 use foundation::{CriticalEventSink, HistorySink, LogFields, LogLevel, Logger, StatusSink};
 use observability::{
@@ -33,12 +34,15 @@ use crate::adapters::{
     AvailabilityGuard, ConsentPort, CoordinatorStore, CycleDriver, ManifestSource, RunStatePort,
     SharedSyncStore, VaultBlobSource, VaultManifestSource,
 };
-use crate::config::{FederatedConfig, LoadedRuntimeConfig, RuntimeConfigError, load_runtime_config};
+use crate::config::{
+    FederatedConfig, LoadedRuntimeConfig, RuntimeConfigError, load_runtime_config,
+};
 use crate::control::{DaemonControlHandlers, TriggerSender};
 use crate::coordinator::{
     CoordinatorPorts, CoordinatorSinks, CycleTrigger, ShutdownFlag, SyncCycleCoordinator,
 };
 use crate::instance_lock::{LockConfig, LockError, SingleInstanceLock};
+use crate::target_binding::{ensure_target_binding, target_fingerprint};
 
 /// 트리거 소스 스레드가 종료 플래그를 관측하는 폴링 간격.
 const THREAD_POLL: Duration = Duration::from_millis(250);
@@ -46,6 +50,9 @@ const THREAD_POLL: Duration = Duration::from_millis(250);
 /// 데몬 기동/조립/종료 실패 taxonomy.
 #[derive(Debug, thiserror::Error)]
 pub enum DaemonError {
+    /// 지속 sync 상태가 다른 vault/업로드 목적지에 속함.
+    #[error("sync target binding failed: {0}")]
+    TargetBinding(String),
     /// config 로드/federated 해소 실패(lock 이전 즉시 종료).
     #[error(transparent)]
     Config(#[from] RuntimeConfigError),
@@ -84,7 +91,22 @@ impl WatcherDaemon {
         })?;
 
         // S3: 상태 저장소 crash-atomic 복구.
-        let store = Arc::new(Mutex::new(open_state(&federated)?));
+        let recovered_store = open_state(&federated)?;
+        let target = target_fingerprint(&core)
+            .map_err(|error| DaemonError::TargetBinding(error.to_string()))?;
+        let binding_path = federated
+            .state
+            .state_path
+            .as_ref()
+            .map(|path| path.with_extension("target"))
+            .unwrap_or_else(|| federated.data_dir.join("sync-state.target"));
+        ensure_target_binding(
+            &binding_path,
+            &target,
+            recovered_store.last_committed_manifest().is_some(),
+        )
+        .map_err(|error| DaemonError::TargetBinding(error.to_string()))?;
+        let store = Arc::new(Mutex::new(recovered_store));
 
         // S4: U6 싱크(먼저 구축해 U0 트레이트 핸들 확보).
         let status = Arc::new(StatusService::new());
@@ -159,6 +181,7 @@ impl WatcherDaemon {
             trigger_sender,
             logger.clone(),
             provider.clone(),
+            target,
         ));
         // 리스너는 `Box<dyn IpcListener>`(non-Send)이라 스레드로 이동할 수 없으므로 전용 스레드
         // 안에서 bind + serve 한다. 바인딩 실패는 데몬을 중단시키지 않고(제어면 부재로 계속) 로그로
@@ -280,9 +303,10 @@ fn spawn_timer(
             thread::sleep(THREAD_POLL);
             let busy = cycle_in_progress.load(Ordering::SeqCst);
             if let Some(signal) = scheduler.tick(Instant::now(), busy)
-                && tx.send(CycleTrigger::Reconcile(signal)).is_err() {
-                    break;
-                }
+                && tx.send(CycleTrigger::Reconcile(signal)).is_err()
+            {
+                break;
+            }
         }
     })
 }

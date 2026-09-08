@@ -475,3 +475,47 @@ watcher의 역할은 obsidian vault를 특정 시간 주기로 모니터링 하�
 **Context**: **AIDLC CONSTRUCTION PHASE COMPLETE.** All 10 units U0..U8 built + REAL-cargo-verified (237 tests, clippy-clean, workspace builds); Build-and-Test documented. OPERATIONS = placeholder. Awaiting user direction (e.g., confirm MSRV 1.89, tackle a deferred item, or run the binary).
 
 ---
+
+## Integration Repair - Module Resumption and Planning
+**Timestamp**: 2026-09-08T17:01:41Z
+**User Input**: "AIDLC 모두 확인해서 검증하고, 없는 부분들 구현해"
+**AI Response**: Selected okc-hooks as this subordinate implementation workspace. Loaded module state and approved requirement amendments, resumed existing Construction artifacts, and created construction/plans/integration-sync-repair-code-generation-plan.md. The confirmed defects are missing retry scheduling and incoherent re-opened upload bytes; coordinated the existing CBOR protocol with the okc-web implementer using session identity and authoritative server offsets. Existing no-filter and config-token policies remain. Security Baseline disabled and skipped; Resiliency and PBT extensions remain enabled. Existing autopilot plus the user's explicit implementation request authorizes this bounded repair without another approval gate.
+**Context**: Module implementation proceeds while root artifacts retain cross-module contracts and aggregate verification. Clock tool timestamp is recorded verbatim despite earlier historical entries having later timestamps.
+
+---
+
+## Integration Repair - User Steering
+**Timestamp**: 2026-09-08T17:01:41Z
+**User Input**: "위에서 내 요구사항에 맞게 모든 모듈들이 잘 구현됐는지 확인해서 기능이 공백이 있으면 AIDLC를 이용해 설계 구현해"
+**AI Response**: Continued the same module repair objective; no scope cancellation. The real web receiver contract now includes session identity, server-authoritative resume offsets, CBOR content type, and an 8 MiB frame payload ceiling. Added a Rust CBOR fixture emitter for root cross-language validation. Existing deliberate non-goals remain distinguished from implementation defects.
+**Context**: Latest steering reinforces implementation and verification authorization. No external messages, deployments, or publication performed.
+
+---
+
+## Integration Repair - Construction and Verification Complete
+**Timestamp**: 2026-09-08T17:14:21Z
+**AI Response**: Completed retry scheduling with deadline-driven re-entry and responsive shutdown; added verified temporary-file spooling so hashing and transfer use identical bytes; implemented session headers, CBOR content type, authoritative server resume offsets, and an 8 MiB raw frame ceiling. Preserved the existing digest framing and compatible optional session response fields. Added the Rust protocol-fixture emitter, setup instructions, and nine tests including generated retry sequences and snapshot/codec properties. Full workspace tests passed 246/0 with seed 20260909; all ten crates built; clippy all-targets/features passed with warnings denied. An initial bare rustc shim attempted an unrelated stable update and failed; using the existing explicit Rust 1.97.1 binaries resolved tool selection offline. Root/web owns the true receiver/core integration tests and later aggregate CI. Updated the module plan checkboxes, state, and build summaries while preserving historical records.
+**Context**: Resiliency and PBT changed-path checks pass. Security extension disabled and skipped. Existing Windows IPC, secure-store, AutoUpdater, cross-OS/MSRV CI and OS service verification deferrals remain visible; no broad product-policy change or deployment occurred.
+
+---
+
+## Integration Repair - Target Identity Follow-up Complete
+**Timestamp**: 2026-09-08T17:21:45Z
+**AI Response**: The integration review identified that a last-committed manifest had no destination binding. Added a versioned fingerprint of canonical vault root, normalized HTTPS base, and token selector beside the state file. Startup rejects mismatched or unbound legacy committed state with a fresh-data-dir/state-path instruction while preserving existing state. Added ConfigProvider.reload_guarded so the exact validated candidate is checked before one atomic swap; daemon reload cannot redirect live transport while retaining another target's manifest. Verifier-only changes under the same selector remain allowed. Four new regression/property tests pass. Re-ran the entire workspace: 250 tests passed, zero failed, build passed for all ten crates, all-target clippy passed with warnings denied. Updated setup instructions, plan checkboxes, state, and latest verification summary. Root/web's Rust-CBOR-to-native-core receiver test has also passed according to that workstream; aggregate proof remains in root artifacts.
+**Context**: This bounded follow-up is within the latest request to implement missing functions. No target state was deleted, reassigned, or uploaded automatically. Existing approved module policies remain.
+
+---
+
+## Integration Repair - Documentation Link and CI Follow-up
+**Timestamp**: 2026-09-08T17:21:45Z
+**AI Response**: Corrected pre-existing Foundation pseudo-links in inception/application-design/unit-of-work-dependency.md to plain notation, preserving the dependency model and all audit history. Root added a hooks CI matrix with proptest seed 20260909 for three operating systems and two Rust versions; remote execution has not occurred. A diagnostic cargo fmt --all -- --check found extensive pre-existing module formatting differences; notified the root integrator so the new CI does not silently claim a passing baseline. Changed source files were formatted; full workspace tests/build/clippy remain verified as recorded.
+**Context**: Root content-validation and CI coordination; no new product behavior change.
+
+---
+
+## Local-Install Initiative U1 - Config-Driven `setup` + Teardown Complete
+**Timestamp**: 2026-09-09T00:00:00Z
+**AI Response**: Implemented root initiative unit U1 (config-driven local install) inside okc-hooks only, under the root initiative's Security-baseline-enabled + partial-PBT posture (applicable rules only). Added a `watcher-bin setup --config <source>` operator subcommand (dispatched in main.rs before the config-load path so it works with no pre-existing config): it hard-gates the user config with foundation's existing strict validation (unknown-key reject, https-only endpoint, non-blank token), copies the original bytes verbatim to the user-level path (`~/.config` / `~/Library/Application Support` / `%APPDATA%`) at `0600`, and registers the auto-start OS service bound to that config via an additive `ServiceSpec.config_path` (launchd/systemd --user/SCM now launch `watcher-bin run <config>`), reusing ServiceManager through an injectable `ServiceRegistrar` seam. A best-effort DNS reachability check warns only, never aborts; the token is never printed/logged (ConfigError::report + redacting TokenSecret; a test asserts no leak). Teardown reuses existing `uninstall`: NativeServiceOps now carries the real loaded config_path as the ConfigToken artifact and run_cli falls back to the user-level config when discovery-default load fails, so `uninstall --purge-token` removes the setup-written config without OKC_WATCHER_CONFIG; the vault is never touched. Shipped examples/config.example.json (referenced from watcher-setup.md) and a functional-design doc under construction/local-install/. Tests: +4 lifecycle-deploy service content-binding unit tests, +8 watcher-bin setup tests (happy 0600+bound-register, unknown-key, non-https, blank-token, token-redaction, idempotent re-run, registration-failure, and a proptest-support-gated config serde round-trip). REAL verification with toolchain 1.97.1: `cargo build --workspace` + `--release` OK; full `cargo test --workspace --features proptest-support` all green (0 failed; lifecycle-deploy 22 lib +7 prop, watcher-bin setup 8/8); `cargo clippy --workspace --all-targets --features proptest-support -- -D warnings` = 0. No new dependencies; Cargo.lock unchanged. Did not run real `setup` (would register an OS service) — only safe CLI paths (missing --config, unreadable source, http-scheme+secret-token redaction) exercised, all correct. No commit/push.
+**Context**: Root umbrella initiative "Local Config-Driven Install", unit U1 (LIR-H1..H4, LIR-X2, NFR-1..4, applicable Security Baseline rules). Surgical/additive; no existing behavior refactored or tests weakened.
+
+---

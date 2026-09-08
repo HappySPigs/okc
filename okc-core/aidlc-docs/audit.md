@@ -149,3 +149,19 @@ Confirmed-correct (no change): FR-9/10/12/13/15/17, all NFR ADRs, ADRs 0028–00
 **Context**: Construction review and repository integration — final change review, validation, commit, and push authorized.
 
 ---
+
+## Integration Continuation - Verification Request
+**Timestamp**: 2026-09-08T17:21:45Z
+**User Input**: "AIDLC 모두 확인해서 검증하고, 없는 부분들 구현해"
+**AI Response**: Resumed the module's existing AI-DLC context as part of the root four-module integration initiative. Selected a bounded core verification pass against the existing normative current-product contract; no schema, policy, or application-code change was needed from this pass.
+**Context**: Core owns canonical integration/approval/materialization; root owns cross-module orchestration.
+
+---
+
+## Integration Continuation - Latest Steering and Verification Results
+**Timestamp**: 2026-09-08T17:21:45Z
+**User Input**: "위에서 내 요구사항에 맞게 모든 모듈들이 잘 구현됐는지 확인해서 기능이 공백이 있으면 AIDLC를 이용해 설계 구현해"
+**AI Response**: Read current module agent/context/state/requirements and normative pipeline/output/provenance boundaries. Ran the full locked Rust workspace offline using the existing pinned 1.97.1 toolchain: 130 tests passed, zero failed, all doc-test targets passed. Ran the installed Python public API suite from okc-web/backend/.venv: 12 tests passed in 1.31 seconds, including actual synthetic-provider integration, taxonomy/cluster approvals, compile, verification, explanation, and unchanged output golden. Wrote construction/build-and-test/integration-continuation-verification.md and updated state. Explicit current exclusions (non-Markdown materialization, current Pack, full link rewriting) and release qualification gaps remain documented, not presented as implemented. AI-DLC extensions remain disabled per module state; existing normative safety/reliability contracts remain authoritative. No application code, historical audit record, core policy, dependency, schema, or release status was changed.
+**Context**: Module-local evidence is ready for the root integration record to reference; the four-module bridge is verified separately by the integration workstream.
+
+---

@@ -1,5 +1,20 @@
 # Build and Test Summary
 
+## Integration repair verification (latest)
+
+- Scope: [integration-sync-repair-code-generation-plan.md](../plans/integration-sync-repair-code-generation-plan.md).
+- `cargo test --workspace --features proptest-support --offline`: **250 passed, 0 failed** with `PROPTEST_RNG_SEED=20260909` (prior baseline 237 plus thirteen new tests).
+- `cargo build --workspace --offline`: **passed**, all ten crates.
+- `cargo clippy --workspace --all-targets --features proptest-support --offline -- -D warnings`: **passed**.
+- Tests added: autonomous retry without incoming events; backoff event coalescing; interruption of a 30-second backoff; generated retryable failure sequences; source changes between reads; authoritative server resume offsets; rejection of impossible offsets; generated coherent upload bytes; session CBOR round-trip.
+- Target identity tests additionally verify state is preserved when vault/endpoint/token selector changes, legacy committed state is not silently claimed, guarded reload keeps the old config on mismatch, and fingerprints remain idempotent and verifier-independent.
+- Transfer consistency now uses a temporary disk spool rather than re-opening mutable source bytes after hashing. Upload tests exercise this real temporary-file path; HTTP remains injected in module tests.
+- The Rust `protocol-fixture` example builds and emits actual CBOR payloads for the root/web cross-language integration suite. Web/core receiver integration and publication verification are owned by that suite; these module results do not claim live HTTP verification.
+- Verified toolchain: explicit Rust 1.97.1. Bare rustup `stable` shims attempted an unrelated component update; pinning `RUSTC`, `RUSTDOC`, and `RUSTUP_TOOLCHAIN` used the existing toolchain offline. No dependency download was needed.
+- Remaining platform/deployment gaps: native OS service installation, Windows IPC, optional secure-store, automatic updater source/distribution, multi-OS/MSRV CI, and quantitative performance measurement. These were previously deferred and do not block local macOS daemon synchronization through the newly implemented receiver contract.
+
+The sections below retain the earlier 237-test construction baseline for historical comparison.
+
 okc-hooks Watcher — CONSTRUCTION 전 유닛(U0..U8) 코드 완료 후의 통합 빌드·테스트 상태 요약이다.
 모든 수치/결과는 실제 툴체인 실행으로 확인됐다.
 
@@ -76,8 +91,8 @@ okc-hooks Watcher — CONSTRUCTION 전 유닛(U0..U8) 코드 완료 후의 통�
 - **라이브 okc 서버 end-to-end(DEP-01/02/05/06/07)**: blocked-on-server — mock 계약으로만 검증.
 - **정량 성능 게이트**: 결정에 따라 정성만(수치 NFR 없음). 부하/처리량 테스트 이연.
 - **TrayIndicator**: headless MVP no-op(트레이 UI 없음; 로그+헬스+CLI status 로 표면화).
-- **PROP-U8-02(graceful-shutdown drain 무손상)**: 실 스레드 종료 시퀀스를 요구해 전용 in-memory proptest 로
-  분리하지 못함 — `daemon.rs` S9 종료 순서로 설계 성립하나 독립 자동 검증은 이연.
+- **PROP-U8-02(graceful-shutdown drain 무손상)**: 백오프 중 실 스레드 종료는 위 통합 보완에서 자동 검증했다.
+  네트워크 요청 도중 종료/전체 OS 서비스 종료 순서는 아직 별도 배포 통합 검증 대상이다.
 
 ## Next Steps
 

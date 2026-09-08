@@ -17,6 +17,10 @@ pub mod control;
 pub mod coordinator;
 /// 전체 컴포넌트 조립, 트리거 스레드, 종료 수명주기.
 pub mod daemon;
+/// 동기화 상태와 목적지 identity의 지속 바인딩.
+pub mod target_binding;
+/// 설정 주도 `setup` — config 검증·배치(0600) + 자동시작 서비스 바인딩(LIR-H1..H4).
+pub mod setup;
 
 /// PBT 도메인 제너레이터. 비기본 feature에서만 노출된다.
 #[cfg(feature = "proptest-support")]
@@ -39,4 +43,8 @@ pub use coordinator::{
 pub use daemon::{DaemonError, WatcherDaemon};
 pub use instance_lock::{
     InstanceInfo, LockConfig, LockError, LockGuard, LockRecord, SingleInstanceLock,
+};
+pub use setup::{
+    NativeServiceRegistrar, ServiceRegistrar, SetupError, SetupReport, perform_setup, run_setup,
+    user_config_path,
 };
