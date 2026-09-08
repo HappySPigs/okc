@@ -1,78 +1,57 @@
-# OKC에 적합한 원본 노트 작성
+# Authoring source notes for OKC
 
-Vault는 작성하는 지식의 공간이다. 설정, 템플릿, 자동 생성된 운영 문서, 백업은 밖에 둔다.
-OKC가 확보한 스냅샷은 그대로 보존하며, 이후 작성은 다음 스냅샷의 입력이 된다.
+A Vault is the workspace for knowledge being authored. Keep configuration, templates, generated operational documents, and backups outside it. Preserve snapshots captured by OKC; later edits become input to a future snapshot.
 
-## 구조를 작게 시작하기
+## Start with a small structure
 
-기존 Vault라면 폴더를 바꾸지 않고 연결한 뒤 `audit_vault`를 실행한다.
-새 Vault는 아래 폴더를 선택적으로 사용할 수 있다. 폴더를 만드는 CLI는 현재 제공하지 않으며,
-`create_note`가 지정한 노트의 부모 폴더를 필요할 때 만든다.
+For an existing Vault, connect it without reorganizing folders, then run `audit_vault`. A new Vault may use the folders below. There is currently no CLI command for creating the structure; `create_note` creates the requested note's parent folders when necessary.
 
-| 폴더 | 역할 |
+| Folder | Purpose |
 |---|---|
-| `inbox/` | 아직 검토하지 않은 수집 내용과 질문 |
-| `sources/` | 출처를 식별할 수 있는 원문 관찰·인용·요약 |
-| `notes/` | 근거를 연결한 주제·주장·판단 |
-| `maps/` | 사람이 읽기 위한 작은 주제 안내와 연결 |
+| `inbox/` | Collected material and questions that have not yet been reviewed |
+| `sources/` | Identifiable source observations, quotations, and summaries |
+| `notes/` | Topics, claims, and decisions linked to evidence |
+| `maps/` | Small, human-readable topic guides and connections |
 
-폴더명은 compiler 분류 정책이 아니다. `draft` 태그가 OKC 수집 제외를 의미하지도 않는다.
-수집에서 제외해야 할 자료는 선택할 Source Vault 밖에 두어 경계를 명시한다.
+Folder names are not compiler classification policy. A `draft` tag does not exclude a note from OKC collection. Keep anything that must not be collected outside the selected source Vault so the boundary is explicit.
 
-## 문단과 출처
+## Paragraphs and sources
 
-하나의 문단에 여러 독립적인 사실을 뭉치지 않는다. 확인한 사실, 해석, 가설, 반례를 구분하고
-출처를 주장 가까이에 적는다. 문서명·URL·쪽수·확인 날짜 중 실제 아는 값만 남긴다.
-형식만 채우기 위해 날짜나 인용을 만들지 않는다.
+Do not pack several independent facts into one paragraph. Distinguish verified facts, interpretations, hypotheses, and counterexamples, and keep sources close to the claims they support. Record only source details you actually know, such as the document name, URL, page, or date checked. Never invent a date or quotation merely to complete a template.
 
-아래는 사용자 자료를 채워 넣기 위한 **Vault 밖 템플릿 예시**다.
+The following is an **example template stored outside the Vault** and intended to be filled with user-provided material.
 
 ```md
 ---
-title: 구체적인 주제
+title: A specific topic
 ---
-# 구체적인 주제
+# A specific topic
 
-## 관찰
+## Observation
 
-확인한 한 가지 주장과 적용 범위를 쓴다.
+State one verified claim and its scope.
 
-근거: [실제로 확인한 문서](https://example.test/replace-with-real-source), 해당 절/쪽.
+Evidence: [Document actually reviewed](https://example.test/replace-with-real-source), relevant section or page.
 
-## 해석과 미확인 사항
+## Interpretation and open questions
 
-관찰에서 추론한 내용과 아직 확인하지 않은 부분을 구분한다.
+Separate conclusions inferred from the observation from points that remain unverified.
 ```
 
-빈 제목과 예제 출처를 그대로 저장하지 않는다. 자료에 필요 없는 섹션은 빼도 된다.
-상반된 주장이 있으면 원래 출처와 시점을 남긴다. 중복 후보를 찾았다고 자동 삭제하거나 합치지 않는다.
+Do not save empty titles or placeholder sources. Remove sections that the material does not need. When claims conflict, retain the original sources and their dates. Do not automatically delete or merge notes merely because they appear to be duplicates.
 
-## 메타데이터와 링크
+## Metadata and links
 
-`title`은 문자열, `aliases`와 `tags`는 문자열 또는 문자열 목록이다.
-작성 도구는 빈 값·복잡한 YAML 타입·중복 키·비정상 숫자를 거부한다.
-알 수 없는 사용자 정의 키는 보존한다. 수정되지 않은 본문과 YAML 주석을 보존하되,
-변경한 YAML 노드의 표현 스타일은 serializer에 따라 달라질 수 있다.
+`title` must be a string. `aliases` and `tags` may be strings or lists of strings. Authoring tools reject empty values, complex YAML types, duplicate keys, and invalid numbers. Unknown user-defined keys are preserved. Unmodified body text and YAML comments are retained, although the serialization style of a changed YAML node may differ.
 
-`source`, `status`, `type`, `created` 등은 필요할 때 사용하는 작성 관습이다.
-OKC가 특별한 승인/비공개/분류 의미로 해석하지 않는다. `sourceId`는 OKC의 Vault binding에
-속하므로 모든 노트에 반복할 필요가 없다.
+Fields such as `source`, `status`, `type`, and `created` are optional authoring conventions. OKC does not treat them as special approval, privacy, or classification signals. `sourceId` belongs to OKC's Vault binding and does not need to be repeated in every note.
 
-링크는 검색으로 존재를 확인하고 후보가 여러 개면 뜻을 확인한다. Obsidian은 Vault root를
-기준으로 한 폴더 링크를 사용하지만 OKC parser는 문서 상대 경로와 후보 조회를 사용하므로,
-둘이 다른 문서를 가리키는 경우를 점검해야 한다. 기본적인 wikilink, ATX heading와 block
-anchor만 휴리스틱으로 검사하며 Markdown 링크와 모든 플러그인 문법을 완전히 해석하지 않는다.
-[Obsidian 링크 문서](https://obsidian.md/help/Linking%2Bnotes%2Band%2Bfiles/Internal%2Blinks)
+Confirm that a link target exists and resolve the meaning when several candidates match. Obsidian treats folder-qualified links as Vault-root-relative, while the OKC parser uses document-relative paths and candidate lookup. Audit cases where those interpretations point to different documents. The current heuristics check basic wikilinks, ATX headings, and block anchors; they do not fully parse Markdown links or every plugin syntax. See the [Obsidian documentation on internal links](https://obsidian.md/help/Linking%2Bnotes%2Band%2Bfiles/Internal%2Blinks).
 
-## 변경과 검토
+## Changes and review
 
-먼저 `read_note`에서 현재 전체 파일의 `sha256`을 받는다. `replace_note`는 모든 본문을 바꾸므로
-긴 노트는 `nextOffset`을 따라 전체 내용을 읽는다. 프런트매터만 바꾸려면 `patch_frontmatter`를 쓴다.
-`dryRun: true`로 검사한 뒤 `false`로 적용하면 백업 ID와 변경 후 해시를 받는다.
-해시 충돌이면 최신 내용을 다시 검토한다. 외부 편집기와 같은 노트를 동시에 변경하지 않는다.
+Start by obtaining the current whole-file `sha256` from `read_note`. Because `replace_note` replaces all content, follow `nextOffset` and read the complete note before changing a long file. Use `patch_frontmatter` when only frontmatter should change. Preview with `dryRun: true`; applying with `false` returns a backup ID and the new hash. If a hash conflict occurs, review the latest content again. Do not edit the same note concurrently from an external editor.
 
-작성 후 `audit_vault`의 오류·경고와 생략된 항목을 확인한다. 민감정보 후보는 일부 패턴에
-대한 힌트일 뿐이다. 실제 OKC의 민감정보 preflight, 증거 검사, critic, 사람의 검토를 이어간다.
-첨부·Canvas·Base에만 있는 중요한 주장은 Markdown 설명으로도 남기되 원본은 보존한다.
+After authoring, inspect `audit_vault` errors, warnings, and omitted items. Sensitive-data candidates are only pattern-based hints. Continue with OKC's actual sensitive-data preflight, evidence checks, critic, and human review. Preserve important material stored in attachments, Canvas, or Base files, and add a Markdown explanation when the claim would otherwise exist only in those formats.
 
-이 가이드는 서버의 `okc://guide/authoring` 리소스와 `capture_knowledge` 프롬프트에서도 제공된다.
+This guidance is also exposed through the server's `okc://guide/authoring` resource and `capture_knowledge` prompt.

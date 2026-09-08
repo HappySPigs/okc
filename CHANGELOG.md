@@ -1,9 +1,9 @@
-# 변경 이력
+# Changelog
 
-## 0.1.0-alpha.1 — 로컬 후보, 공개 배포 전
+## 0.1.0-alpha.1 — Local candidate, not publicly released
 
-- Obsidian 앱/플러그인 없이 단일 원본 Vault를 편집하는 stdio MCP.
-- 생성, 읽기/검색, 해시 기반 본문 수정, 프런트매터 부분 수정, 외부 백업.
-- bounded OKC 입력 품질 점검과 근거 중심 작성 가이드.
-- 설정 생성, 진단, 절대 경로 클라이언트 설정 출력, 로컬 npm 패키징.
-- 기존 MCP 조사와 AWS AI-DLC 설계·검증·운영 기록.
+- A stdio MCP for editing a single source Vault without the Obsidian app or plugins.
+- Create, read/search, hash-guarded full-content replacement, partial frontmatter updates, and external backups.
+- Bounded OKC input-quality auditing and evidence-focused authoring guidance.
+- Configuration generation, diagnostics, absolute-path client configuration output, and local npm packaging.
+- Existing-MCP research plus AWS AI-DLC design, validation, and operations records.

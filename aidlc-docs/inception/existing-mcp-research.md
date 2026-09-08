@@ -1,102 +1,102 @@
-# 기존 Obsidian MCP 구현 조사
+# Research on existing Obsidian MCP implementations
 
-조사일: 2026-09-06. 상태: Inception 조사 근거. 목적: **OKC가 처리하기 좋은 입력 Vault를 로컬에서 작성·관리하는 MCP**의 설계 근거를 얻는다. 컴파일 결과나 OKC 프로젝트 조작을 주목적으로 삼지 않는다.
+Research date: 2026-09-06. Status: Inception research evidence. Purpose: gather design evidence for an **MCP that locally authors and manages an input Vault that OKC can process effectively**. Querying compiled results or manipulating OKC projects is not the primary goal.
 
-## 조사 범위와 판정 기준
+## Scope and evaluation criteria
 
-대표적인 REST bridge 2종과 직접 파일 접근 서버 2종을 GitHub에서 내려받아 아래 commit의 실제 진입점, 도구 등록, 파일 처리, 검색, 설정, 라이선스를 읽었다. README의 설치 설명과 코드에서 확인한 동작을 구분했다. 타 프로젝트 테스트 실행, 성능 측정, 배포 바이너리 검증, 전체 보안 감사는 수행하지 않았다. 문서에 있는 성능 수치를 실측으로 인용하지 않으며 소스 코드는 복사하지 않는다.
+Two representative REST bridges and two direct-filesystem servers were cloned from GitHub. The actual entry points, tool registration, file handling, search, configuration, and licenses at the commits below were inspected. README installation claims were kept separate from behavior verified in source. This review did not run other projects' tests, measure performance, validate distributed binaries, or perform a complete security audit. It does not present performance numbers from documentation as measurements, and no source code was copied.
 
-| 프로젝트 | 조사한 commit | 소스 내 버전 | 라이선스 확인 | 기본 구조 |
+| Project | Commit reviewed | Version in source | License verified | Basic architecture |
 |---|---|---|---|---|
-| MarkusPfundstein/mcp-obsidian | `5ee0b84fa8319fd2fdf0db0ee1febb065e712a15` | 0.2.2 | MIT, LICENSE 확인 | Python stdio → HTTP → Local REST API plugin |
-| cyanheads/obsidian-mcp-server | `2d4e8d1114d650b45568caa9a163e6e853423266` | 3.5.1 | Apache-2.0, LICENSE 확인 | TypeScript MCP → service → Local REST API plugin |
-| bitbonsai/mcpvault | `c5abeda9bed11864079f70ae7f33d134e294aad2` | 0.16.0 | MIT, LICENSE 확인 | Node.js stdio → 파일 서비스 → Vault |
-| lstpsche/obsidian-mcp | `fea2e1f50a8a76d5232b40d07b654ae8037985c7` | 2.5.0 | MIT, LICENSE 확인 | Rust MCP → Vault/index → 파일시스템 |
+| MarkusPfundstein/mcp-obsidian | `5ee0b84fa8319fd2fdf0db0ee1febb065e712a15` | 0.2.2 | MIT, LICENSE inspected | Python stdio → HTTP → Local REST API plugin |
+| cyanheads/obsidian-mcp-server | `2d4e8d1114d650b45568caa9a163e6e853423266` | 3.5.1 | Apache-2.0, LICENSE inspected | TypeScript MCP → service → Local REST API plugin |
+| bitbonsai/mcpvault | `c5abeda9bed11864079f70ae7f33d134e294aad2` | 0.16.0 | MIT, LICENSE inspected | Node.js stdio → file service → Vault |
+| lstpsche/obsidian-mcp | `fea2e1f50a8a76d5232b40d07b654ae8037985c7` | 2.5.0 | MIT, LICENSE inspected | Rust MCP → Vault/index → filesystem |
 
-버전은 package manifest 기준이다. npm/crates.io의 현재 게시 버전과 동일하다는 주장은 아니다. 근거: [Markus manifest][markus-package], [cyanheads manifest][cyan-package], [MCPVault manifest][bonsai-package], [Rust manifest][rust-package]. 라이선스: [Markus][markus-license], [cyanheads][cyan-license], [MCPVault][bonsai-license], [Rust][rust-license].
+Versions come from package manifests; this is not a claim that they match current npm or crates.io releases. Evidence: [Markus manifest][markus-package], [cyanheads manifest][cyan-package], [MCPVault manifest][bonsai-package], and [Rust manifest][rust-package]. Licenses: [Markus][markus-license], [cyanheads][cyan-license], [MCPVault][bonsai-license], and [Rust][rust-license].
 
-## 1. MarkusPfundstein: 작은 REST wrapper
+## 1. MarkusPfundstein: small REST wrapper
 
-**코드 확인.** `server.py`가 도구 15개를 등록하고 stdio 요청을 각 handler의 동기 `run_tool()`로 보낸다. `obsidian.py`는 `requests`로 `/vault/`, `/search/simple/`, JSONLogic `/search/`, periodic endpoint를 호출한다. 별도 로컬 검색 index는 없고 검색과 frontmatter 해석은 Obsidian 측 API가 맡는다. API key는 환경변수에서 받아 Bearer header로 전달한다. 기본 host는 loopback이며 HTTPS certificate 검증은 기본 비활성, 연결/읽기 timeout은 3초/6초다. [서버][markus-server], [HTTP 서비스][markus-service]
+**Verified in code.** `server.py` registers 15 tools and sends stdio requests to each handler's synchronous `run_tool()`. `obsidian.py` uses `requests` to call `/vault/`, `/search/simple/`, JSONLogic `/search/`, and periodic endpoints. There is no separate local search index; Obsidian's API owns search and frontmatter interpretation. The API key comes from an environment variable and is sent in a Bearer header. The default host is loopback, HTTPS certificate validation is disabled by default, and connect/read timeouts are 3/6 seconds. [Server][markus-server], [HTTP service][markus-service]
 
-**편집 로직.** append는 POST, 전체 쓰기는 PUT, 부분 편집은 PATCH다. PATCH는 heading/block/frontmatter locator를 header로 전달한다. 중첩 heading의 bare name이 실패하면 원문 heading hierarchy를 읽어 후보가 하나일 때만 재시도한다. 중복 heading은 모호성 오류를 낸다. 삭제 도구는 `confirm=true`를 요구하지만 이는 모델이 제출하는 도구 인자이므로 별도 사람 승인의 증거로 볼 수 없다. [HTTP 서비스][markus-service], [도구 정의][markus-tools]
+**Editing logic.** Append uses POST, full write uses PUT, and partial editing uses PATCH. PATCH sends a heading, block, or frontmatter locator in a header. If a bare nested-heading name fails, it reads the source heading hierarchy and retries only when exactly one candidate exists. Duplicate headings produce an ambiguity error. The delete tool requires `confirm=true`, but that is a model-supplied tool argument and is not evidence of separate human approval. [HTTP service][markus-service], [tool definitions][markus-tools]
 
-**경로·동시성.** wrapper는 문자열 경로를 URL에 결합한다. Vault containment와 filesystem 원자성은 upstream 구현에 의존한다. 확인한 도구/서비스에는 사용자가 읽은 revision의 `expectedHash` 검사가 없다. 코드 확인 범위 밖인 REST plugin의 보장까지 추정하지 않는다. [HTTP 서비스][markus-service]
+**Paths and concurrency.** The wrapper joins string paths into URLs. Vault containment and filesystem atomicity depend on the upstream implementation. No `expectedHash` check against the revision read by the user appears in the reviewed tools or service. This review does not infer guarantees from the REST plugin, whose code was outside scope. [HTTP service][markus-service]
 
-**설치 UX—README 확인.** Python 3.11+, uvx, Obsidian Local REST API plugin 활성화, API key 설정이 필요하다. Docker 설정도 제공한다. Python MCP SDK는 1.x로 제한되어 있다. OKC 입력 작성 도구가 이를 기반으로 하면 Obsidian 실행, plugin, transport 설정까지 장애 원인이 늘어난다. [README][markus-readme], [manifest][markus-package]
+**Installation UX — README evidence.** Installation requires Python 3.11+, uvx, the Obsidian Local REST API plugin enabled, and an API key. Docker configuration is also provided. The Python MCP SDK is constrained to 1.x. Building the OKC input-authoring tool on this stack would add Obsidian runtime, plugin, and transport configuration as additional failure points. [README][markus-readme], [manifest][markus-package]
 
-**가져올 교훈.** 작은 도구→서비스 구조와 모호한 heading을 자동 선택하지 않는 원칙은 유용하다. REST 의존, 무조건적인 동기 I/O, 모델이 채울 수 있는 확인 boolean은 신규 MCP의 기본 구조로 채택하지 않는다.
+**Lesson to adopt.** A small tool-to-service structure and refusal to guess among ambiguous headings are useful. REST dependence, unconditional synchronous I/O, and a model-fillable confirmation Boolean should not be defaults for the new MCP.
 
-## 2. cyanheads: 구조화된 편집과 사용 가능한 기능의 노출
+## 2. cyanheads: structured editing and capability-aware exposure
 
-**코드 확인.** MCP 도구 정의와 `ObsidianService`가 분리되어 있다. 실제 데이터 접근은 undici HTTP client로 Local REST API에 위임한다. startup에서 Omnisearch 연결을 검사한 뒤 성공했을 때만 검색 schema에 해당 mode를 넣는다. text/JSONLogic 검색 결과는 읽기 경로 정책을 적용한 후 cursor pagination한다. 자체 영속 index가 검색의 주체인 구조는 아니다. [진입점][cyan-index], [서비스][cyan-service], [검색 도구][cyan-search]
+**Verified in code.** MCP tool definitions are separated from `ObsidianService`. Actual data access is delegated through an undici HTTP client to the Local REST API. Startup checks the Omnisearch connection and includes that mode in the search schema only after success. Text and JSONLogic search results apply read-path policy before cursor pagination. This is not an architecture in which a locally persistent index owns search. [Entry point][cyan-index], [service][cyan-service], [search tool][cyan-search]
 
-**편집 UX.** 전체 쓰기는 `overwrite=false`가 기본이고 기존 파일이 있으면 오류를 반환한다. `document-map`으로 heading/block/frontmatter 위치를 조회한 뒤 section을 편집할 수 있다. 단일 heading 이름은 유일한 경우만 허용한다. frontmatter는 `yaml.parseDocument`를 사용하여 변경하지 않은 YAML 노드의 주석·인용 스타일을 최대한 보존하며, 본문만 편집할 때 raw frontmatter를 그대로 이어 붙이는 별도 경로가 있다. YAML 전체 재출력을 완전한 byte 보존과 동일시해서는 안 된다. [쓰기 도구][cyan-write], [frontmatter 처리][cyan-frontmatter]
+**Editing UX.** Full write defaults to `overwrite=false` and returns an error when a file already exists. A `document-map` locates headings, blocks, and frontmatter before section editing. A single heading name is permitted only when unique. Frontmatter updates use `yaml.parseDocument` to preserve comments and quoting styles of untouched YAML nodes where possible, while body-only edits have a separate path that reattaches raw frontmatter unchanged. Re-serializing YAML must not be presented as complete byte preservation. [Write tool][cyan-write], [frontmatter handling][cyan-frontmatter]
 
-**안전·동시성.** read/write 경로 allowlist와 read-only 모드가 service에서도 적용된다. command palette 도구는 별도 opt-in이다. 삭제는 framework의 입력 요청과 응답으로 확인 절차를 구성한다. HTTP retry는 GET/PUT/DELETE에 제한하고 POST/PATCH를 제외하여 append 중복 실행을 피한다. 확인한 서비스/도구에는 revision hash나 `If-Match` 기반 사용자 편집 충돌 검사가 없다. 파일 존재 확인 후 PUT은 원자적인 create-if-absent와 다르다. [경로 정책][cyan-policy], [삭제 도구][cyan-delete], [서비스][cyan-service], [쓰기 도구][cyan-write]
+**Safety and concurrency.** Read/write path allowlists and read-only mode are enforced again in the service. The command-palette tool is opt-in. Deletion uses framework input requests and responses as a confirmation flow. HTTP retries are limited to GET, PUT, and DELETE and exclude POST and PATCH to avoid duplicate appends. No revision hash or `If-Match` user-edit conflict check appears in the reviewed service or tools. Checking existence before PUT is not atomic create-if-absent. [Path policy][cyan-policy], [delete tool][cyan-delete], [service][cyan-service], [write tool][cyan-write]
 
-**설치 UX—문서·manifest 확인.** npx 설정 외에 `.mcpb` bundle manifest와 클라이언트 설치 링크가 있다. Node.js 24+ 또는 Bun과 Obsidian plugin/API key가 필요하다. bundle의 사용자 설정 항목에는 필요한 env 변수가 선언되어 있다. bundle이 실제 모든 클라이언트에서 동작하는지는 이번 조사에서 실행 검증하지 않았다. [README][cyan-readme], [bundle manifest][cyan-bundle]
+**Installation UX — documentation and manifest evidence.** In addition to npx configuration, the project provides an `.mcpb` bundle manifest and client installation links. It requires Node.js 24+ or Bun plus the Obsidian plugin and API key. Required environment variables are declared as user settings in the bundle. This review did not execute the bundle in every claimed client. [README][cyan-readme], [bundle manifest][cyan-bundle]
 
-**가져올 교훈.** 생성과 기존 파일 교체를 나누는 기본값, outline→부분 편집, 제한된 응답 크기, 실제 가능한 기능만 노출하는 방식을 채택한다. 설치 폼과 복구 가능한 오류 메시지는 참고하되 HTTP/plugin 의존을 기본에 넣지 않는다.
+**Lesson to adopt.** Separate create from replacement by default, use outline-first partial editing, bound response sizes, and expose only capabilities actually available. Installation forms and recoverable error messages are useful references, but HTTP and plugin dependencies should not be defaults.
 
-## 3. MCPVault: 설치가 단순한 직접 파일 접근
+## 3. MCPVault: simple direct-filesystem installation
 
-**코드 확인.** Node stdio 진입점이 `createServer()`를 생성하며 총 18개 도구를 정의한다. read/write/patch/frontmatter/tags 외에 outline, line-range 읽기, wikilink 해석 도구가 있다. `--read-only`는 목록에서 mutation 도구를 숨기는 동시에 직접 호출도 차단한다. stdin 종료와 signal을 처리하여 클라이언트 종료 후 고아 프로세스를 줄인다. [진입점][bonsai-server], [서버와 도구][bonsai-create]
+**Verified in code.** A Node stdio entry point creates `createServer()` and defines 18 tools. Beyond read, write, patch, frontmatter, and tags, it exposes outline, line-range reads, and wikilink resolution. `--read-only` both hides mutating tools from the list and blocks direct invocation. stdin closure and signals are handled to reduce orphaned processes after a client exits. [Entry point][bonsai-server], [server and tools][bonsai-create]
 
-**검색 로직.** 매 검색마다 Markdown 파일을 재귀 열거하고 path policy를 적용한 다음 5개씩 병렬 읽기한다. 본문/파일명 substring 후보를 만들고 호출 시 계산한 문서 빈도로 BM25 식을 적용해 재정렬한다. 기본 결과 5개, 최대 20개다. persistent index나 watcher가 이 검색 서비스의 전제가 아니다. 순회 단계와 허용 여부 필터가 분리되어 있으므로 결과 제한이 전체 I/O 제한을 뜻하지 않는다. [검색 서비스][bonsai-search]
+**Search logic.** Every search recursively enumerates Markdown files, applies path policy, then reads five at a time in parallel. It builds body and filename substring candidates and reranks them with a BM25-style score using document frequencies calculated during that call. The default result count is five and the maximum is 20. A persistent index or watcher is not a prerequisite. Because traversal and admissibility filtering are separate, limiting result count does not limit total I/O. [Search service][bonsai-search]
 
-**편집 로직.** append/prepend와 frontmatter patch에서 원본 YAML을 `parseDocument`로 편집한다. 그러나 전체 쓰기의 기본 mode는 overwrite이며 기존 노트를 읽지 못한 경우 append 경로가 신규 쓰기로 진행하는 catch가 있다. frontmatter parse 실패를 빈 metadata와 원문 본문으로 바꾸는 fallback도 있다. 작성용 MCP에서는 parse 실패나 권한 오류를 “없는 파일”과 구분해야 한다. 일반 note write/patch는 직접 `writeFile`하고 `expectedHash` 검사나 파일별 transaction은 확인되지 않았다. [파일 서비스][bonsai-fs], [frontmatter][bonsai-frontmatter]
+**Editing logic.** Append/prepend and frontmatter patches edit the original YAML through `parseDocument`. However, full writes default to overwrite; if reading an existing note fails, an append path may continue as a new write. Frontmatter parse failures may also fall back to empty metadata plus the original body. An authoring MCP must distinguish parse and permission failures from a missing file. General note writes and patches use `writeFile` directly; no `expectedHash` check or per-file transaction was found. [File service][bonsai-fs], [frontmatter][bonsai-frontmatter]
 
-**경로 로직.** Vault root를 realpath로 고정하고 lexical containment 및 기존 대상 symlink의 실제 위치를 검사한다. Vault 내부를 가리키는 symlink는 허용한다. 신규 대상은 직계 parent의 realpath를 시도하지만 parent도 없으면 해당 오류를 일부 무시한다. 이는 모든 기존 ancestor 검사 또는 symlink 전면 거부의 근거가 되지 않는다. `.obsidian`, `.git`, `node_modules` 등의 경로 제한은 별도 `PathFilter`가 처리한다. [파일 서비스][bonsai-fs], [경로 필터][bonsai-filter]
+**Path logic.** The service fixes the Vault root with `realpath`, checks lexical containment, and verifies the actual location of existing symlink targets. Symlinks that point inside the Vault are allowed. For a new target, it attempts `realpath` on the direct parent but ignores some errors when that parent also does not exist. That is not evidence that every existing ancestor is checked or that all symlinks are rejected. A separate `PathFilter` restricts paths such as `.obsidian`, `.git`, and `node_modules`. [File service][bonsai-fs], [path filter][bonsai-filter]
 
-**설치 UX—README·manifest 확인.** Node.js 20+에서 npx + Vault 경로로 실행한다. Obsidian 앱이나 plugin을 필수로 하지 않는다. 경로를 생략하면 cwd를 사용한다. 간편 실행은 참고하되 OKC 작성 MCP는 엉뚱한 디렉터리 변경을 막기 위해 명시적인 Vault 경로를 요구하는 편이 낫다. [README][bonsai-readme], [진입점][bonsai-server]
+**Installation UX — README and manifest evidence.** Run through npx with a Vault path on Node.js 20+. The Obsidian app and a plugin are not required. Omitting the path uses the current working directory. Simple startup is worth emulating, but the OKC authoring MCP should require an explicit Vault path to avoid changing the wrong directory. [README][bonsai-readme], [entry point][bonsai-server]
 
-**가져올 교훈.** 직접 FS + stdio, 부분 읽기, 간결한 결과, 서버 수준 read-only는 잘 맞는다. permissive한 경로 보정, parse 오류 은폐, 기본 overwrite는 채택하지 않는다. 작은 Vault의 MVP는 bounded scan으로 시작하고 실제 규모 측정 이후 index를 결정할 수 있다.
+**Lesson to adopt.** Direct filesystem access over stdio, partial reads, concise results, and server-level read-only enforcement fit this product. Permissive path correction, hidden parse errors, and overwrite-by-default do not. A small-Vault MVP can begin with a bounded scan and decide on indexing only after measuring real scale.
 
-## 4. lstpsche: Rust index와 실시간 갱신
+## 4. lstpsche: Rust index and live updates
 
-**코드 확인.** `Vault::open`에서 metadata index를 만들고 선택적으로 Tantivy index를 구성한다. metadata에 note/tag/link/backlink 구조를 유지한다. Tantivy는 memory index이며 제목/heading/body/frontmatter 필드, English `en_stem` tokenizer와 필드별 가중치를 사용한다. notify watcher는 500ms debounce와 용량 256의 channel을 통해 변경 파일을 갱신하고 삭제 파일을 index에서 제거한다. 한 batch의 Tantivy 변경 후 flush한다. [Vault startup][rust-vault], [metadata index][rust-index], [Tantivy][rust-tantivy], [watcher][rust-watcher]
+**Verified in code.** `Vault::open` creates a metadata index and optionally a Tantivy index. Metadata tracks notes, tags, links, and backlinks. Tantivy uses an in-memory index with title, heading, body, and frontmatter fields, the English `en_stem` tokenizer, and per-field weights. A notify watcher updates changed files and removes deleted ones through a 500 ms debounce and a capacity-256 channel. It flushes after a batch of Tantivy changes. [Vault startup][rust-vault], [metadata index][rust-index], [Tantivy][rust-tantivy], [watcher][rust-watcher]
 
-**편집·경로.** 경로 component별 canonicalization, NFC key 비교, 신규 파일의 가장 가까운 기존 ancestor 확인이 있다. 모호한 Unicode 정규화 이름은 오류다. Vault 안 symlink를 무조건 배제하는 정책은 아니다. 파일 쓰기는 `fs::write`, append는 `OpenOptions`, delete는 직접 제거다. frontmatter 수정은 JSON 값으로 parse 후 다시 serialize하므로 YAML 주석 보존에 적합한 기본값은 아니다. 일반 write에 optimistic hash 조건은 확인되지 않았다. [경로][rust-path], [파일 처리][rust-fs], [frontmatter][rust-frontmatter]
+**Editing and paths.** The implementation canonicalizes path components, compares NFC keys, checks the nearest existing ancestor for new files, and errors on ambiguous Unicode-normalized names. It does not categorically reject all symlinks inside the Vault. File writes use `fs::write`, append uses `OpenOptions`, and delete removes directly. Frontmatter is parsed into JSON values and re-serialized, which is not a suitable default for preserving YAML comments. No optimistic hash condition was found for general writes. [Paths][rust-path], [file handling][rust-fs], [frontmatter][rust-frontmatter]
 
-**운영 특성.** `OBSIDIAN_TOOLS=read` 등의 profile은 tool router를 제한한다. 하지만 startup은 `.obsidian-mcp`와 ignore 파일을 만들며 외부 data directory 설정을 해도 Vault 내부 `.obsidian-mcp` 생성은 남는다. “읽기 도구만 노출”과 “Vault에 한 바이트도 쓰지 않음”은 다른 성질이다. [tool 구성][rust-tools], [startup][rust-vault]
+**Operational behavior.** Profiles such as `OBSIDIAN_TOOLS=read` restrict the tool router. Startup still creates `.obsidian-mcp` and an ignore file; creation inside the Vault remains even when an external data directory is configured. “Expose read tools only” and “write no bytes to the Vault” are different properties. [Tool configuration][rust-tools], [startup][rust-vault]
 
-**설치 UX—README 확인.** cargo install 또는 OS별 release binary를 안내한다. stdio 외에 공유 HTTP server/daemon 모드도 제공하며 semantic embedding은 추가 feature와 runtime 선택이 있다. startup 시간에 대한 README 수치는 이번 조사에서 재현하지 않았다. 한국어 Vault 품질은 English tokenizer의 존재만으로 보장할 수 없다. [README][rust-readme], [Tantivy][rust-tantivy]
+**Installation UX — README evidence.** The project documents cargo installation and operating-system release binaries. It also offers a shared HTTP server/daemon mode, and semantic embeddings add feature and runtime choices. Startup numbers in the README were not reproduced in this review. The existence of an English tokenizer alone cannot guarantee quality for Korean Vaults. [README][rust-readme], [Tantivy][rust-tantivy]
 
-**가져올 교훈.** 향후 대규모 검색은 metadata/index/watcher 분리와 갱신 상태 노출을 참고한다. MVP부터 semantic daemon·모델 다운로드·HTTP 운영을 추가하지 않는다. cache, lock, backup은 사용자의 노트와 분리된 local state directory에 둔다.
+**Lesson to adopt.** At larger scale, separate metadata, index, watcher, and update-status concerns. Do not add a semantic daemon, model downloads, or HTTP operations to the MVP. Keep caches, locks, and backups in a local state directory separate from user notes.
 
-## 5. OKC 입력 작성 MCP에 적용할 결정
+## 5. Proposed decisions for the OKC input-authoring MCP
 
-다음은 조사 결과에 근거한 **신규 프로젝트 설계 제안**이며 기존 서버의 기능 주장과 구분한다.
+The following are **new-project design proposals derived from the research**, not claims about the existing servers.
 
-| 항목 | 적용 제안 | 이유 |
+| Topic | Proposal | Rationale |
 |---|---|---|
-| 기본 연결 | 설치형 Node.js CLI + stdio + 명시적 Vault root | Obsidian을 실행하지 않아도 작성·조회 가능. API key와 별도 listener 불필요 |
-| 관리 대상 | 살아 있는 authoring Vault만 명시적으로 연결 | OKC가 확보한 immutable snapshot, project 내부, compiled artifact는 별도 영역 |
-| 최소 작성 기능 | create note, read, search, outline, section patch, frontmatter patch | 입력의 구조와 근거를 점진적으로 개선하는 데 집중 |
-| 원본 보존 | 알려지지 않은 properties·YAML 주석·CRLF·본문 공백 보존, malformed YAML은 수정 중지 | 사용자·plugin metadata를 임의 변환하지 않음 |
-| 충돌 | 읽을 때 content hash 반환, 수정 시 expected hash 요구, 동일 파일 MCP 쓰기 직렬화 | 오래된 모델 응답이 새로운 노트를 조용히 덮는 경우 감지 |
-| 쓰기 게시 | 새 파일 exclusive create, 기존 파일은 같은 filesystem staging 후 원자 교체·직전 상태 재검사 | 생성 충돌과 중단 중 partial write를 줄임 |
-| 파일 경계 | path traversal·특수파일·모든 symlink·Unicode/case 충돌 거부, root identity 재검사 | OKC 입력 경계와 맞추고 모든 도구에 같은 검사 사용 |
-| 검색·연결 | 제한된 결과+outline→부분 읽기, ambiguous wikilink 보고 | 작은 문맥으로 필요한 근거를 찾고 잘못된 자동 연결 방지 |
-| 준비도 점검 | `readiness`에서 경로·UTF-8·YAML·링크/첨부 한계 등을 근거와 함께 보고 | 폴더를 자동 이동하지 않고 OKC 입력 장애를 수정 가능하게 안내 |
-| 도구의 권한 | mutation 요청과 준비도 점검을 구분; read-only 옵션은 handler에서도 강제 | tool annotation은 enforcement나 human consent의 대체가 아님 |
-| 사용자 경험 | 진단 명령, 버전 고정 설치 예시, 설정 snippet, 외부 state 위치 안내 | 설치→연결 확인→첫 노트 작성→readiness까지 설명 가능 |
+| Default connection | Installable Node.js CLI over stdio with an explicit Vault root | Author and read without running Obsidian; no API key or separate listener |
+| Managed target | Explicitly connect only a live authoring Vault | OKC's immutable snapshot, project internals, and compiled artifacts are separate spaces |
+| Minimal authoring capabilities | Create note, read, search, outline, section patch, and frontmatter patch | Focus on improving input structure and evidence incrementally |
+| Source preservation | Preserve unknown properties, YAML comments, CRLF, and body whitespace; stop on malformed YAML | Do not silently transform user or plugin metadata |
+| Conflicts | Return a content hash on read, require the expected hash on update, and serialize MCP writes to the same file | Detect stale model output before it silently replaces a newer note |
+| Publishing writes | Exclusive create for new files; same-filesystem staging, immediate state recheck, and atomic replacement for existing files | Reduce create conflicts and partial writes during interruption |
+| File boundary | Reject traversal, special files, every symlink, Unicode/case collisions, and out-of-bounds paths; recheck root identity | Match the OKC input boundary and apply one policy across every tool |
+| Search and linking | Bounded results plus outline-first partial reads; report ambiguous wikilinks | Find needed evidence in small contexts without incorrect automatic linking |
+| Readiness audit | Report path, UTF-8, YAML, link, and attachment limitations with evidence | Make OKC input blockers actionable without moving folders automatically |
+| Tool authority | Separate mutations from readiness auditing; enforce read-only mode in handlers | Tool annotations do not substitute for enforcement or human consent |
+| User experience | Diagnostic command, version-pinned installation example, configuration snippet, and documented external-state location | Explain install → connection check → first note → readiness end to end |
 
-**동시 편집의 실제 한계.** hash 확인 + atomic rename은 OS 차원의 compare-and-swap이 아니다. 외부 Obsidian/Sync 프로세스가 마지막 검사 직후 편집하는 경쟁을 완전히 제거하지 못한다. MVP는 보장 범위를 “MCP 내부 직렬화와 관측 가능한 stale hash 충돌 감지”로 한정하고 충돌 시 자동 overwrite/retry를 금지해야 한다. backup·복구 정책과 외부 writer 협조 없이는 “어떤 동시 편집도 잃지 않는다”는 주장을 하지 않는다. symlink에 대해서도 path 검사만으로 적대적인 concurrent 교체에 완전 격리를 주장하지 않는다.
+**Actual concurrent-editing limitation.** A hash check plus atomic rename is not operating-system compare-and-swap. It cannot eliminate a race where an external Obsidian or Sync process edits immediately after the final check. The MVP must limit its guarantee to internal MCP serialization and detection of observable stale hashes, and must prohibit automatic overwrite or retry after a conflict. Without a backup and recovery policy plus cooperation from external writers, it cannot claim that every concurrent edit is preserved. Path checks likewise do not provide complete isolation against adversarial concurrent symlink replacement.
 
-**OKC와의 경계.** sibling `ObsidianKnowlegeComplication`의 README와 보안 계약은 컴파일러가 source snapshot을 불변으로 다루며, UTF-8/NFC·symlink·resource bounds를 검증한다고 명시한다. 이는 사용자가 authoring Vault를 편집하지 못한다는 뜻이 아니다. MCP는 사용자가 명시적으로 연 **작성 공간**을 개선하고, OKC가 source로 확보한 **불변 snapshot**을 수정하지 않는다. 준비도 결과도 OKC compiler의 실제 ingestion/verification을 대체하는 인증서가 아니다. 현재 OKC는 Markdown materialization 단계이므로 첨부·Canvas·Base의 완전 호환을 약속해서는 안 된다. [로컬 OKC README](../../../ObsidianKnowlegeComplication/README.md), [보안 계약](../../../ObsidianKnowlegeComplication/docs/specs/security-and-trust-boundaries.md)
+**Boundary with OKC.** The [ObsidianKnowlegeComplication repository](https://github.com/dolgogae/ObsidianKnowlegeComplication) README and security contract state that the compiler treats source snapshots as immutable and validates UTF-8/NFC, symlinks, and resource bounds. This does not mean users cannot edit an authoring Vault. The MCP improves an explicitly opened **authoring space** and never changes an **immutable snapshot** already captured as an OKC source. Its readiness result is not a certificate that replaces actual OKC compiler ingestion and verification. Because current OKC materialization is Markdown-only, complete compatibility for attachments, Canvas, and Base must not be promised. [OKC README](https://github.com/dolgogae/ObsidianKnowlegeComplication/blob/7f87f7c81a72701710d8668b2569e51478dccc75/README.md), [security contract](https://github.com/dolgogae/ObsidianKnowlegeComplication/blob/7f87f7c81a72701710d8668b2569e51478dccc75/docs/specs/security-and-trust-boundaries.md)
 
-## 6. 구현 전후 검증으로 연결할 사례
+## 6. Cases to connect to pre- and post-implementation validation
 
-- 노트를 읽은 뒤 사용자가 수정하면 이전 hash로 section/frontmatter patch 시 충돌 오류가 나고 현재 bytes가 유지된다.
-- 생성 대상이 이미 있으면 overwrite 인자를 묵시적으로 보정하지 않고 거부한다.
-- 수정하지 않은 frontmatter 주석·quoted value·unknown property, 본문과 CRLF가 보존된다. malformed YAML 수정은 실패한다.
-- 중복 heading·동명이인 wikilink·정규화 충돌 경로는 후보를 보여 주고 자동 선택하지 않는다.
-- Vault 밖 symlink, 내부 symlink, symlink parent, `.git`/plugin 경로는 create/read/search/patch 모두에서 같은 정책으로 처리된다.
-- 준비도 점검과 startup이 Vault를 바꾸지 않는다. 캐시·로그·잠금·백업의 허용 위치를 확인한다.
-- 한국어·한영 혼합 제목/본문, 대형 노트, 많은 파일에서 결과 크기·scan budget·응답 취소가 동작한다.
-- MCP mutation, 파일 삭제/이동, 원격 model 호출 범위는 문서화된 기능에 한정한다. 노트 안 명령문은 tool authority로 처리하지 않는다.
+- After a note is read and then changed externally, a section or frontmatter patch using the old hash fails with a conflict and preserves the current bytes.
+- If a create target already exists, the tool rejects the request rather than silently changing an overwrite option.
+- Untouched frontmatter comments, quoted values, unknown properties, body content, and CRLF are preserved. Updating malformed YAML fails.
+- Duplicate headings, namesake wikilinks, and normalization-colliding paths show candidates and are never chosen automatically.
+- An outside-Vault symlink, inside-Vault symlink, symlink parent, and `.git` or plugin path follow the same policy across create, read, search, and patch.
+- Readiness checks and startup do not modify the Vault. Validate permitted locations for caches, logs, locks, and backups.
+- Result-size bounds, scan budgets, and cancellation work for Korean and mixed Korean/English titles and bodies, large notes, and many files.
+- MCP mutation, file deletion or moves, and remote-model calls remain limited to documented capabilities. Instructions inside notes do not become tool authority.
 
 [markus-package]: https://github.com/MarkusPfundstein/mcp-obsidian/blob/5ee0b84fa8319fd2fdf0db0ee1febb065e712a15/pyproject.toml
 [markus-license]: https://github.com/MarkusPfundstein/mcp-obsidian/blob/5ee0b84fa8319fd2fdf0db0ee1febb065e712a15/LICENSE

@@ -1,44 +1,31 @@
-# 첫 구현 설계
+# Initial implementation design
 
-> 승인 전 초안. Inception 검토 이전에 작성되었으며 채택되지 않았다.
-> 현재 Construction은 중단되어 있다. [진행 상태](../state.md)를 따른다.
+> Unapproved draft. This was written before the Inception review and has not been adopted.
+> Construction is currently paused. Follow the [current status](../state.md).
 
-기준선: `requirements.md`. TypeScript/Node.js 22.13+, MCP SDK 1.30.0 stdio,
-YAML 2.9.0, strict Zod 설정. 기존 MCP 소스는 조사만 했으며 코드를 복사하지 않는다.
+Baseline: `requirements.md`. TypeScript/Node.js 22.13+, MCP SDK 1.30.0 over stdio, YAML 2.9.0, and strict Zod configuration. Existing MCP sources were inspected but no code was copied.
 
 ```mermaid
 flowchart LR
-    User[사용자 + MCP 호스트] --> MCP[okc-mcp stdio]
-    MCP --> Notes[Markdown · 프런트매터 · 입력 점검]
-    Notes --> FS[경로 경계 · 해시 검사 · 파일 교체]
-    FS --> Live[편집하는 Obsidian Vault]
-    FS --> State[Vault 밖 백업과 잠금]
-    Live --> OKC[별도 OKC 스냅샷 · 검토 · 컴파일]
+    User[User + MCP host] --> MCP[okc-mcp stdio]
+    MCP --> Notes[Markdown · frontmatter · input audit]
+    Notes --> FS[Path boundary · hash check · file replacement]
+    FS --> Live[Editable Obsidian Vault]
+    FS --> State[Backups and locks outside the Vault]
+    Live --> OKC[Separate OKC snapshot · review · compilation]
 ```
 
-MCP는 원본 작성 도구이고 OKC compiler의 정책 주체가 아니다. sourceId는 OKC의
-Vault binding에 속하며 모든 노트에 넣지 않는다. folder 이름과 source/status 같은
-커스텀 필드는 작성 관습이다. OKC가 특별한 의미로 해석한다고 보장하지 않는다.
+The MCP authors source material; it is not the policy authority for the OKC compiler. `sourceId` belongs to OKC's Vault binding and is not repeated in every note. Folder names and custom fields such as `source` or `status` are authoring conventions. The design does not guarantee that OKC assigns them special meaning.
 
-## 구현 단위
+## Implementation units
 
-1. **Vault I/O**: 명시적 root, portable 상대 Markdown 경로, 숨김/제어 경로 제외,
-   파일 유형·크기 검사, UTF-8 읽기, 결정적 스캔, create no-replace,
-   외부 백업 + expectedHash 기반 update + 같은 디렉터리 임시파일 교체.
-2. **노트 품질**: 최소 프런트매터 생성, CST metadata patch, 문법/형식 검사,
-   결정적 휴리스틱 링크·중복 진단. 증거의 진실 여부는 자동 판정하지 않는다.
-3. **제품 어댑터**: CLI 설정/진단, 제한된 MCP 도구/리소스/작성 프롬프트,
-   에러 코드와 bounded JSON 응답. 읽기 전용 설정 시 수정 도구 등록 자체를 생략한다.
-4. **배포와 검증**: lockfile, 로컬 tarball, 독립 경로 설치, 실제 stdio client 테스트,
-   위험 경계 회귀, AI-DLC 이력과 요구사항 추적.
+1. **Vault I/O**: explicit root; portable relative Markdown paths; exclusion of hidden and control paths; file-type and size checks; UTF-8 reads; deterministic scanning; create without replacement; external backup; `expectedHash`-guarded update; and same-directory temporary-file replacement.
+2. **Note quality**: minimal frontmatter generation, CST metadata patches, syntax and format checks, and deterministic heuristic diagnostics for links and duplicates. The tool does not automatically judge whether evidence is true.
+3. **Product adapter**: CLI configuration and diagnostics, bounded MCP tools and resources, an authoring prompt, error codes, and bounded JSON responses. In read-only mode, mutating tools are not registered.
+4. **Distribution and validation**: lockfile, local tarball, installation in an independent path, real stdio client tests, risk-boundary regressions, AI-DLC history, and requirements traceability.
 
-## 명시적 한계
+## Explicit limitations
 
-MCP끼리의 잠금은 Obsidian/Sync/다른 편집기를 잠그지 못한다. 마지막 해시 확인과
-파일 rename 사이의 외부 쓰기를 운영체제 CAS로 막지 못한다. 동시에 같은 노트를
-편집하는 상황은 피하고 충돌 시 다시 읽고 검토한다. Node 경로 검사는 descriptor-relative
-openat 샌드박스가 아니며 악의적인 동시 ancestor 교체를 완전히 방어한다고 주장하지 않는다.
+MCP-to-MCP locking cannot lock Obsidian, Sync, or other editors. The design cannot provide operating-system compare-and-swap against an external write that occurs between the final hash check and file rename. Avoid editing the same note concurrently; after a conflict, read the latest content and review the change again. Node path validation is not a descriptor-relative `openat` sandbox and does not claim complete defense against malicious concurrent replacement of an ancestor directory.
 
-입력 점검은 upstream parser 복제가 아니다. 원본 Markdown은 보존하며 실제 compiler
-판정과 구분한다. 기본 검색은 bounded 선형 리터럴 검색이고 semantic relevance를
-보장하지 않는다. 실제 큰 Vault·모든 OS·Obsidian Sync 충돌 검증은 별도 품질 단계다.
+Input auditing does not reproduce the upstream parser. It preserves source Markdown and remains distinct from actual compiler decisions. Default search is a bounded linear literal search and does not guarantee semantic relevance. Validation on large real Vaults, every operating system, and Obsidian Sync conflicts belongs to a separate quality stage.

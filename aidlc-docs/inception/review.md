@@ -1,59 +1,50 @@
-# Inception 검토안 — 승인 전
+# Inception review proposal — unapproved
 
-이 문서는 구현 진행 승인을 받은 명세가 아니다. 사용자와 먼저 확정할 제품의 의도와
-설계 가정을 모았다. 기존 코드에서 역으로 제품 범위를 확정하지 않는다.
+This document is not an approved implementation specification. It collects product intent and design assumptions for review with the user. Existing code must not be used to infer or fix the product scope retroactively.
 
-## 사용자가 확정한 문제
+## Problem confirmed by the user
 
-**OKC에 넣을 지식을 가장 잘 구성하도록 도와주는, 설치형 로컬 Obsidian MCP가 필요하다.**
+**An installable local Obsidian MCP is needed to help organize knowledge as effectively as possible for OKC input.**
 
-기존 MCP의 실제 로직 조사, OKC와 맞는 Vault 설계, 사용자 관점의 저장소 관리,
-AWS AI-DLC에 따른 초기부터 구현까지의 진행이 요청 범위다.
-OKC 컴파일 결과를 조회하는 서버를 주목적으로 삼지 않는다.
+The requested scope includes investigating the actual logic of existing MCPs, designing a Vault that fits OKC, repository management from the user's perspective, and proceeding from the beginning through implementation under AWS AI-DLC. Querying compiled OKC results is not the server's primary purpose.
 
-## 조사에서 확인한 제약
+## Constraints confirmed by research
 
-- OKC의 현재 구현은 Markdown/frontmatter를 구조화하고 문서·블록·메타데이터의
-  근거와 검토 상태를 관리한다. 작성 도구가 compiler의 승인 정책을 대신하지 않는다.
-- 사용자가 편집하는 Vault와 OKC가 수집한 스냅샷은 수명주기가 다르다.
-- title/aliases/tags와 일반 사용자 metadata를 구분해야 한다. 폴더 이름과
-  status 같은 임의 필드를 compiler 정책이라고 가정하지 않는다.
-- 템플릿·운영 Markdown이 지식으로 수집될 수 있으며, 첨부·Canvas·Base와
-  링크 재작성에는 current OKC 구현 한계가 있다.
+- The current OKC implementation structures Markdown and frontmatter and manages evidence and review state for documents, blocks, and metadata. An authoring tool does not replace compiler approval policy.
+- A user-edited Vault and a snapshot collected by OKC have different lifecycles.
+- `title`, `aliases`, and `tags` must be distinguished from general user metadata. Folder names and arbitrary fields such as `status` must not be assumed to represent compiler policy.
+- Templates and operational Markdown may be collected as knowledge. The current OKC implementation also has limitations around attachments, Canvas, Base, and link rewriting.
 
-근거: [기존 MCP 조사](existing-mcp-research.md), [OKC 분석과 Vault 제안](okc-vault-design.md).
+Evidence: [existing MCP research](existing-mcp-research.md) and [OKC analysis and Vault proposal](okc-vault-design.md).
 
-## 아직 사용자가 승인하지 않은 가정
+## Assumptions not yet approved by the user
 
-| 가정 | 결정할 내용 |
+| Assumption | Decision needed |
 |---|---|
-| 단일 Vault부터 시작 | 여러 Vault를 동시에 작성·비교하는 흐름이 첫 버전에 필요한가 |
-| 파일 직접 접근 + stdio | Obsidian 실행 중의 UI/Dataview/플러그인 기능이 필수인가 |
-| Node/TypeScript와 npm 설치 | 대상 사용자와 OS에 이 설치 경로가 충분히 간단한가 |
-| 작성·수정·품질 점검을 첫 단위로 한정 | 수집/정리/중복 병합/출처 보강 중 핵심 여정과 우선순위는 무엇인가 |
-| 선택적 얕은 폴더 구조 | 기존 Vault 개선과 새 Vault 생성의 비중 및 이관 경험은 어떠해야 하는가 |
-| 휴리스틱 품질 점검 | OKC 실제 ingestion 시험까지 어느 시점에 포함해야 하는가 |
-| 해시 검사 + 외부 백업 | 자동 정리 권한과 사용자가 검토할 변경 단위를 어떻게 정할 것인가 |
+| Start with one Vault | Does the first version need to author and compare multiple Vaults at once? |
+| Direct filesystem access over stdio | Are the Obsidian UI, Dataview, or plugin features while Obsidian is running essential? |
+| Node/TypeScript and npm installation | Is this installation path simple enough for the target users and operating systems? |
+| Limit the first Unit to authoring, updates, and quality auditing | Which journey has priority: capture, organization, duplicate merging, or source enrichment? |
+| Optional shallow folder structure | What balance is needed between improving existing Vaults and creating new ones, and what should migration feel like? |
+| Heuristic quality auditing | At what point must actual OKC ingestion testing be included? |
+| Hash checks plus external backups | What cleanup authority is acceptable, and at what granularity should users review changes? |
 
-기존 코드에 위 가정이 반영되어 있다는 사실은 사용자 결정의 증거가 아니다.
+The presence of these assumptions in existing code is not evidence of a user decision.
 
-## 제안하는 성공 기준
+## Proposed success criteria
 
-다음은 수치·시나리오를 함께 검토할 초안이다.
+The following draft combines scenarios and measures for review.
 
-1. 신규 사용자가 문서만으로 설치하고 지정 Vault에 첫 노트를 작성한다.
-2. 기존 Vault 사용자가 강제 이관 없이 문제와 개선안을 이해한다.
-3. 출처·상충 주장·링크를 보존하며 지식을 추가하거나 수정한다.
-4. OKC에 넘겼을 때 입력 구조 문제와 불필요한 수집 잡음을 줄인다.
-5. 변경을 검토하고 충돌을 식별하며 이전 내용으로 복구할 수 있다.
+1. A new user can install from documentation alone and author a first note in a chosen Vault.
+2. An existing-Vault user can understand problems and proposed improvements without forced migration.
+3. Knowledge can be added or updated without losing sources, conflicting claims, or links.
+4. Input-structure problems and unnecessary collection noise are reduced when the Vault is handed to OKC.
+5. Users can review changes, identify conflicts, and recover earlier content.
 
-“가장 좋은 Vault”를 폴더 취향이나 도구 개수만으로 평가하지 않는다.
-대표적인 합성/동의받은 사용자 시나리오에서 OKC 입력 품질과 작성 UX로 평가한다.
+“Best Vault” is not evaluated by folder preference or tool count alone. It should be assessed through OKC input quality and authoring UX in representative synthetic or consented user scenarios.
 
-## 다음 단계와 게이트
+## Next stage and gate
 
-공식 workflow의 Inception은 요구사항 분석, 사용자 스토리, domain/contract,
-구현 단위와 delivery plan을 순서대로 다룬다. 단계 선택과 승인 방식을 사용자와 확정한 뒤
-적용한다. 현 시점에는 전체 Inception이 완료되었다거나 Construction 게이트를 통과했다고 표시하지 않는다.
+The official workflow's Inception phase addresses requirements analysis, user stories, domain and contract design, implementation Units, and delivery planning in sequence. Apply it only after confirming stage selection and approval handling with the user. At this point, do not present Inception as complete or the Construction gate as passed.
 
-참조: [AWS 고정 버전의 phases and stages](https://github.com/awslabs/aidlc-workflows/blob/22ed2d101f4f01196b76d5725cf8d9aabe5fef9e/docs/guide/04-phases-and-stages.md).
+Reference: [phases and stages in the pinned AWS version](https://github.com/awslabs/aidlc-workflows/blob/22ed2d101f4f01196b76d5725cf8d9aabe5fef9e/docs/guide/04-phases-and-stages.md).

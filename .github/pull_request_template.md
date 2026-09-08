@@ -1,7 +1,7 @@
-## 변경
+## Change
 
-해결하는 사용자 문제, 변경 후 동작, 관련 REQ ID:
+User problem addressed, resulting behavior, and related requirement ID:
 
-## 검증
+## Validation
 
-실행한 검사와 결과, 남은 제약:
+Checks performed, results, and remaining limitations:

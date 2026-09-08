@@ -1,12 +1,12 @@
 ---
-name: 문제 보고
-about: 설치·편집·입력 점검 문제를 합성 예제로 보고합니다.
+name: Bug report
+about: Report installation, editing, or input-audit problems with a synthetic example.
 ---
 
-사용 중인 OS, Node 버전, okc-mcp 버전, MCP 클라이언트:
+Operating system, Node version, okc-mcp version, and MCP client:
 
-기대한 동작과 실제 동작:
+Expected behavior and actual behavior:
 
-재현 단계와 오류 코드:
+Reproduction steps and error code:
 
-개인 노트/백업/절대 사용자 경로/토큰을 제거한 최소 합성 예제:
+Minimal synthetic example with personal notes, backups, absolute user paths, and tokens removed:

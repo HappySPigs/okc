@@ -1,51 +1,43 @@
-# 현재 진행 상태
+# Current status
 
-현재 단계: **Inception — 요구사항과 진행 방식 검토 대기**.
-Construction 진입: **승인되지 않음. 추가 구현·테스트·패키징 중단**.
+Current stage: **Inception — awaiting review of requirements and process**.
+Construction entry: **not approved. Further implementation, testing, and packaging are paused.**
 
-## 확정된 사용자 의도
+## Confirmed user intent
 
-- 기존 Obsidian MCP의 실제 로직을 조사한다.
-- OKC에 가장 적합한 **입력 Vault를 만드는 Obsidian MCP**를 설계한다.
-- 설치해서 사용하는 local MCP로 제공한다.
-- OKC 사용자의 저장소·설치·관리 UX를 설계한다.
-- AWS AI-DLC에 따라 프로젝트 초기부터 구현까지 진행한다.
+- Investigate the actual logic of existing Obsidian MCPs.
+- Design an **Obsidian MCP that creates the best possible input Vault for OKC**.
+- Deliver it as an installable local MCP.
+- Design repository, installation, and maintenance UX for OKC users.
+- Follow AWS AI-DLC from the project's beginning through implementation.
 
-## 절차 정정
+## Process correction
 
-assistant는 조사 문서 작성과 병렬 구현을 AI-DLC의 자체 축약 적용으로 진행했다.
-사용자가 Inception 산출물과 진행 방식을 검토하기 전에 Construction 코드를 작성했다.
-사용자가 “지금 우리 AWS AI DLC 방법론으로 프로젝트 진행하는거 아니었냐?”라고
-지적하여 추가 구현을 멈췄다. 단계 승인이나 공식 workflow 실행 이력을 소급 생성하지 않는다.
+The assistant performed research-document work and parallel implementation using its own abbreviated interpretation of AI-DLC. It wrote Construction code before the user reviewed the Inception artifacts and process. The user challenged this by asking, “지금 우리 AWS AI DLC 방법론으로 프로젝트 진행하는거 아니었냐?” (“Aren't we running this project with our AWS AI-DLC methodology?”), and further implementation stopped. No stage approval or official workflow execution history may be created retroactively.
 
-`aidlc-docs/methodology.md`의 기존 축약 적용안은 **미승인·대체 예정 제안**이다.
-공식 awslabs workflow는 당시 참고용으로만 조사했으며 단계 실행 이력이 없었다.
-이후 2026-09-06 사용자가 공식 저장소를 지정하여 “이거 여기서 사용가능하게 세팅해”라고
-요청했다. 이에 AI-DLC 2.7.1의 공식 Codex 배포본을 설치했다.
-[설치 구성과 실제 진단 기록](../docs/aidlc-setup.md)을 따른다.
-설치는 요구사항 승인이나 Construction 전환이 아니다. 제품 구현·테스트·패키징 중단은 유지한다.
+The abbreviated proposal in `aidlc-docs/methodology.md` is **unapproved and slated for replacement**. At that time, the official awslabs workflow had only been researched as a reference; it had not been executed. On 2026-09-06, the user later pointed to the official repository and requested, “이거 여기서 사용가능하게 세팅해” (“Set this up so it can be used here”). The official AI-DLC 2.7.1 Codex distribution was then installed. Follow the [installation configuration and actual diagnostic record](../docs/aidlc-setup.md).
 
-기존 `aidlc-docs` 파일은 프로젝트 문서이며 공식 엔진 상태가 아니다.
-`aidlc/spaces/default/memory/`에는 공식 method와 실제 사용자 지시에서 가져온 제약이 있다.
-공식 intent와 단계 완료·승인 이력은 이번 설치로 생성하지 않았다.
+Installing the workflow does not approve the requirements or authorize a transition to Construction. The pause on product implementation, testing, and packaging remains in effect.
 
-## 보존한 작업
+Existing files under `aidlc-docs` are project documentation, not official engine state. `aidlc/spaces/default/memory/` contains the official method and constraints derived from actual user instructions. Installing the workflow did not create an official intent or any completed-stage or approval history.
 
-| 작업 | 상태 |
+## Preserved work
+
+| Work | Status |
 |---|---|
-| 기존 MCP 4종 commit별 소스 조사 | 조사 초안 존재, 사용자 검토 전 |
-| OKC 파서·지식 모델·소스 경계 분석 | 조사 초안 존재, 사용자 검토 전 |
-| Vault 구성·저장소 UX·요구사항 | 설계 제안, 승인 전 |
-| Node/TypeScript stdio 코드와 테스트 | 너무 일찍 작성한 구현 초안. 채택 여부 미정 |
-| 로컬 테스트 | 중간 시점 26개 전체 검사 통과 기록 존재. 이후 변경된 현재 트리 전체 검증 완료로 간주하지 않음 |
-| 독립 코드 검토 | 응답 크기 제한과 create preview의 경로 검증 문제 등 발견; 구현 중단으로 일부 미해결 |
-| 개인 Vault / sibling OKC | 수정하지 않음 |
-| 공개 배포 / npm 발행 / 원격 저장소 | 수행하지 않음 |
+| Commit-specific source review of four existing MCPs | Research draft exists; not yet reviewed by the user |
+| Analysis of the OKC parser, knowledge model, and source boundary | Research draft exists; not yet reviewed by the user |
+| Vault structure, repository UX, and requirements | Design proposal; not approved |
+| Node/TypeScript stdio code and tests | Implementation draft written too early; adoption is undecided |
+| Local tests | A record exists of all 26 checks passing at an intermediate point. It is not evidence that the later working tree has been fully validated. |
+| Independent code review | Found response-size limits, create-preview path validation, and other issues; some remain unresolved because implementation stopped |
+| Personal Vault or sibling OKC repository | Not modified |
+| Public release or npm publication | Not performed |
 
-## 다음 순서
+## Next steps
 
-1. [Inception 검토안](inception/review.md)에서 확정된 요구와 AI 가정을 구분한다.
-2. 새 Codex 대화에서 `$aidlc`로 공식 기록을 시작하고, 기존 초안을 참고하여 적용 범위와 요구사항·성공 기준을 사용자와 검토한다.
-3. 사용자 스토리, 사용자 흐름, domain/contract, Units와 delivery plan을 순서대로 구체화한다.
-4. 실제 검토와 승인, 요구사항 추적 점검을 거쳐 Construction에 진입한다.
-5. 기존 코드는 승인된 설계에 맞을 때만 재사용한다. 테스트 성공은 설계 승인을 대신하지 않는다.
+1. Use the [Inception review proposal](inception/review.md) to distinguish confirmed requirements from AI assumptions.
+2. In a new Codex conversation, use `$aidlc` to begin official records and review scope, requirements, and success criteria with the user while treating existing drafts as reference material.
+3. Define user stories, user flows, domain and contract design, Units, and the delivery plan in order.
+4. Enter Construction only after actual review, approval, and a requirements-traceability check.
+5. Reuse existing code only where it conforms to the approved design. Passing tests does not substitute for design approval.
