@@ -2,8 +2,38 @@ import { createHash } from 'node:crypto';
 import { posix } from 'node:path';
 import { Document, isMap, parseDocument } from 'yaml';
 
+/** The fixed heuristic audit categories (business-rules.md BR-AUDIT-2). */
+export type AuditCategory = 'yaml' | 'path' | 'link' | 'duplicate' | 'operational-noise' | 'unsupported-format';
+
+/** Project a rich internal finding code onto one of the six design categories. */
+function categoryFor(code: string): AuditCategory {
+  switch (code) {
+    case 'OKC_FRONTMATTER_INVALID':
+    case 'OKC_TEXT_ENCODING':
+    case 'OKC_METADATA_INVALID':
+    case 'NOTE_INVALID':
+      return 'yaml';
+    case 'OKC_LINK_UNSAFE':
+    case 'OKC_LINK_UNRESOLVED':
+    case 'OKC_LINK_AMBIGUOUS':
+    case 'OKC_LINK_FRAGMENT_UNRESOLVED':
+      return 'link';
+    case 'OKC_DUPLICATE_BODY':
+      return 'duplicate';
+    case 'OKC_ATTACHMENT_OUTPUT':
+    case 'OKC_NONMARKDOWN_OUTPUT':
+    case 'OKC_NOTE_TOO_LARGE':
+      return 'unsupported-format';
+    case 'OKC_AUDIT_SKIPPED':
+      return 'path';
+    default:
+      return 'operational-noise';
+  }
+}
+
 export interface Finding {
   code: string;
+  category: AuditCategory;
   severity: 'error' | 'warning' | 'info';
   path: string;
   message: string;
@@ -40,7 +70,7 @@ function mutationResult(operation: () => string): string {
   catch (error) {
     if (error instanceof InvalidNote) throw error;
     throw new InvalidNote([{
-      code: 'OKC_METADATA_INVALID', severity: 'error', path: 'note.md',
+      code: 'OKC_METADATA_INVALID', category: 'yaml', severity: 'error', path: 'note.md',
       message: 'The note operation requires supported fields and bounded JSON-compatible metadata with valid title, aliases, and tags.',
     }]);
   }
@@ -185,7 +215,7 @@ interface NoteInspection {
 
 function inspectNote(path: string, content: string): NoteInspection {
   const issues: Finding[] = [];
-  const add = (code: string, severity: Finding['severity'], message: string): void => { issues.push({ code, severity, path, message }); };
+  const add = (code: string, severity: Finding['severity'], message: string): void => { issues.push({ code, category: categoryFor(code), severity, path, message }); };
   let metadata: Record<string, unknown> = {};
   let body = content;
   if (Buffer.byteLength(content, 'utf8') > MAX_NOTE_BYTES) {
@@ -226,12 +256,12 @@ export function validateNote(path: string, content: string): void {
   if (issues.length) throw new InvalidNote(issues);
 }
 
-export function createNoteContent(input: { title: string; body: string; aliases?: string[] | undefined; tags?: string[] | undefined; source?: string | undefined }): string {
+export function createNoteContent(input: { title: string; body: string; aliases?: string[] | undefined; tags?: string[] | undefined; source?: string | string[] | undefined }): string {
   return mutationResult(() => {
     const allowed = new Set(['title', 'body', 'aliases', 'tags', 'source']);
     if (!input || ![Object.prototype, null].includes(Object.getPrototypeOf(input)) || Reflect.ownKeys(input).some(field => typeof field !== 'string' || !allowed.has(field))) fail('Note creation contains unsupported fields.');
     if (typeof input.title !== 'string' || typeof input.body !== 'string') fail('Note title and body must be strings.');
-    if ((input.aliases !== undefined && !Array.isArray(input.aliases)) || (input.tags !== undefined && !Array.isArray(input.tags)) || (input.source !== undefined && typeof input.source !== 'string')) fail('Note creation fields have unsupported types.');
+    if ((input.aliases !== undefined && !Array.isArray(input.aliases)) || (input.tags !== undefined && !Array.isArray(input.tags)) || (input.source !== undefined && typeof input.source !== 'string' && !Array.isArray(input.source))) fail('Note creation fields have unsupported types.');
     const metadata: Record<string, unknown> = { title: input.title };
     for (const field of ['aliases', 'tags', 'source'] as const) if (input[field] !== undefined) metadata[field] = input[field];
     jsonValue(metadata);
@@ -260,6 +290,83 @@ export function patchFrontmatter(content: string, changes: Record<string, unknow
   });
 }
 
+/** Textual split that tolerates malformed frontmatter YAML (used by fix_yaml). */
+function splitRaw(content: string): { bom: string; newline: string; body: string; hadFrontmatter: boolean } {
+  const bom = content.startsWith('\uFEFF') ? '\uFEFF' : '';
+  const raw = content.slice(bom.length);
+  const opening = /^---(\r\n|\n|\r)/u.exec(raw);
+  const newline = opening?.[1] ?? (content.includes('\r\n') ? '\r\n' : '\n');
+  if (!opening) return { bom, newline, body: raw, hadFrontmatter: false };
+  const closing = /^(---|\.\.\.)(?:\r\n|\n|\r|$)/gmu;
+  closing.lastIndex = opening[0].length;
+  const match = closing.exec(raw);
+  if (!match) return { bom, newline, body: raw, hadFrontmatter: false };
+  return { bom, newline, body: raw.slice(match.index + match[0].length), hadFrontmatter: true };
+}
+
+/**
+ * Replace a note's (possibly malformed) frontmatter with corrected YAML,
+ * preserving the body verbatim. Rejects if the corrected block is not a valid
+ * bounded YAML mapping (BR-STRUCT-2 — no guessing/auto-repair beyond the
+ * supplied, valid correction). Used by S1.fixYaml.
+ */
+export function fixYamlContent(content: string, correctedFrontmatter: string): string {
+  return mutationResult(() => {
+    if (typeof content !== 'string' || typeof correctedFrontmatter !== 'string') fail('fix_yaml requires string content and corrected frontmatter.');
+    const split = splitRaw(content);
+    const normalized = correctedFrontmatter.replace(/\r\n|\r|\n/gu, split.newline).replace(/(?:\r\n|\r|\n)+$/u, '');
+    const result = `${split.bom}---${split.newline}${normalized}${split.newline}---${split.newline}${split.body}`;
+    // frontmatter() enforces a valid, unique-keyed, bounded JSON-compatible
+    // mapping; it throws (-> InvalidNote) if the corrected YAML is still malformed.
+    frontmatter(result);
+    validateNote('note.md', result);
+    return result;
+  });
+}
+
+/**
+ * Replace only the note body, preserving the original frontmatter block byte
+ * for byte (BR-STRUCT-1). Requires the current note to be well-formed. Used by
+ * S1.updateNote for body changes.
+ */
+export function replaceBody(content: string, body: string): string {
+  return mutationResult(() => {
+    if (typeof body !== 'string') fail('body must be a string.');
+    const parsed = frontmatter(content); // validates the current note is well-formed
+    const prefix = content.slice(0, content.length - parsed.body.length); // exact bom+fences+yaml
+    const result = `${prefix}${body}`;
+    validateNote('note.md', result);
+    return result;
+  });
+}
+
+/**
+ * Literal in-note source/link reinforcement (BR-STRUCT-4): sets the `source`
+ * frontmatter key and/or appends literal body text. No link-graph resolution,
+ * rename-time relinking, or full Obsidian link interpretation. Used by
+ * S1.reinforceSourcesLinks. Requires the current note to already be valid.
+ */
+export function reinforceContent(content: string, changes: { source?: string | string[]; appendBody?: string }): string {
+  return mutationResult(() => {
+    if (typeof content !== 'string') fail('reinforce requires string content.');
+    if (changes.source === undefined && changes.appendBody === undefined) fail('reinforce requires a source and/or appendBody.');
+    let result = content;
+    if (changes.source !== undefined) {
+      result = patchFrontmatter(result, { source: changes.source });
+    }
+    if (changes.appendBody !== undefined) {
+      if (typeof changes.appendBody !== 'string') fail('appendBody must be a string.');
+      if (changes.appendBody.length > 0) {
+        const nl = result.includes('\r\n') ? '\r\n' : '\n';
+        const sep = /\r|\n/u.test(result.slice(-1)) ? '' : nl;
+        result = `${result}${sep}${changes.appendBody}`;
+      }
+    }
+    validateNote('note.md', result);
+    return result;
+  });
+}
+
 interface AuditNote { path: string; content: string }
 
 export function auditNotes(notes: AuditNote[], otherFiles: string[], skipped: string[]): {
@@ -282,7 +389,7 @@ export function auditNotes(notes: AuditNote[], otherFiles: string[], skipped: st
     if (seenFindings.has(identity)) { summary.aggregatedOccurrences++; return; }
     seenFindings.add(identity);
     if (findings.length >= MAX_AUDIT_FINDINGS) { summary.omittedFindings++; return; }
-    findings.push({ path, code, severity, message });
+    findings.push({ path, code, category: categoryFor(code), severity, message });
   };
   for (const note of analyses) {
     for (const issue of note.analysis.issues) add(issue.path, issue.code, issue.severity, issue.message);

@@ -40,16 +40,43 @@ async function main(): Promise<void> {
     } } }, null, 2)}\n`);
     return;
   }
-  const vault = new Vault(config);
-  await vault.initialize();
   if (command === 'doctor') {
-    const files = await vault.list();
-    process.stdout.write(`${JSON.stringify({ ok: true, version: VERSION, node: process.version,
-      mode: config.readOnly ? 'read-only' : 'authoring', vaultPath: config.vaultPath,
-      statePath: config.statePath, notes: files.notes.length, skippedEntries: files.skipped.length,
-      transport: 'stdio', compilerRequired: false, note: 'Path/scan check only; not a compiler or write-permission certification.' }, null, 2)}\n`);
+    // Shallow local self-check reported per check (no network). Vault failures
+    // are reported as failing checks, not thrown, so diagnostics stays actionable.
+    const checks: { name: string; pass: boolean; detail: string }[] = [];
+    const major = Number(process.versions.node.split('.')[0] ?? '0');
+    const nodeOk = major >= 22;
+    checks.push({ name: 'node-runtime', pass: nodeOk, detail: `Node ${process.version}${nodeOk ? '' : ' (requires >= 22.13.0)'}` });
+    checks.push({ name: 'config', pass: true, detail: `Loaded ${values.config}; vault=${config.vaultPath}; state=${config.statePath}` });
+    const vault = new Vault(config);
+    let vaultOk = false;
+    try {
+      await vault.initialize();
+      vaultOk = true;
+      checks.push({ name: 'vault-reachable', pass: true, detail: `Vault root resolved and validated: ${config.vaultPath}` });
+    } catch (error) {
+      checks.push({ name: 'vault-reachable', pass: false, detail: error instanceof VaultError ? `${error.code}: ${error.message}` : 'Vault could not be initialized; check the path, permissions, and that it is a real directory outside any .okc / .okc-project.' });
+    }
+    if (vaultOk) {
+      try {
+        const files = await vault.list();
+        checks.push({ name: 'vault-scan', pass: true, detail: `${files.notes.length} notes, ${files.otherFiles.length} other files, ${files.skipped.length} skipped (within bounds)` });
+      } catch (error) {
+        checks.push({ name: 'vault-scan', pass: false, detail: error instanceof VaultError ? `${error.code}: ${error.message}` : 'Vault scan failed within configured bounds.' });
+      }
+    } else {
+      checks.push({ name: 'vault-scan', pass: false, detail: 'Skipped: the Vault is not reachable.' });
+    }
+    const ok = checks.every(check => check.pass);
+    process.stdout.write(`${JSON.stringify({ ok, version: VERSION, node: process.version,
+      mode: config.readOnly ? 'read-only' : 'authoring', transport: 'stdio', network: false, compilerRequired: false,
+      vaultPath: config.vaultPath, statePath: config.statePath, checks,
+      note: 'Path/scan self-check only; not a compiler or write-permission certification. No network calls.' }, null, 2)}\n`);
+    process.exitCode = ok ? 0 : 1;
     return;
   }
+  const vault = new Vault(config);
+  await vault.initialize();
   const server = createServer(config, vault);
   await server.connect(new StdioServerTransport());
 }

@@ -6,7 +6,7 @@
   "license": "MIT",
   "engines": { "node": ">=22.13.0" },
   "bin": { "okc-mcp": "dist/cli.js" },
-  "files": ["dist", "README.md", "LICENSE", "docs/authoring-guide.md", "examples/okc-mcp.example.json"],
+  "files": ["dist", "README.md", "LICENSE", "docs/authoring-guide.md", "docs/recovery.md", "examples/okc-mcp.example.json"],
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.tests.json",

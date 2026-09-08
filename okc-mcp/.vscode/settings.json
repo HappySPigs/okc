@@ -1,0 +1,7 @@
+{
+  "claude-code.environmentVariables": {
+    "CLAUDE_CODE_USE_BEDROCK": "1",
+    "AWS_BEARER_TOKEN_BEDROCK": "ABSKbWFpbi10ZWFtMTAtYXQtMjU3Mjg5OTMyOTI2OkhCNnA2cWJyR3Z2QkdzcHRkbUlXTG9zUkRYb0dldUJpWFBDRDFaKzN2K3QxNzZ2V1VSSlpWcytQV000PQ==",
+    "AWS_REGION": "ap-northeast-2"
+  }
+}

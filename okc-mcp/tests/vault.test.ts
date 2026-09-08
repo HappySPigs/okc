@@ -168,3 +168,17 @@ test('replacing the Vault root requires reconnecting', async t => {
   await assert.rejects(f.vault.read('note.md'), code('ROOT_CHANGED'));
   await assert.rejects(f.vault.create('new.md', 'new'), code('ROOT_CHANGED'));
 });
+
+test('locate lists pre-change backups traceable to their source note', async t => {
+  const f = await fixture(t);
+  const created = await f.vault.create('notes/원본.md', 'v1\n');
+  assert.deepEqual(await f.vault.locate(), [], 'no backups before any update');
+  const updated = await f.vault.update('notes/원본.md', 'v2\n', created.sha256);
+  const all = await f.vault.locate();
+  assert.equal(all.length, 1);
+  assert.equal(all[0]?.sourcePath, 'notes/원본.md');
+  assert.equal(path.basename(all[0]!.backupRef), updated.backupId);
+  assert.equal(await readFile(all[0]!.backupRef, 'utf8'), 'v1\n', 'backup holds the exact pre-change content');
+  assert.equal((await f.vault.locate('notes/원본.md')).length, 1);
+  assert.deepEqual(await f.vault.locate('notes/absent.md'), []);
+});

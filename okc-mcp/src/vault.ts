@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { constants, type Dirent, type Stats } from 'node:fs';
-import { link, lstat, mkdir, open, opendir, realpath, rename, unlink } from 'node:fs/promises';
+import { link, lstat, mkdir, open, opendir, readFile, realpath, rename, unlink } from 'node:fs/promises';
 import path from 'node:path';
 
 export class VaultError extends Error {
@@ -449,6 +449,14 @@ export class Vault {
       const backup = await open(path.join(backups, backupId), constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | NOFOLLOW, 0o600);
       try { await backup.writeFile(original.content, 'utf8'); await backup.sync(); }
       finally { await backup.close(); }
+      // Sidecar makes the backup traceable to its source note for documented
+      // manual recovery (BR-BACKUP-1/4; US-RV-03 AC3 / US-RV-04). Written after
+      // the content file and before publication, so a rejected write leaves no
+      // misleading backup pair (BR-BACKUP-2 — rejections short-circuit above).
+      const meta = JSON.stringify({ sourcePath: notePath, sha256: expectedHash, createdAt: new Date().toISOString() });
+      const metaHandle = await open(path.join(backups, `${backupId}.meta.json`), constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | NOFOLLOW, 0o600);
+      try { await metaHandle.writeFile(meta, 'utf8'); await metaHandle.sync(); }
+      finally { await metaHandle.close(); }
 
       const target = await this.target(notePath);
       const stagingPath = path.join(path.dirname(target.absolute), `.okc-mcp-${randomUUID()}.tmp`);
@@ -480,5 +488,39 @@ export class Vault {
         }
       }
     });
+  }
+
+  /**
+   * Enumerate pre-change backups for documented manual recovery (C5.locate,
+   * BR-BACKUP-4 / W6). Read-only; reads only the small sidecar metadata files
+   * under the state `backups/` directory (outside the Vault). Newest first.
+   */
+  async locate(notePath?: string): Promise<{ backupRef: string; sourcePath: string; sha256: string; createdAt: string }[]> {
+    if (notePath !== undefined) portableRelative(notePath, true);
+    const backups = await this.stateDirectory('backups');
+    const results: { backupRef: string; sourcePath: string; sha256: string; createdAt: string }[] = [];
+    const handle = await opendir(backups);
+    let scanned = 0;
+    for await (const entry of handle) {
+      if (scanned++ >= this.config.maxFiles) fail('SCAN_LIMIT', 'Backup directory entry count exceeds maxFiles.');
+      if (!entry.isFile() || !entry.name.endsWith('.meta.json')) continue;
+      const metaPath = path.join(backups, entry.name);
+      const stat = await lstat(metaPath);
+      if (stat.isSymbolicLink() || !stat.isFile() || stat.size > 65_536) continue;
+      let parsed: unknown;
+      try { parsed = JSON.parse(await readFile(metaPath, 'utf8')); } catch { continue; }
+      if (!parsed || typeof parsed !== 'object') continue;
+      const record = parsed as Record<string, unknown>;
+      if (typeof record.sourcePath !== 'string') continue;
+      if (notePath !== undefined && record.sourcePath !== notePath) continue;
+      results.push({
+        backupRef: path.join(backups, entry.name.slice(0, -'.meta.json'.length)),
+        sourcePath: record.sourcePath,
+        sha256: typeof record.sha256 === 'string' ? record.sha256 : '',
+        createdAt: typeof record.createdAt === 'string' ? record.createdAt : '',
+      });
+    }
+    results.sort((left, right) => (left.createdAt < right.createdAt ? 1 : left.createdAt > right.createdAt ? -1 : 0));
+    return results;
   }
 }

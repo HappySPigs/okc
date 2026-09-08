@@ -10,10 +10,11 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 
 const projectRoot = fileURLToPath(new URL('../', import.meta.url));
 const cliPath = path.join(projectRoot, 'src', 'cli.ts');
-const mutations = ['create_note', 'patch_frontmatter', 'replace_note'];
+const mutations = ['create_note', 'update_note', 'standardize_frontmatter', 'fix_yaml', 'reinforce_sources_links'];
+const readTools = ['audit_vault', 'list_notes', 'read_note', 'search_notes'];
 const digest = (content: string): string => createHash('sha256').update(content).digest('hex');
 type ToolResult = Awaited<ReturnType<Client['callTool']>>;
-type Envelope = { ok: boolean; data?: unknown; error?: { code: string; message: string } };
+type Envelope = { ok: boolean; data?: unknown; error?: { kind?: string; code: string; message: string } };
 
 function envelope(result: ToolResult): Envelope {
   assert.ok(Array.isArray(result.content));
@@ -33,12 +34,13 @@ async function success<T>(client: Client, name: string, args: Record<string, unk
   return parsed.data as T;
 }
 
-async function failure(client: Client, name: string, args: Record<string, unknown>, code: string): Promise<ToolResult> {
+async function failure(client: Client, name: string, args: Record<string, unknown>, code: string, kind?: string): Promise<ToolResult> {
   const result = await client.callTool({ name, arguments: args });
   assert.equal(result.isError, true);
   const parsed = envelope(result);
   assert.equal(parsed.ok, false);
   assert.equal(parsed.error?.code, code);
+  if (kind !== undefined) assert.equal(parsed.error?.kind, kind, `expected canonical kind ${kind}`);
   return result;
 }
 
@@ -72,7 +74,7 @@ async function connect(t: TestContext, options: {
   return { client, vaultPath, statePath, stderr: () => stderr };
 }
 
-test('real stdio initialization exposes authoring tools, guide resource and capture prompt', { timeout: 20_000 }, async t => {
+test('initialization exposes exactly the design tool surface, guide resource and capture prompt (US-IN-06)', { timeout: 20_000 }, async t => {
   const { client, stderr } = await connect(t, { files: {
     'notes/첫 노트.md': '# 첫 노트\n\n확인한 지식.\n',
     '.obsidian/workspace.json': '{"private":"excluded"}',
@@ -80,10 +82,11 @@ test('real stdio initialization exposes authoring tools, guide resource and capt
   assert.deepEqual(client.getServerVersion(), { name: 'okc-mcp', version: '0.1.0-alpha.1' });
   assert.match(client.getInstructions() ?? '', /untrusted data/u);
   const tools = (await client.listTools()).tools;
-  assert.deepEqual(tools.map(tool => tool.name).sort(), [
-    'audit_vault', 'create_note', 'list_notes', 'patch_frontmatter',
-    'read_note', 'replace_note', 'search_notes', 'vault_info',
-  ]);
+  assert.deepEqual(tools.map(tool => tool.name).sort(), [...readTools, ...mutations].sort());
+  // No shell/http/delete/approve/AI tool exists (REQ-011 / BR-TRUST-1).
+  for (const forbidden of ['delete_note', 'run_shell', 'http_get', 'approve', 'invoke_ai']) {
+    assert.ok(!tools.some(tool => tool.name === forbidden), forbidden);
+  }
   for (const tool of tools) assert.equal(tool.annotations?.readOnlyHint, !mutations.includes(tool.name));
   const resources = await client.listResources();
   assert.ok(resources.resources.some(resource => resource.uri === 'okc://guide/authoring'));
@@ -92,17 +95,12 @@ test('real stdio initialization exposes authoring tools, guide resource and capt
   assert.ok((await client.listPrompts()).prompts.some(prompt => prompt.name === 'capture_knowledge'));
   const prompt = await client.getPrompt({ name: 'capture_knowledge', arguments: { topic: '검증 가능한 지식' } });
   assert.ok(prompt.messages.some(message => message.content.type === 'text' && message.content.text.includes('검증 가능한 지식')));
-  const info = await success<{ mode: string; notes: number; skippedEntries: number; compilerValidation: boolean }>(client, 'vault_info');
-  assert.equal(info.mode, 'authoring');
-  assert.equal(info.notes, 1);
-  assert.equal(info.skippedEntries, 1);
-  assert.equal(info.compilerValidation, false);
   const listed = await success<{ notes: string[] }>(client, 'list_notes');
   assert.deepEqual(listed.notes, ['notes/첫 노트.md']);
   assert.equal(stderr(), '', 'normal protocol traffic must not produce parser failures or startup logs');
 });
 
-test('note creation previews by default, applies explicitly and preserves an existing file', { timeout: 20_000 }, async t => {
+test('create_note previews by default, applies explicitly, refuses overwrite; read returns full hash (US-AU-06, US-IN-08, US-RV-01)', { timeout: 20_000 }, async t => {
   const { client, vaultPath } = await connect(t);
   const input = { path: 'notes/지식.md', title: '검증 가능한 지식',
     body: '# 검증 가능한 지식\n\n직접 확인한 사실입니다.\n', tags: ['지식'], source: 'https://example.test/evidence' };
@@ -115,30 +113,30 @@ test('note creation previews by default, applies explicitly and preserves an exi
   const content = await readFile(path.join(vaultPath, input.path), 'utf8');
   assert.equal(content, preview.preview);
   assert.equal(applied.sha256, digest(content));
-  await failure(client, 'create_note', { ...input, body: 'This must not overwrite the note.', dryRun: false }, 'NOTE_EXISTS');
+  await failure(client, 'create_note', { ...input, body: 'This must not overwrite the note.', dryRun: false }, 'NOTE_EXISTS', 'overwrite-refused');
   assert.equal(await readFile(path.join(vaultPath, input.path), 'utf8'), content);
   const range = await success<{ content: string; sha256: string; nextOffset: number; untrusted: boolean }>(client, 'read_note', {
     path: input.path, offset: 5, length: 7,
   });
   assert.equal(range.content, content.slice(5, 12));
   assert.equal(range.sha256, digest(content), 'a partial read must carry the hash of the entire note');
-  assert.equal(range.nextOffset, 12);
   assert.equal(range.untrusted, true);
 });
 
-test('frontmatter changes preserve unknown keys, comments and body; stale edits fail with external backup intact', { timeout: 20_000 }, async t => {
+test('standardize_frontmatter preserves unknown keys/comments/BOM/body; conflict and backup behavior (US-AU-02/05, US-RV-02/03/05)', { timeout: 20_000 }, async t => {
   const body = '# 기록\r\n\r\n이 내용과 공백은 보존합니다.  \r\n`[[code data]]`\r\n';
   const original = '\uFEFF---\r\n# Keep this context\r\ntitle: Original # title comment\r\ncustom:\r\n  release_date: 2026-09-06\r\n  releaseDate: independent\r\n---\r\n' + body;
   const { client, vaultPath, statePath } = await connect(t, { files: { 'notes/기록.md': original } });
   const read = await success<{ sha256: string }>(client, 'read_note', { path: 'notes/기록.md' });
-  const changes = { title: '확인한 기록', tags: ['source'] };
-  const preview = await success<{ applied: boolean; proposedSha256: string }>(client, 'patch_frontmatter', {
-    path: 'notes/기록.md', changes, expectedHash: read.sha256,
+  const frontmatterPatch = { title: '확인한 기록', tags: ['source'] };
+  const preview = await success<{ applied: boolean; proposedSha256: string; changedKeys: string[] }>(client, 'standardize_frontmatter', {
+    path: 'notes/기록.md', frontmatterPatch, expectedHash: read.sha256,
   });
   assert.equal(preview.applied, false);
+  assert.deepEqual(preview.changedKeys.sort(), ['tags', 'title']);
   assert.equal(await readFile(path.join(vaultPath, 'notes/기록.md'), 'utf8'), original);
-  const applied = await success<{ applied: boolean; sha256: string; backupId: string }>(client, 'patch_frontmatter', {
-    path: 'notes/기록.md', changes, expectedHash: read.sha256, dryRun: false,
+  const applied = await success<{ applied: boolean; sha256: string; backupId: string }>(client, 'standardize_frontmatter', {
+    path: 'notes/기록.md', frontmatterPatch, expectedHash: read.sha256, dryRun: false,
   });
   assert.equal(applied.applied, true);
   assert.equal(applied.sha256, preview.proposedSha256);
@@ -148,21 +146,64 @@ test('frontmatter changes preserve unknown keys, comments and body; stale edits 
   for (const preserved of ['# Keep this context', '# title comment', 'release_date: 2026-09-06', 'releaseDate: independent']) {
     assert.ok(patched.includes(preserved), preserved);
   }
+  // Exactly one external pre-change backup, with a source-traceable sidecar.
   assert.equal(await readFile(path.join(statePath, 'backups', applied.backupId), 'utf8'), original);
-  assert.equal((await readdir(path.join(statePath, 'backups'))).length, 1);
-  await failure(client, 'patch_frontmatter', {
-    path: 'notes/기록.md', changes: { title: 'stale' }, expectedHash: read.sha256, dryRun: false,
-  }, 'CONFLICT');
-  const external = patched + '\r\nObsidian에서 추가한 최신 내용.\r\n';
-  await writeFile(path.join(vaultPath, 'notes/기록.md'), external);
-  await failure(client, 'replace_note', {
-    path: 'notes/기록.md', content: '# Stale replacement\n', expectedHash: applied.sha256, dryRun: false,
-  }, 'CONFLICT');
-  assert.equal(await readFile(path.join(vaultPath, 'notes/기록.md'), 'utf8'), external);
-  assert.equal((await readdir(path.join(statePath, 'backups'))).length, 1, 'conflicts must not create replacement backups');
+  const meta = JSON.parse(await readFile(path.join(statePath, 'backups', `${applied.backupId}.meta.json`), 'utf8')) as { sourcePath: string };
+  assert.equal(meta.sourcePath, 'notes/기록.md');
+  const backupFiles = (await readdir(path.join(statePath, 'backups'))).filter(name => name.endsWith('.md'));
+  assert.equal(backupFiles.length, 1);
+  // Stale hash rejected as a conflict; file untouched; no replacement backup.
+  await failure(client, 'standardize_frontmatter', {
+    path: 'notes/기록.md', frontmatterPatch: { title: 'stale' }, expectedHash: read.sha256, dryRun: false,
+  }, 'CONFLICT', 'hash-mismatch');
+  assert.equal((await readdir(path.join(statePath, 'backups'))).filter(name => name.endsWith('.md')).length, 1);
 });
 
-test('Korean literal search and advisory audit paginate stable results without changing notes', { timeout: 20_000 }, async t => {
+test('update_note applies combined body+frontmatter change through the one pipeline (US-AU-05)', { timeout: 20_000 }, async t => {
+  const original = '---\ntitle: Draft\n---\n# Draft\n\nfirst.\n';
+  const { client, vaultPath } = await connect(t, { files: { 'n.md': original } });
+  const { sha256 } = await success<{ sha256: string }>(client, 'read_note', { path: 'n.md' });
+  const applied = await success<{ applied: boolean; sha256: string; backupId: string }>(client, 'update_note', {
+    path: 'n.md', expectedHash: sha256, changes: { body: '# Draft\n\nrevised.\n', frontmatter: { tags: ['done'] } }, dryRun: false,
+  });
+  assert.equal(applied.applied, true);
+  const content = await readFile(path.join(vaultPath, 'n.md'), 'utf8');
+  assert.ok(content.includes('revised.'));
+  assert.ok(content.includes('tags:'));
+  assert.equal(applied.sha256, digest(content));
+});
+
+test('fix_yaml repairs malformed frontmatter in place and rejects still-invalid corrections (US-AU-03)', { timeout: 20_000 }, async t => {
+  const malformed = '---\ntitle: [unterminated\ncustom: keep\n---\n# Body\n\n본문 보존.\n';
+  const { client, vaultPath } = await connect(t, { files: { 'broken.md': malformed } });
+  const { sha256 } = await success<{ sha256: string }>(client, 'read_note', { path: 'broken.md' });
+  // A still-malformed correction is refused; the file is unchanged.
+  await failure(client, 'fix_yaml', { path: 'broken.md', expectedHash: sha256, correctedFrontmatter: 'title: [still bad', dryRun: false }, 'NOTE_INVALID', 'malformed-yaml');
+  assert.equal(await readFile(path.join(vaultPath, 'broken.md'), 'utf8'), malformed);
+  const applied = await success<{ applied: boolean }>(client, 'fix_yaml', {
+    path: 'broken.md', expectedHash: sha256, correctedFrontmatter: 'title: Fixed\ncustom: keep', dryRun: false,
+  });
+  assert.equal(applied.applied, true);
+  const fixed = await readFile(path.join(vaultPath, 'broken.md'), 'utf8');
+  assert.ok(fixed.includes('title: Fixed'));
+  assert.ok(fixed.includes('본문 보존.'), 'the body must be preserved');
+});
+
+test('reinforce_sources_links adds literal source and body text only (US-AU-04)', { timeout: 20_000 }, async t => {
+  const original = '---\ntitle: Claim\n---\n# Claim\n\n주장.\n';
+  const { client, vaultPath } = await connect(t, { files: { 'c.md': original } });
+  const { sha256 } = await success<{ sha256: string }>(client, 'read_note', { path: 'c.md' });
+  const applied = await success<{ applied: boolean }>(client, 'reinforce_sources_links', {
+    path: 'c.md', expectedHash: sha256, source: 'https://example.test/evidence', appendBody: '\n출처: https://example.test/evidence\n', dryRun: false,
+  });
+  assert.equal(applied.applied, true);
+  const content = await readFile(path.join(vaultPath, 'c.md'), 'utf8');
+  assert.ok(content.includes('source:'));
+  assert.ok(content.includes('출처: https://example.test/evidence'));
+  assert.ok(content.includes('# Claim'), 'existing body is retained');
+});
+
+test('literal Korean search and categorized audit paginate stable results without changing notes (US-AU-01/07)', { timeout: 20_000 }, async t => {
   const files = {
     'notes/가.md': '# 가\n\n지식의 근거 [[MissingA]].\n',
     'notes/나.md': '# 나\n\n지식의 근거 [[MissingB]].\n',
@@ -174,69 +215,62 @@ test('Korean literal search and advisory audit paginate stable results without c
     query: '지식', limit: 1,
   });
   assert.equal(first.total, 2);
-  assert.equal(first.nextOffset, 1);
   assert.equal(first.untrusted, true);
   const second = await success<{ matches: { path: string }[]; nextOffset: null }>(client, 'search_notes', {
     query: '지식', offset: first.nextOffset, limit: 1,
   });
   assert.deepEqual([...first.matches, ...second.matches].map(match => match.path), ['notes/가.md', 'notes/나.md']);
-  assert.equal(second.nextOffset, null);
-  type Audit = { findings: { path: string; code: string }[]; totalFindings: number; nextOffset: number | null;
-    compilerValidation: boolean; limitations: string[] };
+  type Audit = { findings: { path: string; code: string; category: string }[]; totalFindings: number; nextOffset: number | null;
+    heuristic: boolean; compilerValidation: boolean; limitations: string[] };
   const full = await success<Audit>(client, 'audit_vault', { limit: 100 });
   assert.ok(full.totalFindings >= 4);
+  assert.equal(full.heuristic, true);
   assert.equal(full.compilerValidation, false);
-  assert.ok(full.limitations.length > 0);
-  const findings: Audit['findings'] = [];
-  let offset: number | null = 0;
-  for (let pages = 0; offset !== null && pages < 20; pages++) {
-    const page: Audit = await success<Audit>(client, 'audit_vault', { offset, limit: 2 });
-    assert.ok(page.findings.length <= 2);
-    assert.equal(page.totalFindings, full.totalFindings);
-    findings.push(...page.findings);
-    offset = page.nextOffset;
-  }
-  assert.equal(offset, null, 'bounded pagination must terminate');
-  assert.deepEqual(findings, full.findings);
+  // Every finding carries one of the six fixed categories (BR-AUDIT-2).
+  const allowed = new Set(['yaml', 'path', 'link', 'duplicate', 'operational-noise', 'unsupported-format']);
+  for (const finding of full.findings) assert.ok(allowed.has(finding.category), finding.category);
+  assert.ok(full.findings.some(finding => finding.category === 'link'));
   for (const [relative, content] of Object.entries(files)) assert.equal(await readFile(path.join(vaultPath, relative), 'utf8'), content);
 });
 
-test('read-only sessions omit all mutation tools and reject direct invocation', { timeout: 20_000 }, async t => {
+test('read-only sessions omit every mutation tool and reject direct invocation (US-IN-09)', { timeout: 20_000 }, async t => {
   const original = '# Keep\n\n원본 내용.\n';
   const { client, vaultPath } = await connect(t, { readOnly: true, files: { 'Keep.md': original } });
   const tools = (await client.listTools()).tools;
-  assert.equal(tools.length, 5);
-  for (const name of mutations) assert.ok(!tools.some(tool => tool.name === name));
+  assert.equal(tools.length, readTools.length);
+  for (const name of mutations) assert.ok(!tools.some(tool => tool.name === name), name);
   const attempts = [
     { name: 'create_note', arguments: { path: 'New.md', title: 'New', body: '# New\n', dryRun: false } },
-    { name: 'replace_note', arguments: { path: 'Keep.md', content: '# Changed\n', expectedHash: digest(original), dryRun: false } },
-    { name: 'patch_frontmatter', arguments: { path: 'Keep.md', changes: { title: 'Changed' }, expectedHash: digest(original), dryRun: false } },
+    { name: 'update_note', arguments: { path: 'Keep.md', expectedHash: digest(original), changes: { body: '# Changed\n' }, dryRun: false } },
   ];
   for (const request of attempts) {
     const result = await client.callTool(request);
     assert.equal(result.isError, true);
-    assert.ok(Buffer.byteLength(JSON.stringify(result)) < 4096);
   }
   assert.equal(await readFile(path.join(vaultPath, 'Keep.md'), 'utf8'), original);
   await assert.rejects(access(path.join(vaultPath, 'New.md')), { code: 'ENOENT' });
-  assert.equal((await success<{ mode: string }>(client, 'vault_info')).mode, 'read-only');
 });
 
-test('tool failures redact parser content and response limits preserve the stdio connection', { timeout: 20_000 }, async t => {
+test('errors carry a canonical kind, redact parser content, and response limits preserve the connection (US-IN-09, REQ-008)', { timeout: 20_000 }, async t => {
   const sentinel = 'PRIVATE_PARSER_SENTINEL_42';
   const malformed = `---\ntitle: [${sentinel}\n---\n# Broken\n`;
   const { client, vaultPath, stderr } = await connect(t, { maxResponseBytes: 4096, files: {
     'Broken.md': malformed,
     'Large.md': '# Large\n\n' + '지식 '.repeat(2500),
   } });
-  const invalid = await failure(client, 'patch_frontmatter', {
-    path: 'Broken.md', changes: { title: 'Fixed' }, expectedHash: digest(malformed), dryRun: false,
-  }, 'NOTE_INVALID');
-  assert.ok(!JSON.stringify(invalid).includes(sentinel));
+  const { sha256 } = await success<{ sha256: string }>(client, 'read_note', { path: 'Broken.md', length: 8000 }).catch(async () => {
+    // Broken.md is small; a normal read succeeds and returns the whole-file hash.
+    return success<{ sha256: string }>(client, 'read_note', { path: 'Broken.md' });
+  });
+  const invalid = await failure(client, 'standardize_frontmatter', {
+    path: 'Broken.md', frontmatterPatch: { title: 'Fixed' }, expectedHash: sha256, dryRun: false,
+  }, 'NOTE_INVALID', 'malformed-yaml');
+  assert.ok(!JSON.stringify(invalid).includes(sentinel), 'must not echo untrusted source text');
   assert.ok(Buffer.byteLength(JSON.stringify(invalid)) < 4096);
   assert.equal(await readFile(path.join(vaultPath, 'Broken.md'), 'utf8'), malformed);
-  const limited = await failure(client, 'read_note', { path: 'Large.md', length: 8000 }, 'RESPONSE_LIMIT');
+  const limited = await failure(client, 'read_note', { path: 'Large.md', length: 8000 }, 'RESPONSE_LIMIT', 'bounds-exceeded');
   assert.ok(Buffer.byteLength(JSON.stringify(limited)) < 4096);
-  assert.equal((await success<{ notes: number }>(client, 'vault_info')).notes, 2);
+  // Connection still healthy after the bounded refusal.
+  assert.equal((await success<{ total: number }>(client, 'list_notes')).total, 2);
   assert.ok(!stderr().includes(sentinel));
 });

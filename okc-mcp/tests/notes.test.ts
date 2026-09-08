@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { analyzeNote, auditNotes, createNoteContent, MAX_NOTE_BYTES, patchFrontmatter, validateNote } from '../src/notes.js';
+import { analyzeNote, auditNotes, createNoteContent, fixYamlContent, MAX_NOTE_BYTES, patchFrontmatter, reinforceContent, replaceBody, validateNote } from '../src/notes.js';
 
 test('minimal notes and supplied metadata remain useful to ordinary Obsidian users', () => {
   const plain = '# Plain\n\nOriginal claim.\n';
@@ -150,4 +150,48 @@ test('authoring note size hard bound matches the four MiB configuration limit', 
   assert.equal(analysis.issues[0]?.code, 'OKC_NOTE_TOO_LARGE');
   assert.equal(analysis.issues[0]?.severity, 'error');
   assert.deepEqual(analysis.links, []);
+});
+
+test('every audit finding is projected onto one of the six fixed categories (BR-AUDIT-2)', () => {
+  const result = auditNotes([
+    { path: 'A.md', content: '# A\n\n[[Missing]]\n' },
+    { path: 'B.md', content: '---\ntitle: One\n---\nShared body.\n' },
+    { path: 'C.md', content: '---\ntitle: Two\n---\nShared body.\n' },
+  ], ['x.canvas'], ['.obsidian']);
+  const allowed = new Set(['yaml', 'path', 'link', 'duplicate', 'operational-noise', 'unsupported-format']);
+  assert.ok(result.findings.length > 0);
+  for (const finding of result.findings) assert.ok(allowed.has(finding.category), finding.category);
+  assert.ok(result.findings.some(finding => finding.category === 'link'));
+  assert.ok(result.findings.some(finding => finding.category === 'duplicate'));
+  assert.ok(result.findings.some(finding => finding.category === 'unsupported-format'));
+  assert.ok(result.findings.some(finding => finding.category === 'path')); // OKC_AUDIT_SKIPPED
+});
+
+test('fixYamlContent repairs malformed frontmatter, preserves body, and refuses still-invalid corrections', () => {
+  const malformed = '---\ntitle: [unterminated\ncustom: keep\n---\n# Body\n\n본문.\n';
+  const fixed = fixYamlContent(malformed, 'title: Fixed\ncustom: keep');
+  assert.ok(fixed.includes('title: Fixed'));
+  assert.ok(fixed.endsWith('# Body\n\n본문.\n'), 'body preserved verbatim');
+  assert.throws(() => fixYamlContent(malformed, 'title: [still bad'));
+  const added = fixYamlContent('# No frontmatter\n', 'title: Added');
+  assert.ok(added.startsWith('---\ntitle: Added\n---\n'));
+  assert.ok(added.endsWith('# No frontmatter\n'));
+});
+
+test('reinforceContent writes literal source/body text only and requires at least one change', () => {
+  const original = '---\ntitle: Claim\n---\n# Claim\n\n주장.\n';
+  const out = reinforceContent(original, { source: 'https://example.test/x', appendBody: '\n출처: https://example.test/x\n' });
+  assert.ok(out.includes('source:'));
+  assert.ok(out.includes('https://example.test/x'));
+  assert.ok(out.includes('# Claim'), 'existing body retained');
+  assert.ok(out.endsWith('출처: https://example.test/x\n'));
+  assert.throws(() => reinforceContent(original, {}));
+});
+
+test('replaceBody swaps only the body, preserving the exact frontmatter block', () => {
+  const original = '---\ntitle: Keep # comment\ncustom: v\n---\n# Old body\n';
+  const out = replaceBody(original, '# New body\n');
+  assert.ok(out.startsWith('---\ntitle: Keep # comment\ncustom: v\n---\n'));
+  assert.ok(out.endsWith('# New body\n'));
+  assert.throws(() => replaceBody('---\ntitle: [bad\n---\nbody\n', 'x'), 'a malformed current note is rejected');
 });

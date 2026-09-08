@@ -28,8 +28,8 @@ export const AUTHORING_GUIDE = `# OKC 입력 Vault 작성 지침
 - 현재 OKC materializer의 Attachment/Canvas/Base/완전한 링크 재작성은 미완성입니다.
   실제 의미를 담는 텍스트·근거를 Markdown에 남기고 원본 첨부도 별도로 보존하세요.
 
-권장 순서: vault_info → search_notes → read_note → create_note 또는
-patch_frontmatter/replace_note → audit_vault → 별도 OKC에서 source binding과
-스냅샷·검토·컴파일. 원격 AI에 전달되는 범위는 사용 중인 MCP 호스트에서도 확인하세요.
+권장 순서: search_notes → read_note → create_note 또는
+update_note/standardize_frontmatter/fix_yaml/reinforce_sources_links → audit_vault →
+별도 OKC에서 source binding과 스냅샷·검토·컴파일. 원격 AI에 전달되는 범위는 사용 중인 MCP 호스트에서도 확인하세요.
 서버 자체는 provider를 호출하지 않지만 조회 결과는 호스트에 전달됩니다.
 `;
