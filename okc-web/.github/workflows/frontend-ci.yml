@@ -1,0 +1,40 @@
+# Frontend CI — okc-web (React + Vite SPA).
+# See backend-ci.yml for the monorepo-root activation note.
+
+name: frontend-ci
+
+on:
+  push:
+    paths: ["okc-web/frontend/**", "okc-web/.github/workflows/frontend-ci.yml"]
+  pull_request:
+    paths: ["okc-web/frontend/**"]
+  workflow_dispatch: {}
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: okc-web/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: okc-web/frontend/package-lock.json
+
+      - name: Install (locked)
+        run: npm ci
+
+      - name: Type-check + build
+        run: npm run build      # tsc --noEmit && vite build → dist/
+
+      - name: Unit tests
+        run: npm run test
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: okc-web/frontend/dist

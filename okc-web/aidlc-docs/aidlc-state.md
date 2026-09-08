@@ -1,5 +1,17 @@
 # AI-DLC State Tracking
 
+## Current Execution Snapshot (AUTHORITATIVE)
+
+- **Workspace Scope**: `okc-web` module only; artifacts remain in `okc-web/aidlc-docs/`.
+- **Current Phase / Stage**: **CONSTRUCTION COMPLETE** (W0–W5 done). OPERATIONS = placeholder/SKIP → workflow complete.
+- **Last Completed**: **W5 Build and Test** — build/test instruction docs (`construction/build-and-test/` ×5), CI both stacks (`.github/workflows/backend-ci.yml` + `frontend-ci.yml`), `README.md`, `aidlc-docs/PROCESS.md`, secret scan (0 hardcoded), `screenshots/` capture guide + Playwright script. Lockfiles already present (`backend/uv.lock` + `frontend/package-lock.json`).
+- **Verification (final, both stacks)**: backend `ruff`/`mypy` clean (**49 files**) + **80 pytest passed** (real okc binding, no mock); frontend `tsc` clean + `vite build` → `frontend/dist` + `vitest` **8 passed**; CI YAML parses; secret scan clean.
+- **KNOWN LIMITS (honest, surfaced not hidden)**: (1) the AI-driven runtime spine `integrate→…→compile→verified` needs a live LLM provider, NOT configured in this env — all non-AI seams proven green, engine returns real typed errors offline; (2) automated screenshots need a browser (absent) + a provider for the full flow — a repeatable capture script + guide ship in `screenshots/` instead of faked images; (3) frontend contributor portal at `/upload/:token` (backend owns `/u/{token}` JSON API); (4) CI workflows are module-scoped and must be hoisted to the monorepo repo-root `.github/` to activate.
+- **Next Step**: none within CONSTRUCTION — all waves complete. Optional follow-ups (user's call): commit/PR the branch; run the provider-dependent AI spine + capture the focal screenshots; hoist CI to the repo root.
+- **Working Tree**: Changes are on `main` and are not committed or pushed by this session.
+
+> This snapshot supersedes stale historical `Current Stage` and resume-pointer prose retained below for audit continuity.
+
 ## Project Information
 - **Project Name**: okc-web (Obsidian Vault Integration Web Platform)
 - **Project Type**: Greenfield
@@ -10,19 +22,19 @@
 
 ## ▶ SESSION RESUME POINTER (read this first on a fresh session)
 
-**As of 2026-09-08 checkpoint (pushed to `okc-web-construction`).**
+**As of 2026-09-08 W1 completion (working tree on `main`; not committed or pushed in this session).**
 
-- **Where we are**: INCEPTION complete. CONSTRUCTION under **AUTOPILOT** (recommended decisions auto-selected at each per-unit 2-option gate; NFR skipped; FD only U3/U4; MVP-only; parallel waves). Stack pivoted Rust/axum+Next.js → **FastAPI(Python)+React(Vite) SPA** per **ADR-0025** (faithful 1:1 port; all ids/decisions/screens invariant). **All 25 aidlc-docs migrated.** **W0 (U0 Foundation) COMPLETE & green.**
+- **Where we are**: INCEPTION complete. CONSTRUCTION under **AUTOPILOT**. W0 and W1 are complete and green; current stage is **W2 U3 Functional Design**. NFR is skipped, FD runs only for U3/U4, scope is the approved MVP, and W3 U4/U5 must execute in real parallel.
 - **Authoritative mapping**: [`construction/plans/stack-migration-spec.md`](construction/plans/stack-migration-spec.md). ADR: [`inception/requirements/decision-records.md`](inception/requirements/decision-records.md) §ADR-0025. Wave plan: [`construction/plans/parallel-execution-plan.md`](construction/plans/parallel-execution-plan.md). U0 plan (all 12 steps [x]): [`construction/plans/U0-foundation-code-generation-plan.md`](construction/plans/U0-foundation-code-generation-plan.md).
-- **Code so far** (`okc-web/backend/`, FastAPI package `app/`): U0 done — `app/shared/{error,state,jobs,audit,authz}.py`, `app/adapter/{schema_guard,dto,engine,queue}.py`, `app/config.py`, `app/main.py` (unit auto-discovery via `UNIT_MODULES`; each unit exposes `register(app, state)`), `tests/test_foundation.py` (23 pass), `pyproject.toml`, `uv.lock`, `.gitignore`.
+- **Code so far** (`okc-web/backend/`): U0 `app/shared` + `app/adapter`; U1 `app/auth`; U2 `app/upload`; production discovery through `app.main.create_app`; unit tests plus `tests/test_w1_spine.py`. Current full gate: 54 tests pass, `ruff` clean, `mypy` clean across 33 source/test files.
 - **Environment to reproduce (fresh clone)**: cargo/rustc at `~/.cargo/bin` (add to PATH). Build+install the engine binding:
   1. `uv venv --python 3.12 okc-web/backend/.venv`
   2. `VIRTUAL_ENV=okc-web/backend/.venv uv pip install "maturin==1.15.0"`
   3. `cd okc-core && okc-web/backend/.venv/Scripts/maturin build --release --locked --manifest-path bindings/python/Cargo.toml -i okc-web/backend/.venv/Scripts/python.exe --out bindings/python/dist` (~2 min; produces `okc_compiler-0.3.0-*.whl`)
   4. `VIRTUAL_ENV=... uv pip install <that wheel>` → `import okc` gives `INTEROP_SCHEMA_VERSION==2`.
   5. `cd okc-web/backend && VIRTUAL_ENV=.venv uv pip install fastapi "uvicorn[standard]" pydantic sqlalchemy argon2-cffi python-ulid python-multipart pytest pytest-asyncio httpx ruff mypy` (or `uv sync` for pinned PyPI deps + install the wheel separately).
-- **Verify green**: `cd okc-web/backend && .venv/Scripts/python.exe -m pytest -q` (23 pass) · `ruff check app` · `mypy app`. Real no-mock seam proven: `OkcEngineImpl` maps a real `okc.OkcError` (relative path → `PATH_NOT_ABSOLUTE`/400).
-- **NEXT ACTION → W1**: generate **U1 auth ‖ U2 upload** (real parallel, disjoint dirs `app/auth/` & `app/upload/`) against the frozen U0 contracts. Each unit creates its package + a `register(app, state)` in `app/<unit>/router.py` (sets `app.state.session_resolver` / `token_resolver`, includes its APIRouter) + tests `tests/test_u1_auth.py` / `test_u2_upload.py`; scope ruff/mypy/pytest to own files. Then **W2** U3 orchestration → **W3** U4 review ‖ U5 serving → **W4** U6 React/Vite SPA (`okc-web/frontend/`, design frozen in `ui-screens.md`/`design-system.md`) → **W5** Build&Test (spine e2e, screenshots/, both-stack CI, secret scan). See wave detail + the W1 agent brief pattern in audit.md (2026-09-08 entries).
+- **Verify green (macOS)**: `cd okc-web/backend && .venv/bin/python -m ruff check app tests && .venv/bin/python -m mypy app tests && .venv/bin/python -m pytest -q` → 54 passed. Real no-mock spine uses production `create_app` through U1 login, U2 token issue/upload, U0 worker, native `okc.add_source`, job polling, and a fresh manifest read.
+- **NEXT ACTION → W2**: execute U3 Orchestration Functional Design (MVP-scoped), auto-select the recommended standard gate under standing autopilot, then create and execute the U3 Code Generation plan. After W2: W3 U4 Review ‖ U5 Serving, W4 U6 React/Vite SPA, W5 Build and Test.
 - **Guardrails (standing)**: faithful MVP-only port, NO scope expansion; okc-core stays Rust (consumed via `okc` Python bindings — the single ADR-0002 seam in `app/adapter/`); RBAC-before-core (C-1); 3-variant `CuratorDecision` no winner-select (C3); single-writer `ThreadPoolExecutor(max_workers=1)` + read-path client (NFR-CONC-1); uvicorn `--workers 1`; HTTP polling (no SSE); secrets from env.
 
 ## Project Context (non-derivable)
@@ -86,12 +98,12 @@ _All extensions opted OUT (hackathon PoC scope) → full rule files NOT loaded. 
 **AUTHORIZED DEVIATION** (사용자 승인): CLAUDE.md의 per-unit 규칙 "각 유닛을 완전히 완료한 뒤 다음 유닛" 중 **유닛 간 순서 규칙만 WAVE 단위로 승격**. **유닛 내부** 스테이지 순서(FD→NFR-Req→NFR-Design→Infra→CodeGen)와 각 스테이지의 표준 **2-옵션 승인 게이트는 무변경·전부 보존**. 병렬 웨이브 내 각 유닛은 자기 고유 2-옵션 게이트 체인을 독립 발화(배치/결합/3-옵션 승인 금지 — NO EMERGENT BEHAVIOR 준수). 웨이브 동기화 배리어 = 웨이브 내 전 유닛 게이트 체인의 AND + 해당 웨이브 spine 세그먼트의 무-mock 통합 체크.
 
 **Per-stage 실행 결정 — AUTOPILOT 재조정(2026-09-08; NFR skip + design-scope 제한):**
-- [ ] Functional Design — EXECUTE (**U3/U4 only**, comprehensive·MVP-scoped; U0/U1/U2/U5/U6 **SKIP** → CodeGen에 흡수). _[autopilot trim of plan's U1/U2 standard]_
+- [x] Functional Design — DONE (**U3/U4 only**; U0/U1/U2/U5/U6 **SKIP** → CodeGen에 흡수). U3 comprehensive (business-logic-model.md · business-rules.md · domain-entities.md); U4 **concise** per the lean-MVP user directive (u4-review/functional-design/business-rules.md). Both 2-option gates auto-continued.
 - [x] NFR Requirements — **SKIP (all units)** _[user directive "NFR 건너뜀"]_
 - [x] NFR Design — **SKIP (all units)** _[user directive "NFR 건너뜀"]_
 - [x] Infrastructure Design — **SKIP (folded into CodeGen)** _[single-process local PoC; layout in module-integration-guide §4]_
-- [ ] Code Generation — EXECUTE (comprehensive·**MVP-only**: 29 승인 스토리 한정; beyond-MVP 제외) — ALWAYS, per-unit
-- [ ] Build and Test — EXECUTE (standard; real backend `uv sync`/`pytest` (+`ruff`/`mypy`, maturin-built `okc-compiler`) + frontend `vite build`/`vitest`; 하드-MUST exit artifacts: screenshots/·CI(both stacks)·lockfiles(`uv.lock`+`package-lock.json`)·README·PROCESS narrative·secret scan)
+- [x] Code Generation — DONE (comprehensive·**MVP-only**: 29 승인 스토리 한정; beyond-MVP 제외) — per-unit. **DONE: U0, U1, U2, U3, U4, U5, U6.** All units generated.
+- [x] Build and Test — **DONE** (standard; backend `ruff`/`mypy`/`pytest` 80 green with maturin-built `okc-compiler` + frontend `vite build`/`vitest` 8 green; exit artifacts: CI both stacks·lockfiles(`uv.lock`+`package-lock.json`)·README·PROCESS.md·secret scan clean·screenshots capture guide+script [browser/provider-dependent, flagged])
 
 **AUTOPILOT gate protocol**: 각 per-unit 2-옵션 완료 게이트에서 권장 "Continue to Next Stage"를 **자동 선택**(무-대기), audit.md에 자동결정 기록. 2-옵션 메시지 자체는 발화(3-옵션/배치 금지 — NO EMERGENT BEHAVIOR 유지); 사람-대기만 표준 승인으로 면제.
 **MVP guardrails (beyond-MVP EXCLUDED)**: viewer role(FR-AUTH-2 deferred) · >10-source federation · at-rest 암호화/멀티테넌트 · SSE/WebSocket(HTTP 폴링 유지) · okc-mcp RAG internals(계약만) · 고급 관측.
@@ -99,15 +111,20 @@ _All extensions opted OUT (hackathon PoC scope) → full rule files NOT loaded. 
 
 **Wave 진행 추적:**
 - [x] W0 — U0 Foundation — **COMPLETE** (FastAPI `backend/app/`; ruff/mypy clean; 23/23 pytest; real okc seam verified)
-- [ ] W1 — U1 Auth ‖ U2 Upload
-- [ ] W2 — U3 Orchestration
-- [ ] W3 — U4 Review ‖ U5 Serving
-- [ ] W4 — U6 Frontend 통합
-- [ ] W5 — Build and Test
+- [x] W1 — U1 Auth ‖ U2 Upload — **COMPLETE** (U1 16 tests; U2 14 tests; production-app real-binding spine; full gate `ruff`/`mypy` clean + 54 tests)
+- [x] W2 — U3 Orchestration — **COMPLETE** (FD 3 artifacts + CodeGen `app/orchestration/*` + 8 tests; full gate `ruff`/`mypy` clean/38 files + **62 tests**)
+- [x] W3 — U4 Review ‖ U5 Serving — **COMPLETE** (real parallel fan-out; U4 concise FD + `app/review/*` 9 tests; U5 `app/serving/*` 7 tests; wave barrier `ruff`/`mypy` clean/48 files + **78 tests**; ADR-0002 guard clean). AI runtime spine provider-dependent (deferred to Build&Test).
+- [x] W4 — U6 Frontend 통합 — **COMPLETE** (React/Vite SPA `frontend/` 61 files, 24 screens, 3 focal; `tsc`+`vite build`+`vitest` 8 green; + orchestrator SPA history-fallback fix in main.py, backend **80 tests**).
+- [x] W5 — Build and Test — **COMPLETE** (build/test docs ×5, CI both stacks, README, PROCESS.md, secret scan clean, lockfiles present, screenshots capture guide+script). Screenshots + AI spine are provider/browser-dependent — honestly flagged, not faked.
 
 **오픈 질문 처리**: W0에서 해소 = okc-core commit-pin 해시 · SourceRegistry owner(물리=U0 state / 의미=U3, `sources` write-read API를 W0 마이그레이션에 freeze) · job-route two-mount 계약. 소유 웨이브로 이연 = serving addressing/authz+E5-2(U5,W3) · Role 모델+session/token hashing refinements(U1/U2,W1).
 
-_Status_: 계획 문서 확정. **애플리케이션 코드 미생성** — CONSTRUCTION 진입(W0 U0 FD/CodeGen)은 여전히 사용자 게이트 대기.
+_Status_: W1 sync barrier complete. U1/U2 plans are fully checked, summaries exist, and the production app path is verified against the real binding. Proceeding in W2 at U3 Functional Design.
 
 ### 🟡 OPERATIONS Phase
-- [ ] Operations — SKIP (placeholder; 로컬 단일 프로세스 PoC, 범위 밖)
+- [x] Operations — SKIP (placeholder; 로컬 단일 프로세스 PoC, 범위 밖) — CONSTRUCTION 종료 후 워크플로 완료로 처리.
+
+---
+
+## ✅ WORKFLOW COMPLETE (2026-09-09)
+INCEPTION + CONSTRUCTION (W0–W5) 전부 완료. 백엔드 U0–U5 + 프론트 U6 랜딩, 양 스택 그린(backend 80 / frontend 8), CI·README·PROCESS·락파일·시크릿스캔 구비. 남은 항목은 전부 provider/browser 의존(선택): AI 런타임 spine 실행 + focal 스크린샷 캡처, CI 리포루트 hoist, 커밋/PR. 작업 트리는 `main`에 있으며 이 세션에서 커밋/푸시하지 않음.

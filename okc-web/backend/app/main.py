@@ -16,10 +16,13 @@ import logging
 import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.responses import Response
 
 from app.adapter import schema_guard
 from app.adapter.queue import EngineWorker
@@ -141,10 +144,32 @@ def _get_job_or_404(app: FastAPI, job_id: str, expect_project: str | None) -> Jo
     return snap
 
 
+class _SPAStaticFiles(StaticFiles):
+    """StaticFiles + client-side-routing history fallback: an unmatched path that
+    is NOT an API/upload route (``/api/*``, ``/u/*``) falls back to ``index.html``
+    so SPA deep-links and refreshes (e.g. ``/projects/x``, ``/upload/{token}``)
+    load instead of 404ing. Real asset 404s under known API prefixes are preserved.
+    """
+
+    async def get_response(self, path: str, scope: Any) -> Response:  # noqa: ANN401
+        is_spa_route = not path.startswith(("api/", "u/"))
+        try:
+            response = await super().get_response(path, scope)
+        except StarletteHTTPException as exc:
+            # StaticFiles(html=True) RAISES 404 for a missing path rather than
+            # returning it; fall back to the SPA shell for client-side routes.
+            if exc.status_code == 404 and is_spa_route:
+                return await super().get_response("index.html", scope)
+            raise
+        if response.status_code == 404 and is_spa_route:
+            return await super().get_response("index.html", scope)
+        return response
+
+
 def _mount_spa(app: FastAPI, cfg: AppConfig) -> None:
     dist = cfg.spa_dist or _default_spa_dist()
     if dist and os.path.isdir(dist):
-        app.mount("/", StaticFiles(directory=dist, html=True), name="spa")
+        app.mount("/", _SPAStaticFiles(directory=dist, html=True), name="spa")
 
 
 def _default_spa_dist() -> str:

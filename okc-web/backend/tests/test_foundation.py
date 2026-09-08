@@ -141,7 +141,9 @@ def test_audit_append_and_list_and_db_check() -> None:
     with pytest.raises(sqlite3.IntegrityError):
         raw = db.engine.raw_connection()
         try:
-            raw.driver_connection.execute(
+            driver = raw.driver_connection
+            assert driver is not None
+            driver.execute(
                 "INSERT INTO curator_decisions(id,project_id,curator_id,decision_kind,payload_json,core_op,created_at)"
                 " VALUES ('d','p','c','select_winner','{}','x','t')"
             )

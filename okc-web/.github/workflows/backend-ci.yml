@@ -1,0 +1,68 @@
+# Backend CI — okc-web (FastAPI + real okc binding).
+#
+# NOTE (monorepo integration): GitHub Actions reads workflows from the REPO-ROOT
+# `.github/workflows/`. This file lives in the okc-web module (AI-DLC module-scope
+# rule); to activate it in the monorepo, surface it at the repo root (copy or a
+# repo-root workflow with `paths: [okc-web/**, okc-core/**]`). It assumes okc-core
+# is available as a sibling checkout (this repo expects ../okc-core).
+
+name: backend-ci
+
+on:
+  push:
+    paths: ["okc-web/backend/**", "okc-core/**", "okc-web/.github/workflows/backend-ci.yml"]
+  pull_request:
+    paths: ["okc-web/backend/**", "okc-core/**"]
+  workflow_dispatch: {}
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: okc-web/backend
+    steps:
+      - name: Checkout okc-web
+        uses: actions/checkout@v4
+        with:
+          path: okc-web
+
+      - name: Checkout okc-core (sibling)
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/okc-core   # adjust to the real okc-core repo
+          path: okc-core
+          # ref: <pinned okc-core commit>   # pin for reproducibility
+
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build + install the okc-compiler wheel (maturin/pyo3)
+        working-directory: .
+        run: |
+          uv venv --python 3.12 okc-web/backend/.venv
+          VIRTUAL_ENV=okc-web/backend/.venv uv pip install "maturin==1.15.0"
+          okc-web/backend/.venv/bin/maturin build --release --locked \
+            --manifest-path okc-core/bindings/python/Cargo.toml \
+            -i okc-web/backend/.venv/bin/python --out okc-core/bindings/python/dist
+          VIRTUAL_ENV=okc-web/backend/.venv uv pip install okc-core/bindings/python/dist/okc_compiler-0.3.0-*.whl
+
+      - name: Install backend deps (locked)
+        run: VIRTUAL_ENV=.venv uv sync --frozen || VIRTUAL_ENV=.venv uv sync
+
+      - name: Lint (ruff)
+        run: .venv/bin/python -m ruff check app tests
+
+      - name: Type-check (mypy)
+        run: .venv/bin/python -m mypy app tests
+
+      - name: Test (pytest, real binding)
+        run: .venv/bin/python -m pytest -q
+
+      - name: Secret scan (no hardcoded secrets)
+        run: |
+          ! grep -rnEi "(api[_-]?key|secret|password)[[:space:]]*[:=][[:space:]]*['\"][A-Za-z0-9_-]{16,}['\"]" app \
+            | grep -vE "env|getenv|environ|api_key_env|_ENV"
