@@ -1,0 +1,12 @@
+# Normalize line endings: store as LF in the repo, auto-detect text
+* text=auto eol=lf
+
+# Treat these as binary (no line-ending normalization)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.pdf binary
+*.zip binary
+*.tar.zst binary
