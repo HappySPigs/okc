@@ -1,0 +1,28 @@
+# sync-state lib 크레이트 (U4). crash-atomic 상태 지속/복구(`SyncStateStore`) +
+# 순수·결정적 재시도 백오프 상태머신(`RetryBackoffController`).
+[package]
+name = "sync-state"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+# U4 는 DAG 상 U0 `foundation` 하나에만 의존하는 소비자 말단이다(신규 외부 크레이트 0건).
+[dependencies]
+foundation = { path = "../foundation" }
+serde.workspace = true
+thiserror.workspace = true
+# proptest 는 optional: 오직 `proptest-support` feature 가 켜졌을 때만 빌드 그래프에 유입.
+proptest = { workspace = true, optional = true }
+
+# 자기 크레이트 property 테스트가 proptest-support feature 를 켤 수 있도록 재선언하고,
+# U0 도메인 제너레이터(`Manifest`/`Sha256Digest`/`ByteCount`)를 재사용한다(드리프트 방지).
+[dev-dependencies]
+proptest.workspace = true
+foundation = { path = "../foundation", features = ["proptest-support"] }
+
+[features]
+# NON-DEFAULT: default features 비어 있음 -> proptest 는 프로덕션 빌드 그래프에 유입되지 않음(PBT-07).
+default = []
+# 자기 제너레이터 노출 + U0 제너레이터 재사용을 위해 foundation/proptest-support 도 함께 켠다.
+proptest-support = ["dep:proptest", "foundation/proptest-support"]

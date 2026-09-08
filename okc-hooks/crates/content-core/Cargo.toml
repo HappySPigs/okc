@@ -1,0 +1,26 @@
+# content-core lib 크레이트 (U1). 결정성 콘텐츠 코어 — 스트리밍 SHA-256 해싱, 볼트 열거,
+# 매니페스트 재계산·정확 diff·안전 한도 검증. 외부 워크스페이스 의존은 foundation(U0)뿐이다.
+[package]
+name = "content-core"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+# 런타임 의존성은 전부 workspace 핀을 상속한다. sha2 는 U1 이 도입하는 유일한 신규 런타임 크레이트.
+[dependencies]
+foundation.workspace = true
+sha2.workspace = true
+thiserror.workspace = true
+# proptest 는 optional: 오직 `proptest-support` feature 가 켜졌을 때만 빌드 그래프에 유입.
+proptest = { workspace = true, optional = true }
+
+# 자기 크레이트 테스트가 proptest-support feature 를 켤 수 있도록 dev-dependency 로도 재선언.
+[dev-dependencies]
+proptest.workspace = true
+
+[features]
+# NON-DEFAULT: default features 비어 있음 -> proptest 는 프로덕션 빌드 그래프에 유입되지 않음(PBT-07).
+default = []
+# U1 자체 generator + U0 proptest-support generator 재사용을 위해 foundation 의 feature 도 전파.
+proptest-support = ["dep:proptest", "foundation/proptest-support"]

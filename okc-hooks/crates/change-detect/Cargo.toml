@@ -1,0 +1,26 @@
+# change-detect lib 크레이트 (U2). 순수 변경 감지·트리거·가드 판정자.
+# FilesystemWatcher / ReconciliationScheduler / VaultAvailabilityGuard 세 애그리게이트를 노출한다.
+[package]
+name = "change-detect"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+# 런타임 의존성은 전부 workspace 핀을 상속한다(R-PURE-02: foundation 외 단위 크레이트 미의존).
+[dependencies]
+foundation.workspace = true
+notify.workspace = true
+thiserror.workspace = true
+# proptest 는 optional: 오직 `proptest-support` feature 가 켜졌을 때만 빌드 그래프에 유입.
+proptest = { workspace = true, optional = true }
+
+# 자기 크레이트 테스트가 proptest-support feature 를 켤 수 있도록 dev-dependency 로도 재선언.
+[dev-dependencies]
+proptest.workspace = true
+
+[features]
+# NON-DEFAULT: default features 비어 있음 -> proptest 는 프로덕션 빌드 그래프에 유입되지 않음(T9/PBT-07).
+default = []
+# U2 제너레이터 노출 + U0 제너레이터 재사용(단일 출처, foundation/proptest-support 연쇄 활성).
+proptest-support = ["dep:proptest", "foundation/proptest-support"]

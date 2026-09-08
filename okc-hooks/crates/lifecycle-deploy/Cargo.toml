@@ -1,0 +1,32 @@
+# lifecycle-deploy lib 크레이트 (U7a). 바이너리 수명주기 단위 —
+# `ServiceManager`(3-OS 서비스 설치/제거/제어) + `AutoUpdater`(헬스게이트 스테이징 업데이트 +
+# 자동 롤백) + `Uninstaller`(idempotent 로컬 산출물 정리). OS/프로세스/시계/파일시스템 상호작용은
+# 전부 seam 트레이트 뒤로 격리되어 특권/네트워크 없이 단위테스트된다.
+[package]
+name = "lifecycle-deploy"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+# U0: `ReadJudgment`/`Liveness`/`CriticalEventSink`/`Version`/`RollbackReason`/`Timestamp` 등을 소비.
+foundation.workspace = true
+# U5: `CredentialProvider.token_status()` — 정리 전 토큰 진단(선택, 삭제 API 아님)에만 소비.
+auth-consent.workspace = true
+# U6: `StatusService`(=`ReadJudgment`)/`CriticalErrorNotifier`(=`CriticalEventSink`) 구현은
+# 조립 루트(U8)가 U0 트레이트 객체로 하향 주입한다. U7a 코드는 U6 구체 타입을 참조하지 않으며
+# (비순환 하향 주입), 배선 정합을 위해 의존만 선언한다.
+observability.workspace = true
+thiserror.workspace = true
+# proptest 는 optional: 오직 `proptest-support` feature 가 켜졌을 때만 빌드 그래프에 유입.
+proptest = { workspace = true, optional = true }
+
+[dev-dependencies]
+proptest.workspace = true
+
+[features]
+# NON-DEFAULT: default features 비어 있음 -> proptest 는 프로덕션 빌드 그래프에 유입되지 않음(PBT-07).
+default = []
+# 자기 제너레이터/테스트 더블 노출 + U0 도메인 제너레이터 재사용을 위해 foundation/proptest-support 도 함께 켠다.
+proptest-support = ["dep:proptest", "foundation/proptest-support"]

@@ -1,0 +1,29 @@
+# auth-consent lib 크레이트 (U5). AuthTransport + CredentialProvider + ConsentGate.
+# foundation(U0)에만 의존하는 Wave-내 소비 단위 (DAG 비순환).
+[package]
+name = "auth-consent"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+# 런타임 의존성은 전부 workspace 핀을 상속한다.
+[dependencies]
+foundation = { path = "../foundation" }
+serde.workspace = true      # ConsentRecord/ConsentGrant serde derive (CBOR round-trip)
+thiserror.workspace = true  # CredentialError/ConsentError/TimeoutConfigError 운영 오류 파생
+url.workspace = true        # base-URL join (U0 validate_https_url 재사용)
+ureq.workspace = true       # HttpTransport 구체 어댑터(rustls TLS, native-tls 아님)
+# proptest 는 optional: 오직 `proptest-support` feature 에서만 빌드 그래프에 유입.
+proptest = { workspace = true, optional = true }
+
+# 자기 크레이트 property 테스트가 proptest-support 를 켜고 U0 제너레이터를 재사용한다.
+[dev-dependencies]
+proptest.workspace = true
+foundation = { path = "../foundation", features = ["proptest-support"] }
+
+[features]
+# NON-DEFAULT: default 비어 있음 -> proptest 는 프로덕션 빌드 그래프에 유입되지 않음(PBT-07).
+default = []
+# 테스트 더블(mock)과 도메인 제너레이터를 노출하고, U0 제너레이터(proptest-support)를 재사용한다.
+proptest-support = ["dep:proptest", "foundation/proptest-support"]

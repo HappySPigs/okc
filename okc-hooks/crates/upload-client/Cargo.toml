@@ -1,0 +1,32 @@
+# upload-client lib 크레이트 (U3). 업로드 프로토콜 상태머신(`UploadProtocolDriver`) —
+# have/want 협상 -> 서버 결여 blob 전송(단일/재개 청크) -> 전송 전 재검증 -> 커밋.
+# W3 소비 단위: U0 foundation + W2(content-core/sync-state/auth-consent) 공개 API 만 소비한다
+# (신규 외부 크레이트 0건 — 순수 프로토콜 로직).
+[package]
+name = "upload-client"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+# 런타임 의존성은 전부 workspace 핀을 상속한다. U3 는 신규 외부 크레이트를 도입하지 않는다.
+[dependencies]
+foundation.workspace = true
+content-core.workspace = true
+sync-state.workspace = true
+auth-consent.workspace = true
+serde.workspace = true      # 프로토콜 봉투(NegotiateRequest/CommitRequest 등) CBOR round-trip
+thiserror.workspace = true  # UploadError/BlobSourceError 운영 오류 파생
+# proptest 는 optional: 오직 `proptest-support` feature 가 켜졌을 때만 빌드 그래프에 유입.
+proptest = { workspace = true, optional = true }
+
+# 자기 크레이트 테스트가 proptest-support feature 를 켜고 U0 도메인 제너레이터를 재사용한다.
+[dev-dependencies]
+proptest.workspace = true
+
+[features]
+# NON-DEFAULT: default features 비어 있음 -> proptest 는 프로덕션 빌드 그래프에 유입되지 않음(PBT-07).
+default = []
+# 자기 제너레이터 노출 + U0 제너레이터(`Manifest`/`Sha256Digest`/`ByteCount`) 재사용을 위해
+# foundation/proptest-support 도 함께 켠다.
+proptest-support = ["dep:proptest", "foundation/proptest-support"]

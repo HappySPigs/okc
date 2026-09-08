@@ -1,0 +1,30 @@
+# watcher-bin 크레이트 (U8). 단일 배포 바이너리의 조립 루트와 테스트 가능한 오케스트레이션 코어.
+[package]
+name = "watcher-bin"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+foundation.workspace = true
+content-core.workspace = true
+change-detect.workspace = true
+upload-client.workspace = true
+sync-state.workspace = true
+auth-consent.workspace = true
+observability.workspace = true
+lifecycle-deploy.workspace = true
+ops-control.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+ctrlc.workspace = true
+proptest = { workspace = true, optional = true }
+
+[dev-dependencies]
+proptest.workspace = true
+
+[features]
+default = []
+proptest-support = ["dep:proptest", "foundation/proptest-support"]

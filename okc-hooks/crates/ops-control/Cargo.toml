@@ -1,0 +1,32 @@
+# ops-control lib 크레이트 (U7b). 운영자 CLI(`OperatorCli`) + 로컬 IPC 제어면
+# (`ControlPlane`) + 권위 run-state(`RunStateController`). 데몬 대상 명령은 IPC 클라이언트로,
+# install/uninstall 은 U7a 를 in-process 로 직접 호출한다.
+[package]
+name = "ops-control"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+# U7b 는 하위/동위 크레이트(U0/U5/U6/U7a)에만 의존한다 — U8(조립 루트)은 참조하지 않는다.
+# CLI 파싱은 std 로 손수 구현하고, IPC 는 std::os::unix::net(Unix 도메인 소켓)을 트레이트 seam
+# 뒤에 둔다 -> 신규 외부 크레이트 0건.
+[dependencies]
+foundation.workspace = true
+observability.workspace = true
+auth-consent.workspace = true
+lifecycle-deploy.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+# proptest 는 optional: 오직 `proptest-support` feature 가 켜졌을 때만 빌드 그래프에 유입.
+proptest = { workspace = true, optional = true }
+
+# 자기 크레이트 property 테스트가 proptest 를 사용한다.
+[dev-dependencies]
+proptest.workspace = true
+
+[features]
+# NON-DEFAULT: default features 비어 있음 -> proptest 는 프로덕션 빌드 그래프에 유입되지 않음(PBT-07).
+default = []
+proptest-support = ["dep:proptest", "foundation/proptest-support"]
