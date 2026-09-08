@@ -1,66 +1,62 @@
-# Reverse Engineering — Overview
+# Reverse Engineering Overview
 
-**Project**: okc-core (OKC — Obsidian Knowledge Compilation) · v0.3.0 · Schema 3
-**Approach**: link + summarize existing normative docs; do **not** re-derive them.
+**Project**: OKC 0.3.0, current Schema 3
 
-> This repository is **documentation-first** by an explicit founding decision (2026-08-15): every
-> plan, algorithm, and rationale is written to Markdown so that fresh coding sessions rely only on
-> those docs. As a result, the authoritative reverse-engineering material already exists in-repo.
-> These AI-DLC artifacts act as an **index and reconciliation layer** over that material, plus one
-> genuinely new artifact — a citation-backed reconstruction of the user's intent from Codex
-> sessions (`decision-intent-timeline.md`).
+**Baseline**: `e448bf28ee3dcb43d18428eb1bdb9ac70163bf34`
 
-## What OKC is (business / system overview)
+**Analysis mode**: Brownfield, documentation-first, source-verified
 
-OKC compiles several **immutable** Obsidian Vault snapshots — each produced by a *different*
-person using a *different* community Obsidian MCP — into **one new, deterministic, auditable
-Vault**. Sources are treated as read-only and potentially hostile; nothing is mutated in place;
-the compiled output is a fresh artifact whose every block is traceable to its origin and to the
-decision that placed it. As of Schema 3 (v0.3.0), **AI is a required participant**: an LLM
-performs the semantic classification/merge under deterministic guardrails, with a critic gate and
-human approval before a new Vault is emitted.
+This artifact set is a navigation and reconciliation layer. It does not replace
+the normative specifications, stable algorithms, accepted ADRs, current-state
+record, or requirement traceability matrix.
 
-```text
-person A ── any MCP ──▶ Vault A ┐
-person B ── any MCP ──▶ Vault B ├─▶  OKC (deterministic core + required AI)  ─▶  Compiled Vault + pack
-person C ── any MCP ──▶ Vault C ┘        provenance · conflicts · audit envelope · critic gate
-```
+## System summary
 
-The problem OKC solves is **MCP-origin-neutral merge**: the sources may each come from a
-different Obsidian MCP, and OKC must still integrate them correctly. See the intent timeline for
-where this framing came from (user turns, 2026-09-01).
+OKC turns one to ten immutable Obsidian Vault directory/ZIP/`tar.zst` snapshots
+into a new, deterministic, auditable Schema 3 Markdown directory. AI providers
+produce recorded taxonomy, synthesis, and critic proposals. Local validation
+and explicit curator approvals create the only compile authority,
+`ApprovedIntegrationPlan`. Final compile, verify, and explain operations are
+provider-free.
 
-## Authoritative sources (read these first)
+The current output contains `knowledge/`, `legacy/`, and `.okc/` audit files.
+It does not currently carry through attachments, Canvas, or Base files, does
+not complete every link rewrite, and does not expose an OKCPack writer.
 
-| Topic | Normative document | Kind |
-|---|---|---|
-| Product identity, durable principles, non-goals | [`PROJECT_CONTEXT.md`](../../../PROJECT_CONTEXT.md) | Charter |
-| Current state, quality gates, release blockers, golden SHA | [`docs/CURRENT_STATE.md`](../../../docs/CURRENT_STATE.md) | Snapshot |
-| Contemporaneous decision record (dated, source-linked) | [`docs/history/DECISION_LOG.md`](../../../docs/history/DECISION_LOG.md) | Log |
-| Architecture decisions (0001–0031) | [`docs/adr/`](../../../docs/adr/) | ADRs |
-| Formal specifications | [`docs/specs/`](../../../docs/specs/) | Specs |
-| REQ → implementation → evidence matrix | [`docs/TRACEABILITY.md`](../../../docs/TRACEABILITY.md) | Traceability |
-| Doc map / entry point | [`docs/INDEX.md`](../../../docs/INDEX.md) | Index |
-| Open questions / known gaps | [`docs/history/OPEN_QUESTIONS.md`](../../../docs/history/OPEN_QUESTIONS.md) | Backlog |
-| Agent operating rules (docs-first mandate) | [`AGENTS.md`](../../../AGENTS.md) | Rules |
-| Algorithms (merge math, dedup, etc.) | [`docs/algorithms/`](../../../docs/algorithms/) | Specs |
-| Glossary / roles | [`docs/GLOSSARY.md`](../../../docs/GLOSSARY.md) · [`docs/roles/`](../../../docs/roles/) | Reference |
+## Artifact set
 
-## RE artifact set (this directory)
-
-| File | Purpose |
+| Artifact | Purpose |
 |---|---|
-| `overview.md` (this file) | System/business overview + pointer map to normative sources |
-| [`architecture.md`](architecture.md) | Layering & data flow summary → links `docs/specs/framework-architecture.md` |
-| [`component-inventory.md`](component-inventory.md) | Crate/binding inventory table → links source + specs |
-| [`technology-stack.md`](technology-stack.md) | Languages, toolchain, key dependencies (from `Cargo.toml`) |
-| [`decision-intent-timeline.md`](decision-intent-timeline.md) | **New**: user-intent reconstruction from Codex sessions, cited, mapped to ADRs/REQs |
+| [business-overview.md](business-overview.md) | Business actors, transactions, and vocabulary |
+| [architecture.md](architecture.md) | Package boundaries, state ownership, and key flows |
+| [code-structure.md](code-structure.md) | Existing source and test file inventory |
+| [api-documentation.md](api-documentation.md) | Current Rust, CLI, Python, and Node contracts |
+| [component-inventory.md](component-inventory.md) | Package and adjacent-asset inventory |
+| [interaction-diagrams.md](interaction-diagrams.md) | End-to-end transaction sequences |
+| [technology-stack.md](technology-stack.md) | Languages, tools, pinned libraries, and targets |
+| [dependencies.md](dependencies.md) | Internal dependency direction and external roles |
+| [code-quality-assessment.md](code-quality-assessment.md) | Evidence, risks, and technical debt |
+| [decision-intent-timeline.md](decision-intent-timeline.md) | Session-grounded user intent mapped to decisions |
+| [reverse-engineering-timestamp.md](reverse-engineering-timestamp.md) | Analysis metadata and completeness checklist |
 
-## Scope & caveats
+## Authoritative sources
 
-- **Not stale-checked line-by-line.** Facts here were summarized from the normative docs and
-  `Cargo.toml` at commit `7f87f7c` (2026-09-06). Where an artifact and a normative doc disagree,
-  the normative doc wins — record the conflict, do not silently resolve it.
-- **No code was analyzed for correctness here.** This is an inventory/synthesis pass, not an audit.
-- The intent timeline reflects what the **user asked for** in sessions; whether each item is
-  *implemented* is tracked in `docs/TRACEABILITY.md` / `docs/CURRENT_STATE.md`, not here.
+| Concern | Source |
+|---|---|
+| Product identity and boundary | [`PROJECT_CONTEXT.md`](../../../PROJECT_CONTEXT.md) |
+| Implemented, partial, and missing state | [`docs/CURRENT_STATE.md`](../../../docs/CURRENT_STATE.md) |
+| Requirement-to-code/test mapping | [`docs/TRACEABILITY.md`](../../../docs/TRACEABILITY.md) |
+| Current behavior | [`docs/specs/`](../../../docs/specs/) |
+| Algorithm status and formulas | [`docs/algorithms/README.md`](../../../docs/algorithms/README.md) |
+| Accepted and proposed decisions | [`docs/adr/README.md`](../../../docs/adr/README.md) |
+| Unresolved decisions | [`docs/history/OPEN_QUESTIONS.md`](../../../docs/history/OPEN_QUESTIONS.md) |
+
+## Reverse-engineering limits
+
+- The analysis describes current source and public contracts; it does not prove
+  correctness beyond the recorded checks.
+- Historical ADR text can describe superseded V1/V2 behavior. ADR-0027 and the
+  current specifications determine the active boundary.
+- ADR-0028 through ADR-0031 are proposed. They are design input only.
+- The Git remote/archive-tag mismatch is reported as an open documentation and
+  release-metadata defect, not silently resolved here.

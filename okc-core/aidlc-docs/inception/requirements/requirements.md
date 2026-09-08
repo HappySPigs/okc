@@ -1,106 +1,149 @@
-# Requirements (Inception, session-grounded)
+# Requirements — Current-Project Reconciliation
 
-> **Reconciliation, not reinvention.** okc-core already has a normative requirements matrix in
-> [`docs/TRACEABILITY.md`](../../../docs/TRACEABILITY.md) with stable REQ-* IDs. This document does
-> **not** mint competing IDs. It restates requirements **grounded in the user's own words from
-> Codex sessions**, maps each to the existing REQ ID(s) and ADR(s), and flags mismatches for the
-> user. Implementation status lives in `TRACEABILITY.md` / `docs/CURRENT_STATE.md`, not here.
-> Session citation keys (S1–S15) are defined in
-> [`../reverse-engineering/decision-intent-timeline.md`](../reverse-engineering/decision-intent-timeline.md).
+> This document does not create a competing normative requirement set. The
+> stable REQ identifiers and exact MUST/MUST NOT language live in
+> [`docs/specs/product-and-scope.md`](../../../docs/specs/product-and-scope.md)
+> and [`docs/TRACEABILITY.md`](../../../docs/TRACEABILITY.md). This AI-DLC
+> artifact connects session-grounded intent to that current contract and to the
+> as-built Construction documentation.
 
-## Intent Analysis
+## Intent analysis
 
-- **User request (this run, 2026-09-07)**: *"지금 만들어진 프로젝트에서 codex 세션 이력들을 참고해서
-  ai-dlc 문서들 작성해줄 수 있어?"* — produce AI-DLC Inception documents for okc-core, using the
-  Codex session history to reconstruct the "why".
-- **Request type**: Reverse engineering + documentation (Enhancement of process artifacts). Not a
-  code change.
-- **Scope estimate**: System-wide (documents the whole product), but confined to `aidlc-docs/`.
-- **Complexity estimate**: Moderate — low technical risk, but requires faithful attribution of
-  intent to existing decisions without duplicating or contradicting authoritative docs.
-- **Depth chosen**: Standard (functional + non-functional), executed in **batch mode** (no
-  per-stage gates) per the user's explicit choice.
-- **Underlying product being specified**: OKC — a Rust, documentation-first, AI-required compiler
-  that merges immutable Obsidian Vault snapshots from arbitrary community MCPs into one
-  deterministic, auditable Vault.
+- **Initial request, 2026-09-07**: reconstruct AI-DLC documentation using this
+  project's Codex session history.
+- **Continuation request, 2026-09-08**: complete the documentation through the
+  Construction phase based on the currently configured project.
+- **Request type**: system-wide brownfield documentation/reconciliation.
+- **Behavior change**: none authorized or required.
+- **Depth**: comprehensive because the documented system spans hostile-input
+  handling, AI disclosure, immutable approval, native publication, three public
+  language surfaces, and release gates.
+- **Execution mode**: one-pass batch draft followed by review, continuing the
+  user's previously recorded process choice.
 
-## Functional Requirements (grounded in session intent)
+## Current product statement
 
-Each FR cites the originating session(s), the existing REQ ID(s) it corresponds to, and the ADR(s)
-that decided it. **All REQ/ADR mappings below were cross-checked against
-[`docs/TRACEABILITY.md`](../../../docs/TRACEABILITY.md) and `docs/adr/` by an adversarial
-verification pass (2026-09-07); corrections were applied** (see the audit log entry
-"Verification Pass Applied"). Notably, an initial `REQ-AI-*` rotation was fixed:
-REQ-AI-001 = provider neutrality, REQ-AI-002 = hostile-proposals/independent critic,
-REQ-AI-003 = recording/replay, REQ-AI-004 = mandatory integration.
+OKC compiles immutable Obsidian Vault snapshots into a new deterministic,
+auditable Schema 3 Markdown directory. AI is mandatory for creating a new
+integration, but provider output is proposal-only. Local validation, an
+independent critic, and explicit curator approval produce the sealed
+`ApprovedIntegrationPlan`; compile, verify, and explain are offline and
+provider-free.
 
-| # | Requirement (from user intent) | Sessions | Existing REQ | ADR |
-|---|---|---|---|---|
-| FR-1 | Ingest **multiple** Obsidian Vault snapshots as inputs and merge them into one output Vault. | S1, S3 | REQ-SRC-001/002, REQ-SNP-001/002 | 0003, 0016 |
-| FR-2 | Merge must be **MCP-origin-neutral**: sources produced by different community Obsidian MCPs must still integrate correctly. | S3 | REQ-SRC-001 (origin neutrality) | 0016 |
-| FR-3 | Treat sources as **immutable**; never mutate inputs; emit a **new** compiled Vault that excludes raw sources. | S3, S4 | REQ-SNP-*, REQ-PRV-001 | 0003, 0006 |
-| FR-4 | Detect duplicates/near-duplicates and **conflicts**; record every disposition with **typed provenance** and an audit envelope. | S3 | REQ-DED-001/002, REQ-PRV-001, REQ-CNF-001 | 0009, 0010, 0017 |
-| FR-5 | **AI is required** for semantic classification/merge (not optional); the LLM operates on the defined logic. | S5, S6 | REQ-AI-004 (mandatory integration) | 0022 |
-| FR-6 | **Provider-neutral** AI interface — any LLM can be attached through a common interface; provider profiles + disclosure + record/replay. | S1, S5 | REQ-AI-001 (provider neutrality), REQ-AI-003 (recording/replay) | 0004, 0023 |
-| FR-7 | A **critic gate + human approval** must pass before a new Vault is produced (evidence-complete integration). | S6 | REQ-AI-002 (hostile proposals/critic), REQ-INT-004 (critic), REQ-INT-005 (immutable approvals) | 0024 |
-| FR-8 | Single application named **`okc`** providing both **CLI and TUI** from one binary. | S3 | REQ-APP-001 | 0019 |
-| FR-9 | **TUI resolves conflicts in-app** and runs the full flow: AI connect → Vault select → sensitive-info check/consent → taxonomy review → cluster review → compile → verify. | S3, S6, S7 | REQ-APP-001/002 | 0025 |
-| FR-10 | **cwd-as-workspace**: running `okc` in a folder (Claude Code-style) uses that folder as the integration workspace; CLI and TUI share the same `okc-app` service code. | S6, S7 | REQ-APP-002 | 0025 |
-| FR-11 | **Secret/token entry** like Claude Code (prompted token input) with a defined keychain/secret boundary; support env var too. | S6 | REQ-SEC-003 (credentials) | 0025 |
-| FR-12 | **Claude Code-style install/update** — one-line install, usable immediately as `okc` without manual PATH setup. | S3, S11 | REQ-REL-001 | 0020, 0021 |
-| FR-13 | Expose OKC as a **library** importable from other languages; ship **Python** (dist `okc-compiler`, import `okc`, CPython 3.11 abi3) and **Node.js** (npm `okc-compiler`) bindings with feature parity as a release condition. | S9, S10 | REQ-SDK-001/002 | 0026 |
-| FR-14 | Keep **only the current schema (Schema 3)** in `main`; preserve V1/V2 via git history + remote **archive tags** (no versioned cruft in source). | S12, S13 | REQ-CMP-003 (current-only schema) | 0027 |
-| FR-15 | Deterministic, verifiable **compiled output + pack** (stable golden SHA); `verify` step. | S4, S6 | REQ-CMP-*, REQ-MAT-001 | 0013, 0014, 0027 |
-| FR-16 | Ship a **spring-quickstart-style guide** and keep README/docs/guide (incl. SDK) current. | S5, S10 | — (no docs REQ; DECISION_LOG maps operator guide to REQ-SDK-001/REQ-APP-001) | — |
-| FR-17 | Provide **realistic demo vaults** (`VAULT_A/B/C`, interlinked) to exercise the flow. | S8 | — (dev tooling; no REQ — verified) | — |
+## Functional requirements mapped from intent
 
-## Non-Functional Requirements
+Session citation keys S1–S15 are defined in
+[`decision-intent-timeline.md`](../reverse-engineering/decision-intent-timeline.md).
+Status is copied conceptually from current specifications and traceability; the
+authoritative status remains there.
 
-| # | NFR (from intent + repo posture) | Sessions / source | Existing REQ | ADR |
-|---|---|---|---|---|
-| NFR-1 | **Determinism**: identical inputs → identical output (golden SHA in `CURRENT_STATE.md`). | S4, S6; specs | REQ-CMP-* | 0004 |
-| NFR-2 | **Auditability/traceability**: every output block traceable to origin + decision. | S3 | REQ-PRV-001 | 0010 |
-| NFR-3 | **Security/trust boundaries**: sources treated as hostile/immutable; narrow network surface (AI + updater only); secrets zeroized. | repo posture; S3, S6 | REQ-SEC-001/002/003 | 0025 |
-| NFR-4 | **Portability**: cross-platform incl. Windows (SDK smoke tests must pass on win_amd64). | S15 | REQ-SDK-* | 0007 |
-| NFR-5 | **Performance / bounded semantic execution** (batching, cancellation/recovery) — captured as proposed design. | S14 | REQ-PERF-001 (scale) | 0028, 0031 (proposed) |
-| NFR-6 | **Maintainability**: documentation-first; `unsafe_code = forbid`; clippy pedantic; decisions recorded as ADRs. | S1, S14; `Cargo.toml` | — | 0001, 0002 |
-| NFR-7 | **Open source**, cross-platform, `MIT OR Apache-2.0`. | S1 | — | 0007 |
+| ID | Session-grounded requirement | Normative mapping | Current classification |
+|---|---|---|---|
+| FR-1 | Ingest multiple Obsidian Vault snapshots and integrate them into one new output | REQ-SNP-001/002, REQ-SRC-001/002 | Implemented for 1–10 directory/ZIP/tar.zst sources |
+| FR-2 | Source meaning and identity must be MCP-origin-neutral | REQ-SRC-001; ADR-0016 | Implemented; no MCP identity enters corpus/output |
+| FR-3 | Never mutate source Vaults or embed raw source copies in output | REQ-SNP-001, REQ-PRV-001; ADR-0003/0006 | Implemented current slice; broader platform race proof open |
+| FR-4 | Detect exact/near duplicates and preserve conflicts with provenance | REQ-DED-001/002, REQ-CNF-001, REQ-PRV-001 | Exact/current closure implemented; scalable semantic path partial |
+| FR-5 | AI is required to create a Schema 3 semantic integration | REQ-AI-004; ADR-0022 | Implemented vertical slice; scale/hierarchy work remains |
+| FR-6 | Any supported LLM fits a provider-neutral capability interface with record/replay | REQ-AI-001/003; ADR-0004/0023 | Five provider shapes implemented; real-provider matrix open |
+| FR-7 | Independent critic and explicit human approval gate every compiled result | REQ-AI-002, REQ-INT-004/005; ADR-0024 | Implemented for current records |
+| FR-8 | One executable named `okc` exposes CLI and TUI | REQ-APP-001; ADR-0019 | Implemented |
+| FR-9 | TUI covers provider connection, Vault selection, preflight, taxonomy/cluster review, compile, and verify | REQ-APP-001/002; ADR-0025 | Implemented local synthetic workflow; all-host/real-provider gaps remain |
+| FR-10 | `cd <workspace> && okc` uses bounded cwd discovery and shared application services | REQ-APP-002; ADR-0025 | Implemented |
+| FR-11 | Secrets use named environment variables or opaque native keychain accounts | REQ-SEC-003; ADR-0025 | Implemented; native CI matrix open |
+| FR-12 | Installation/update ergonomics should resemble a single command-line tool | REQ-REL-001; ADR-0020/0021 | Config/client present; stable signed publication absent |
+| FR-13 | Python and Node libraries expose the same workflow through one Rust facade | REQ-SDK-002; ADR-0026 | Locally implemented; remote native/package matrix open |
+| FR-14 | Main contains only the current Schema 3 implementation | REQ-CMP-003; ADR-0027 | Implemented in source; repository/tag metadata drift needs reconciliation |
+| FR-15 | Output is deterministic and independently verifiable; the Pack intent remains future | REQ-CMP-001/002/003, REQ-MAT-001 | Directory implemented; current OKCPack correctly absent |
+| FR-16 | README and quickstart-style guide describe current CLI/TUI/SDK behavior | QG-007; REQ-SDK-001/002 and REQ-APP-001 context | Implemented, with documentation gates maintained |
+| FR-17 | Realistic interlinked demo Vaults exercise the flow | Development tooling | Implemented as `demo/VAULT_A/B/C`; not a normative product REQ |
 
-## Confirmations Needed (in lieu of the blocking verification-questions gate)
+## Non-functional requirements
 
-Batch mode was chosen, so the mandatory `requirement-verification-questions.md` gate is not run.
-The REQ/ADR attribution questions have since been **resolved by the adversarial verification pass**
-(corrections applied above). The items below are the **product/scope** decisions that remain
-genuinely open for you — they are choices, not attribution errors:
+| ID | Requirement | Normative mapping | Acceptance boundary |
+|---|---|---|---|
+| NFR-1 Determinism | Same approved inputs produce the same IDs, paths, provenance, and bytes | REQ-SNP-002, REQ-CMP-001/002; QG-002 | Cross-language inventory SHA-256 remains `452ca0671e806a93b4f36f218cf9e62da899f6404c74705c2cf0ca14e413c7e5` |
+| NFR-2 Provenance | Every output note/redirect closes to exact source, proposal, critic, approval, and plan | REQ-PRV-001; QG-003 | Missing/foreign/stale evidence fails verification |
+| NFR-3 Security | Treat sources, provider output, project state, paths, and artifacts as hostile | REQ-SEC-001/002/003; QG-004 | Bounds, no-follow/no-clobber, disclosure, redaction, strict decoding; full fuzz/platform proof open |
+| NFR-4 Portability | Current behavior and packages target Linux/Windows/macOS declared hosts | REQ-SDK-002, REQ-REL-001 | Local/emulated evidence is not the complete native matrix |
+| NFR-5 Performance | Qualify 10 Vaults, 100,000 notes, 20 GB, including semantic candidates | REQ-PERF-001; QG-006 | No accepted current numeric time/RSS budget; gate not passed |
+| NFR-6 Reliability | Resume complete tasks, invalidate stale authority, bound work, publish atomically | REQ-INT-005, REQ-APP-002, REQ-CMP-001 | Caught failure coverage exists; crash/recovery/ancestor races remain |
+| NFR-7 Maintainability | Keep one policy owner, docs-first traceability, safe Rust, strict types | ADR-0001/0002; QG-007 | Specs/algorithms/ADR/current state/traceability stay synchronized |
+| NFR-8 Supply chain | Locked, auditable, reproducible, signed multi-platform distributions | REQ-REL-001; QG-008 | Partial local packaging only; stable publication prohibited |
+| NFR-9 Usability | CLI/TUI and SDKs expose predictable progress, errors, review, and recovery | REQ-APP-001/002, REQ-SDK-001/002 | Stable CLI exits and structured SDK errors; accessibility is terminal-focused |
 
-1. **Verified corrections — please confirm acceptable** — the pass corrected these mappings against
-   `TRACEABILITY.md`: FR-5 (→ REQ-AI-004), FR-6 (→ REQ-AI-001/003), FR-7 (→ REQ-AI-002/REQ-INT-004/005),
-   FR-2 (→ REQ-SRC-001; dropped REQ-MCP-001), FR-11 (→ REQ-SEC-003 only), FR-14 (→ REQ-CMP-003 only),
-   FR-16 (→ no docs REQ), NFR-5 (dropped REQ-MEM-001, which is *experimental algorithms*, not RSS).
-   Confirm these match your understanding.
-2. **MCP adapter status** — the pass clarified that merge *neutrality* is **REQ-SRC-001**, while
-   **REQ-MCP-001 is a separate, future-only MCP *adapter*** (`specs/mcp-adapter.md`, no shipped
-   crate). FR-2 now cites REQ-SRC-001. Open product question: is a real MCP adapter still on the
-   roadmap, or is origin-neutral ingest sufficient?
-3. **Scope of this AI-DLC run** — Confirm the batch scope is complete as delivered (state + audit +
-   reverse-engineering + requirements). Should I also draft User Stories and Workflow Planning, or
-   stop Inception here?
-4. **Neuroscience "merge math" (S1)** — the genesis session referenced brain-merging / neuroscience
-   math as inspiration. The pass confirmed this maps to **REQ-MEM-001 = experimental algorithms**,
-   explicitly *excluded from the default path* (deferred to future experimental work per
-   DECISION_LOG 2026-08-15). Confirm it stays framing/experimental, not a live FR.
-5. **Demo vaults (FR-17)** — attribution verified as "no REQ" (dev tooling). Open product question:
-   keep as informal tooling, or promote to a formal requirement?
+## Mechanical completeness invariants
 
-## Key Requirements Summary
+1. Every current Markdown document occurs in exactly one approved taxonomy cluster.
+2. Every source block and frontmatter value has exactly one disposition.
+3. Every non-empty synthesis section has current cluster-owned evidence.
+4. Contradiction sets preserve at least two independently evidenced claims.
+5. Critical/major critic findings block; minor findings need exact waivers.
+6. Omissions need exact curator-bound rationale and approval.
+7. Every authority record is immutable and hash-bound; dependent change makes it stale.
+8. `ApprovedIntegrationPlan` is the only materialization authority.
+9. The destination is absent and the final namespace operation cannot replace a winner.
+10. Verification derives allowed files and bytes from the plan, not from an untrusted manifest.
 
-- OKC's *reason to exist* (FR-1/FR-2): merge immutable, multi-origin Obsidian Vaults into one
-  deterministic, auditable Vault — MCP-origin-neutral.
-- The defining evolution (FR-5/FR-7): **AI moved from optional to required**, gated by a critic +
-  human approval, while the core stays deterministic and the AI stays provider-neutral (FR-6).
-- The UX north star (FR-8/FR-10/FR-12): **Claude Code-like** — one binary `okc`, one-line install,
-  cwd-as-workspace, prompted token entry.
-- The maturity arc (FR-13/FR-14): **library-ized** to Python/Node, then **single-sourced** to
-  Schema 3 with history/tags preserving older formats.
-- Everything above was **documentation-first** from the first session (NFR-6) — the premise that
-  makes this reconstruction possible at all.
+## Public surface constraints
+
+- Rust exposes current corpus and integration operations only.
+- CLI exposes project/provider/integrate/integration/review/TUI, compile,
+  directory verify/explain, doctor, and update only.
+- Python and Node use explicit absolute paths, bounded jobs, per-call remote
+  consent, structured errors, and interop schema 2.
+- Language bindings do not perform cwd discovery, prompt, print, install global
+  signal/tracing handlers, access the native keychain, or invoke updates.
+- Recognizable Schema 1/2 markers return a typed unsupported-schema error; no
+  current reader/migration is restored.
+
+## Out of current scope
+
+- A shipped MCP server or Obsidian plugin.
+- Web/registry/cloud runtime infrastructure.
+- A command-provider adapter.
+- Attachment, Canvas, or Base materialization and complete link rewriting.
+- A current OKCPack writer/reader.
+- Experimental memory/retrieval algorithms in the default compiler.
+- A stable release or package publication claim.
+
+## Algorithm status boundary
+
+| Status | IDs | Construction treatment |
+|---|---|---|
+| Normative | ALG-SNP-001, ALG-NRM-001, ALG-DED-001/002, ALG-CNF-001, ALG-PRV-001, ALG-SEM-001, ALG-INT-001 | Mapped to current modules; partial portions remain explicit |
+| Normative-future | ALG-CLM-001 | Not part of current compilation |
+| Experimental | ALG-MEM-001 through ALG-MEM-006 | Isolated from default path |
+| Research-only | ALG-MEM-007 | No product commitment |
+
+## Extension disposition
+
+The Security Baseline, Resiliency Baseline, and Property-Based Testing
+extensions are installed but were not explicitly opted in. They remain
+disabled for this batch. The repository's own normative security/reliability/
+test rules are nevertheless fully represented above.
+
+## Resolved continuation choices
+
+- Complete AI-DLC artifacts through Construction: authorized by the current request.
+- Use one product unit (`okc-schema3-product`) with seven internal packages:
+  selected because OKC is a local modular product, not independently deployed services.
+- Skip User Stories: this task changes documentation only; session FRs provide
+  the traceability input.
+- Skip Infrastructure Design: no runtime infrastructure change exists.
+- Execute Code Generation retrospectively: inventory and trace existing code,
+  without changing application behavior.
+
+## Still-open product/release decisions
+
+- Whether/when to accept ADR-0028 through ADR-0031.
+- Exact QG-006 budget and reference machine.
+- Current Pack/non-Markdown format, manual amendment, scanner exception, and
+  complete cancellation/recovery contracts.
+- Official repository/remote and rewritten archive-tag reconciliation.
+- Protected native release/signing/publication authority.
+
+## Construction trace
+
+The detailed design begins at
+[`application-design.md`](../application-design/application-design.md) and
+continues at [`construction/README.md`](../../construction/README.md).

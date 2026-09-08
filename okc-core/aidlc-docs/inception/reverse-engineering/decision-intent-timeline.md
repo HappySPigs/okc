@@ -153,7 +153,9 @@ history (the repo was later renamed to `okc-core`). Consolidated transcript: `/t
 
 ### 15 — Cross-platform SDK hardening (S15, 2026-09-06)
 - **Intent**: fix a Windows Python-SDK smoke-test failure (`okc_compiler-0.3.0-cp311-abi3-win_amd64.whl`),
-  then commit/push. (S15) → matches HEAD commit `7f87f7c` "make SDK smoke tests portable".
+  then commit/push. (S15) → the session-era checkout named commit `7f87f7c`;
+  the current rewritten history carries the same commit message at `986b19c`.
+  Archive/history identity reconciliation remains explicitly open.
 
 ## Cross-cutting themes (user's own priorities, recurring)
 

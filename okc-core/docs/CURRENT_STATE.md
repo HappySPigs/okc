@@ -3,7 +3,7 @@ title: Current State
 status: normative
 owners:
   - release-maintainer
-last_updated: 2026-09-06
+last_updated: 2026-09-08
 decision_refs:
   - ADR-0019
   - ADR-0020
@@ -149,6 +149,36 @@ A fresh macOS arm64 wheel installed outside the repository passes all 12
 Python tests; the rebuilt Node addon passes all 13 tests. Strict mypy and
 TypeScript checks pass. Windows native rerun evidence remains pending; exact
 local commands are recorded in the [decision log](history/DECISION_LOG.md).
+
+## AI-DLC construction documentation: 2026-09-08
+
+The brownfield AI-DLC record under [`../aidlc-docs/`](../aidlc-docs/) now
+documents the current product through Construction: refreshed reverse
+engineering, requirements reconciliation, as-built application/unit design,
+functional and NFR design, implementation traceability, and build/test
+instructions. It uses one `okc-schema3-product` unit with the seven current
+packages as internal modules. User Stories and runtime Infrastructure Design
+are explicitly skipped because this continuation changes documentation only
+and adds no deployed service boundary.
+
+The pass corrected prior AI-DLC drafts that implied current Pack or
+non-Markdown materialization. No application code, public API, schema,
+dependency, identity, output path, or artifact golden changed. A baseline
+documentation test exposed the Git-root relocation in one traceability link;
+the link now targets the sibling checkout workflow. The link contract now also
+scans `aidlc-docs/` so these artifacts remain in QG-007 coverage. The complete
+130-test Rust suite, workspace check, warnings-as-errors Clippy, rustfmt, and
+guide build pass locally. Node native build, 13 tests, strict TypeScript, and package dry-run
+also pass after rerunning localhost tests outside the sandbox. Python was not
+rebuilt in this pass because a usable 3.11+ Maturin/pytest/mypy environment was
+absent; prior successful evidence remains historical rather than being
+restated as a current run.
+
+The current checkout remote/archive tag objects differ from the repository
+identity and peeled commits frozen in manifests/ADR-0027. The discrepancy is
+recorded in [`OPEN_QUESTIONS.md`](history/OPEN_QUESTIONS.md) and must be
+resolved before release metadata or archive recovery is claimed current. This
+does not change the development-only product status or close a release gate.
 
 ## Current public boundary
 

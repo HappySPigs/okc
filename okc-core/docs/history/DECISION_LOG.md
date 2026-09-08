@@ -3,7 +3,7 @@ title: Decision Log
 status: historical
 owners:
   - release-maintainer
-last_updated: 2026-09-06
+last_updated: 2026-09-08
 decision_refs:
   - ADR-0001
   - ADR-0002
@@ -808,3 +808,45 @@ The Rust command passed one documentation-link test and one unchanged
 cross-language golden test; VitePress built successfully. An earlier Cargo
 invocation without the Rust toolchain directory in `PATH` could not locate
 `rustc`; the explicit `PATH` above resolved that host setup error.
+
+## 2026-09-08 — AI-DLC construction documentation and checkout-layout reconciliation
+
+- Expanded the existing session-grounded AI-DLC draft through Construction in
+  comprehensive retrospective/as-built mode. Added the missing reverse-
+  engineering set, workflow/application/unit design, functional design, NFR
+  requirements/design, source traceability, and build/test instructions and
+  summary. One unit, `okc-schema3-product`, contains the seven current packages;
+  it does not reinterpret them as independently deployed services.
+- Explicitly skipped User Stories because the request is documentation-only and
+  skipped runtime Infrastructure Design because no deployed/cloud boundary is
+  changed. Code Generation records current source rather than generating or
+  modifying application code. The installed optional AI-DLC extensions remain
+  disabled because no explicit opt-in was supplied; current normative security,
+  resilience, and test requirements still govern the product.
+- Corrected stale AI-DLC statements that advertised Pack/non-Markdown
+  materialization. The current output remains the Markdown-only Schema 3
+  directory. ADR-0028 through ADR-0031 remain proposed, and no schema, public
+  API, dependency, identity, output byte, quality-gate status, or release state
+  changed.
+- The first full Rust run found one pre-existing documentation link broken by
+  the checkout relocation: `docs/TRACEABILITY.md` still targeted the former
+  in-product `.github` directory. Updated only that link to the parent Git-root
+  workflow and extended the same link contract to scan `aidlc-docs/`. The
+  rerun passed all 130 Rust tests and every doc-test target; the current
+  artifact golden remained unchanged.
+- Recorded a separate unresolved metadata defect in `OPEN_QUESTIONS.md`: the
+  current `origin` and rewritten local archive-tag commits differ from the
+  official repository and peeled commits frozen in Cargo/ADR/release docs. No
+  new official remote or archive equivalence was inferred.
+- Local commands passed: workspace/all-target/all-feature Cargo check;
+  warnings-as-errors Clippy; rustfmt; the focused documentation/golden tests;
+  VitePress production build; Node native build, 13/13 tests, strict TypeScript,
+  and a six-file package dry-run. Node localhost tests required the already
+  approved host execution after a sandbox `EPERM`; the sandbox failure is not a
+  product failure. Python was not rerun because no usable local 3.11+
+  Maturin/pytest/mypy environment was available; prior evidence was not
+  relabeled as current.
+- Final AI-DLC validation found 52 Markdown files, 14 Mermaid blocks with text
+  alternatives, no unresolved relative links or unclosed fences, no tabs or
+  trailing whitespace, and a clean `git diff --check`. Stable 0.3.0 publication
+  remains prohibited.

@@ -95,6 +95,7 @@ fn repository_relative_markdown_links_resolve() {
         .collect::<Vec<_>>();
     collect_markdown_files(&root.join("docs"), &mut files);
     collect_markdown_files(&root.join("guide"), &mut files);
+    collect_markdown_files(&root.join("aidlc-docs"), &mut files);
     files.sort();
 
     let mut failures = Vec::new();

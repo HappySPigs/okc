@@ -3,7 +3,7 @@ title: Requirements Traceability Matrix
 status: normative
 owners:
   - qa-security-engineer
-last_updated: 2026-09-06
+last_updated: 2026-09-08
 decision_refs:
   - ADR-0019
   - ADR-0020
@@ -133,7 +133,7 @@ verified code land together.
 
 - Corpus/snapshot/parser/integration: [`crates/okc-core/src/`](../crates/okc-core/src/) and [`corpus_builder_contract.rs`](../crates/okc-core/tests/corpus_builder_contract.rs)
 - Cross-language output bytes: [`sdk_output_golden.rs`](../crates/okc-core/tests/sdk_output_golden.rs) and its current approved-plan fixture
-- Documentation links: [`documentation_contract.rs`](../crates/okc-core/tests/documentation_contract.rs)
+- Root/spec/guide/AI-DLC documentation links: [`documentation_contract.rs`](../crates/okc-core/tests/documentation_contract.rs)
 - Fixed-seed mutation/properties: [`adversarial_contract.rs`](../crates/okc-core/tests/adversarial_contract.rs)
 - Providers: [`crates/okc-ai/src/lib.rs`](../crates/okc-ai/src/lib.rs)
 - Projects, journal, services, artifact safety, worker, and TUI foundation: [`crates/okc-app/src/`](../crates/okc-app/src/)
@@ -143,7 +143,7 @@ verified code land together.
 - Interop DTOs/jobs/errors: [`crates/okc-interop/src/lib.rs`](../crates/okc-interop/src/lib.rs)
 - Python public API and typing: [`bindings/python/tests/`](../bindings/python/tests/)
 - Node.js public API and declarations: [`bindings/node/tests/`](../bindings/node/tests/)
-- SDK native package matrix: [`.github/workflows/sdk-bindings.yml`](../.github/workflows/sdk-bindings.yml)
+- SDK native package matrix: [`.github/workflows/sdk-bindings.yml`](../../.github/workflows/sdk-bindings.yml)
 
 ## Current-only archive evidence
 

@@ -67,3 +67,85 @@ Confirmed-correct (no change): FR-9/10/12/13/15/17, all NFR ADRs, ADRs 0028–00
 **Context**: Requirements Analysis + Reverse Engineering — fact-vs-assumption verification; attribution errors corrected before review.
 
 ---
+
+## Workflow Continuation — Construction Request
+**Timestamp**: 2026-09-08T07:25:15Z
+**User Input**: "현재 aidlc-docs에 inception밖에 없는데 construction까지 완벽하게 문서 만들어줘. 현재 구성된 프로젝트를 기준으로 해서."
+**AI Response**: Resumed the existing batch-draft workflow, expanded scope through Construction, and selected a comprehensive retrospective/as-built mode. The current request authorizes documentation generation only: no application behavior, schema, dependency, API, artifact bytes, release state, remote state, or package publication is changed. The single unit `okc-schema3-product` represents the seven-package local product; User Stories and runtime Infrastructure Design are explicitly skipped with rationale.
+**Context**: Session Continuity and Workflow Planning — current project baseline refresh.
+
+---
+
+## Extension Discovery
+**Timestamp**: 2026-09-08T07:25:15Z
+**User Input**: (no new input — workflow discovery)
+**AI Response**: Detected the installed Security Baseline, Resiliency Baseline, and Property-Based Testing opt-in prompts. No explicit opt-in was supplied, so the full extension rules were not loaded or enforced. Their status is recorded as disabled in `aidlc-state.md`. The repository's own normative security, resilience, mutation/property, and quality-gate requirements remain part of the as-built documentation.
+**Context**: Requirements Analysis — optional extension configuration.
+
+---
+
+## Current Baseline Findings
+**Timestamp**: 2026-09-08T07:25:15Z
+**User Input**: (no new input — reverse-engineering evidence)
+**AI Response**: Confirmed the Cargo/product workspace at `/Users/sihun/workspace/projects/okc/okc-core`, the Git checkout root at `/Users/sihun/workspace/projects/okc`, seven current 0.3.0 packages, artifact schema 3, interop schema 2, journal schema 4, and analyzed commit `e448bf28ee3dcb43d18428eb1bdb9ac70163bf34`. Corrected prior AI-DLC claims that treated Pack/non-Markdown materialization as implemented. Recorded a repository-metadata discrepancy: the checkout remote and rewritten archive-tag commits differ from current manifest/ADR documentation.
+**Context**: Reverse Engineering — current source and authority reconciliation.
+
+---
+
+## Baseline Build and Test Run
+**Timestamp**: 2026-09-08T07:25:15Z
+**User Input**: (no new input — verification evidence)
+**AI Response**: Ran `cargo test --locked --workspace --all-features --no-fail-fast` using the pinned Rust toolchain path. All application tests and the cross-language golden passed, but the overall command failed because `docs/TRACEABILITY.md` linked to the old in-product `.github` location after workflows moved to the parent Git root. The exact failing target was `repository_relative_markdown_links_resolve`; the broken target was `docs/TRACEABILITY.md:146: ../.github/workflows/sdk-bindings.yml`. Repaired only that relative link and scheduled a full rerun.
+**Context**: Build and Test — pre-change baseline and QG-007 defect.
+
+---
+
+## Inception Completion — Retrospective Design
+**Timestamp**: 2026-09-08T08:24:21Z
+**User Input**: (no new input — batch execution)
+**AI Response**: Refreshed the complete reverse-engineering artifact set, reconciled requirements with current REQ/ALG/ADR status, documented the User Stories skip assessment, generated the workflow plan, generated all mandatory Application Design artifacts, and decomposed the system into the single `okc-schema3-product` unit with seven internal packages/modules. All plan checkboxes were updated in the same interaction.
+**Context**: Inception — Workflow Planning, Application Design, and Units Generation complete in batch mode.
+
+---
+
+## Construction Completion — As-Built Documentation
+**Timestamp**: 2026-09-08T08:24:21Z
+**User Input**: (no new input — batch execution)
+**AI Response**: Generated all artifacts for the executed Functional Design, NFR Requirements, NFR Design, retrospective Code Generation, and Build and Test stages. Runtime Infrastructure Design was skipped because the local product has no new deployed/cloud boundary. Created 44 new Markdown artifacts and refreshed the eight existing AI-DLC files without changing application source, dependencies, public API, schemas, or artifact bytes.
+**Context**: Construction — complete through Build and Test, pending user review.
+
+---
+
+## Build and Test Stage
+**Timestamp**: 2026-09-08T08:24:21Z
+**Build Status**: Passed for current Rust, Node, and guide checks; Python not run due host tool environment
+**Test Status**: Rust 130/130 passed; Node 13/13 passed on approved host rerun; current Python and performance runs not executed
+**Files Generated**:
+- `build-instructions.md`
+- `unit-test-instructions.md`
+- `integration-test-instructions.md`
+- `performance-test-instructions.md`
+- `contract-test-instructions.md`
+- `security-test-instructions.md`
+- `e2e-test-instructions.md`
+- `build-and-test-summary.md`
+**AI Response**: Repaired the one pre-existing traceability link exposed by the baseline test and extended the repository documentation contract to scan `aidlc-docs/`. Cargo workspace test/check/Clippy/rustfmt, focused documentation/golden tests, VitePress, Node native build/tests/typing/package dry-run, and AI-DLC link/fence/Mermaid structure validation passed. Recorded sandbox/local-tool failures separately and did not infer release readiness.
+**Context**: Construction — Build and Test evidence finalized.
+
+---
+
+## Construction Review Prompt
+**Timestamp**: 2026-09-08T08:24:21Z
+**User Input**: (no new input — approval prompt record)
+**AI Response**: "Construction documentation is complete through Build and Test. Review `aidlc-docs/README.md` and `aidlc-docs/construction/build-and-test/build-and-test-summary.md`; request corrections if needed. Product stable-release status remains unchanged."
+**Context**: Construction — artifact generation complete; user acceptance pending.
+
+---
+
+## User Review and Git Integration Request
+**Timestamp**: 2026-09-08T08:42:13Z
+**User Input**: "변경점 확인해서 add, commit, push 진행해줘."
+**AI Response**: Interpreted the request as authorization to review the completed documentation bundle, stage the coherent repository changes, commit them on the current branch, and push to its configured upstream without changing remote configuration.
+**Context**: Construction review and repository integration — final change review, validation, commit, and push authorized.
+
+---

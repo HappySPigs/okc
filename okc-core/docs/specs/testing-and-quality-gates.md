@@ -4,7 +4,7 @@ status: normative
 owners:
   - qa-security-engineer
   - release-maintainer
-last_updated: 2026-09-06
+last_updated: 2026-09-08
 decision_refs:
   - ADR-0003
   - ADR-0004
@@ -183,7 +183,8 @@ fallback.
 
 ## Documentation and release checks
 
-The repository-relative Markdown test and `guide` production build MUST pass.
+The repository-relative Markdown test for root, `docs/`, `guide/`, and
+`aidlc-docs/` Markdown and the `guide` production build MUST pass.
 The active specifications and guides MUST contain no retired execution or
 compatibility promise. ADR bodies and append-only history remain historical
 records and may name old generations; ADR-0027 markings define current

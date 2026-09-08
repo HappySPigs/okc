@@ -3,7 +3,7 @@ title: Open Questions
 status: normative-future
 owners:
   - architect
-last_updated: 2026-09-06
+last_updated: 2026-09-08
 decision_refs:
   - ADR-0002
   - ADR-0004
@@ -27,6 +27,30 @@ source_refs:
 ---
 
 # Open Questions
+
+## Repository identity and rewritten archive evidence — 2026-09-08
+
+The current checkout has a release/documentation identity mismatch that must
+not be silently resolved:
+
+- the configured Git `origin` is `https://github.com/HappySPigs/okc.git`;
+- `Cargo.toml`, ADR-0020, package metadata, and active guide links identify
+  `https://github.com/dolgogae/okc` as the official repository;
+- the Git checkout root now contains `okc-core/` as the Cargo/product
+  workspace and `.github/workflows/` as its sibling; and
+- the local annotated archive tags peel to
+  `135563b088b73676b9ee3df523003be8a4503c33` (`archive/v0.1.0`) and
+  `bd5bb446dc2b341dd90608bdfa9cf4120f9d5f19` (`archive/v0.2.0`), while
+  ADR-0027 and active release documentation freeze different peeled commits.
+
+The rewritten commits may be content-equivalent results of moving this product
+under a new Git root, but no equivalence or new official repository decision is
+recorded. Before any release, remote tag verification, archive recovery claim,
+or package repository link is treated as current evidence, owners must decide
+the canonical repository/history, verify content equivalence if intended, and
+update the manifest, accepted decision, release documentation, guides, and CI
+links together. This metadata defect does not alter current Schema 3 runtime
+bytes or authorize rewriting historical transcripts.
 
 ## Draft decision set available — 2026-09-06
 
