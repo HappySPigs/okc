@@ -13,6 +13,28 @@ explanation are provider-free and reproducible.
 > single-process, local/trusted environment). Several gates remain open — see
 > each module's README for its own boundary and caveats.
 
+### CI
+
+Per-module build + test runs on every push (definitions in
+[`.github/workflows/`](.github/workflows/); live status on the
+[Actions tab](https://github.com/HappySPigs/okc/actions)):
+
+[![core-ci](https://github.com/HappySPigs/okc/actions/workflows/core-ci.yml/badge.svg)](https://github.com/HappySPigs/okc/actions/workflows/core-ci.yml)
+[![core-sdk-bindings](https://github.com/HappySPigs/okc/actions/workflows/core-sdk-bindings.yml/badge.svg)](https://github.com/HappySPigs/okc/actions/workflows/core-sdk-bindings.yml)
+[![hooks-ci](https://github.com/HappySPigs/okc/actions/workflows/hooks-ci.yml/badge.svg)](https://github.com/HappySPigs/okc/actions/workflows/hooks-ci.yml)
+[![mcp-ci](https://github.com/HappySPigs/okc/actions/workflows/mcp-ci.yml/badge.svg)](https://github.com/HappySPigs/okc/actions/workflows/mcp-ci.yml)
+[![web-backend-ci](https://github.com/HappySPigs/okc/actions/workflows/web-backend-ci.yml/badge.svg)](https://github.com/HappySPigs/okc/actions/workflows/web-backend-ci.yml)
+[![web-frontend-ci](https://github.com/HappySPigs/okc/actions/workflows/web-frontend-ci.yml/badge.svg)](https://github.com/HappySPigs/okc/actions/workflows/web-frontend-ci.yml)
+
+`core-ci` runs `cargo fmt`/`clippy -D warnings`/workspace tests across
+Linux·Windows·macOS (x64+arm64); `core-sdk-bindings` builds and tests the
+Python (maturin) and Node (napi) bindings; `hooks-ci` runs clippy + the
+proptest suite; `mcp-ci` runs the TypeScript type-check + test suite;
+`web-backend-ci` builds the real `okc` binding and runs ruff/mypy/pytest plus
+the four-module `scripts/test_integration.py`; `web-frontend-ci` runs the
+Vite build + vitest. (`showcase-pages` deploys the showcase site and runs no
+tests.)
+
 ## Modules
 
 This repository is an umbrella monorepo of four independently managed modules.
