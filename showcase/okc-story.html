@@ -1,0 +1,1466 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OKC — 검증 가능한 조직 기억</title>
+    <meta
+      name="description"
+      content="여러 팀의 Obsidian Vault를 AI 제안 → 코드 검증 → 사람 승인을 거쳐 하나의 결정론적이고 출처를 추적할 수 있으며 다시 검증 가능한 지식 베이스로 컴파일하는 시스템, OKC를 위에서 아래로 읽으며 이해하는 문서."
+    />
+    <meta name="theme-color" content="#0a0a0b" />
+    <meta property="og:title" content="OKC — 검증 가능한 조직 기억" />
+    <meta
+      property="og:description"
+      content="AI는 제안하고, 코드는 검증하며, 사람만 승인합니다."
+    />
+    <meta property="og:image" content="assets/okc-comic.jpg" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Silkscreen:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      /* ============================================================
+         OKC STORY — tokens
+         Signal integrity: lime = verified/pass, rose = blocking/fail,
+         amber = human (curator) judgment. Never decorative.
+         ============================================================ */
+      :root {
+        --ink: #0a0a0b;
+        --ink-1: #101013;
+        --ink-2: #16161a;
+        --lime: #c9f24b;
+        --lime-deep: #9ec22f;
+        --paper: #ece7d9;
+        --paper-bright: #f5f1e6;
+        --rose: #ff5545;
+        --amber: #f5b13d;
+        --blue: #6f8bff;
+
+        --on-ink: #f1efe6;
+        --on-ink-mut: #8b8f86;
+        --on-ink-faint: #5f635c;
+        --on-paper: #17150d;
+        --on-paper-mut: #6b6455;
+        --on-lime: #0a0a0b;
+
+        --line-ink: rgba(241, 239, 230, 0.16);
+        --line-ink-soft: rgba(241, 239, 230, 0.08);
+        --line-paper: rgba(23, 21, 13, 0.18);
+        --line-lime: rgba(201, 242, 75, 0.4);
+
+        --maxw: 1360px;
+        --gut: clamp(16px, 4.2vw, 60px);
+        --sec: clamp(72px, 9vw, 132px);
+
+        --f-disp: "Archivo", "Pretendard Variable", Pretendard, sans-serif;
+        --f-body: "Pretendard Variable", Pretendard, "Archivo", sans-serif;
+        --f-mono: "Space Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+        --f-pixel: "Silkscreen", "Space Mono", monospace;
+      }
+
+      * { box-sizing: border-box; }
+      html { -webkit-text-size-adjust: 100%; }
+      body {
+        margin: 0;
+        background: var(--ink);
+        color: var(--on-ink);
+        font-family: var(--f-body);
+        font-size: 16px;
+        line-height: 1.7;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+        overflow-x: hidden;
+      }
+      /* fine grain over the whole page */
+      body::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 200;
+        opacity: 0.05;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      }
+      a { color: inherit; }
+      img { max-width: 100%; display: block; }
+      h1, h2, h3, h4, p { margin: 0; }
+      ::selection { background: var(--lime); color: var(--on-lime); }
+
+      .skip {
+        position: absolute; left: -9999px; top: 0;
+        background: var(--lime); color: var(--on-lime);
+        padding: 10px 16px; z-index: 400; font-weight: 700;
+      }
+      .skip:focus { left: 12px; top: 12px; }
+
+      :focus-visible {
+        outline: 3px solid var(--lime);
+        outline-offset: 3px;
+      }
+
+      .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 var(--gut); }
+
+      /* ---------- reading progress ---------- */
+      .progress {
+        position: fixed; top: 0; left: 0; right: 0; height: 3px;
+        z-index: 300; background: transparent;
+      }
+      .progress > i {
+        display: block; height: 100%; width: 0%;
+        background: var(--lime);
+      }
+
+      /* ---------- masthead ---------- */
+      .mast {
+        position: sticky; top: 0; z-index: 150;
+        background: var(--ink);
+        border-bottom: 1px solid var(--line-ink);
+      }
+      .mast__in {
+        max-width: var(--maxw); margin: 0 auto; padding: 0 var(--gut);
+        height: 58px; display: flex; align-items: center; gap: 22px;
+      }
+      .brand { display: flex; align-items: center; gap: 11px; text-decoration: none; flex: 0 0 auto; }
+      .brand__seal {
+        width: 26px; height: 26px; border-radius: 50%;
+        border: 2px solid var(--lime); position: relative;
+        display: grid; place-items: center; flex: 0 0 auto;
+      }
+      .brand__seal::after {
+        content: ""; width: 9px; height: 9px; border-radius: 50%;
+        background: var(--lime);
+      }
+      .brand__name { font-family: var(--f-disp); font-weight: 900; letter-spacing: -0.01em; font-size: 1.15rem; }
+      .brand__sub {
+        font-family: var(--f-mono); font-size: 0.62rem; letter-spacing: 0.16em;
+        color: var(--on-ink-mut); text-transform: uppercase; white-space: nowrap;
+      }
+      .mast__nav { display: flex; gap: 3px; margin-left: auto; flex-wrap: wrap; }
+      .mast__nav a {
+        font-family: var(--f-mono); font-size: 0.68rem; letter-spacing: 0.06em;
+        color: var(--on-ink-mut); text-decoration: none; padding: 6px 9px; border-radius: 999px;
+        transition: color 0.15s, background 0.15s;
+      }
+      .mast__nav a:hover { color: var(--lime); background: var(--ink-2); }
+      .mast__gh {
+        margin-left: 6px; font-family: var(--f-mono); font-size: 0.66rem; font-weight: 700;
+        letter-spacing: 0.08em; color: var(--on-lime); background: var(--lime);
+        text-decoration: none; padding: 7px 12px; white-space: nowrap;
+      }
+      .mast__gh:hover { background: #d7ff5e; }
+
+      /* ---------- shared type helpers ---------- */
+      .kicker {
+        font-family: var(--f-mono); font-size: 0.68rem; font-weight: 700;
+        letter-spacing: 0.2em; text-transform: uppercase;
+      }
+      .eyebrow-num {
+        font-family: var(--f-mono); font-size: 0.7rem; font-weight: 700;
+        letter-spacing: 0.14em; color: var(--lime-deep);
+      }
+      .display {
+        font-family: var(--f-disp); font-weight: 800;
+        font-size: clamp(2.9rem, 7.4vw, 6.1rem); line-height: 0.98;
+        letter-spacing: -0.025em;
+      }
+      .h2 {
+        font-family: var(--f-disp); font-weight: 800;
+        font-size: clamp(1.95rem, 4.1vw, 3.35rem); line-height: 1.06;
+        letter-spacing: -0.02em;
+      }
+      .h3 { font-family: var(--f-disp); font-weight: 700; font-size: clamp(1.2rem, 2vw, 1.55rem); line-height: 1.2; }
+      .lead { font-size: clamp(1.05rem, 1.5vw, 1.24rem); line-height: 1.62; max-width: 62ch; }
+      .prose { max-width: 64ch; }
+      .prose p + p { margin-top: 1em; }
+      .mut { color: var(--on-ink-mut); }
+      .em-lime { color: var(--lime); }
+      .em-rose { color: var(--rose); }
+      .em-amber { color: var(--amber); }
+
+      /* ---------- section fields ---------- */
+      .field { padding: var(--sec) 0; position: relative; scroll-margin-top: 66px; }
+      #install { scroll-margin-top: 80px; }
+      .field--ink { background: var(--ink); color: var(--on-ink); }
+      .field--ink2 { background: var(--ink-1); color: var(--on-ink); }
+      .field--paper { background: var(--paper); color: var(--on-paper); }
+      .field--paper .mut { color: var(--on-paper-mut); }
+      .field--paper .kicker { color: var(--on-paper); }
+      .field--paper .eyebrow-num { color: #6f8b12; }
+
+      .sec-head { max-width: 74ch; }
+      .sec-head .kicker { display: inline-block; margin-bottom: 20px; }
+      .sec-head .h2 { margin-bottom: 22px; }
+
+      /* ---------- panels / tags ---------- */
+      .panel { border: 1px solid var(--line-ink); background: var(--ink-1); position: relative; }
+      .field--paper .panel { border-color: var(--line-paper); background: var(--paper-bright); }
+      .tag {
+        font-family: var(--f-mono); font-size: 0.6rem; font-weight: 700;
+        letter-spacing: 0.16em; text-transform: uppercase; color: var(--on-ink-mut);
+      }
+      .field--paper .tag { color: var(--on-paper-mut); }
+
+      /* ============================================================
+         HERO
+         ============================================================ */
+      .hero { background: var(--ink); border-bottom: 1px solid var(--line-ink); }
+      .hero__grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.62fr) minmax(0, 1fr);
+      }
+      .hero__thesis {
+        background: var(--lime); color: var(--on-lime);
+        padding: clamp(40px, 5.5vw, 84px) clamp(28px, 4vw, 68px);
+        position: relative; overflow: hidden;
+      }
+      .hero__kick { letter-spacing: 0.22em; margin-bottom: 30px; }
+      .hero__title { margin: 0 0 26px; }
+      .hero__title small {
+        display: block; font-family: var(--f-disp); font-weight: 700;
+        font-size: clamp(1.05rem, 1.7vw, 1.35rem); letter-spacing: 0;
+        color: rgba(10,10,11,0.62); margin-top: 20px; line-height: 1.5;
+        max-width: 34ch;
+      }
+      .hero__oneliner {
+        font-family: var(--f-mono); font-weight: 700; font-size: clamp(0.72rem, 1.2vw, 0.9rem);
+        letter-spacing: 0.02em; border-top: 1.5px solid rgba(10,10,11,0.28);
+        padding-top: 18px; margin-top: 34px; display: inline-block;
+      }
+      .hero__stamp {
+        position: absolute; right: clamp(-30px, -1vw, 20px); bottom: clamp(-30px, -2vw, 10px);
+        width: clamp(120px, 15vw, 188px); height: clamp(120px, 15vw, 188px);
+      }
+
+      .hero__side {
+        padding: clamp(32px, 3vw, 52px) clamp(24px, 2.6vw, 46px);
+        display: flex; flex-direction: column; gap: 30px;
+      }
+      /* build log */
+      .buildlog { border-top: 2px solid var(--lime); }
+      .buildlog__h {
+        font-family: var(--f-mono); font-weight: 700; font-size: 0.7rem;
+        letter-spacing: 0.2em; color: var(--lime); padding: 14px 0 12px;
+      }
+      .buildlog dl { margin: 0; display: grid; grid-template-columns: auto 1fr; }
+      .buildlog dt, .buildlog dd {
+        font-family: var(--f-mono); font-size: 0.8rem; margin: 0;
+        padding: 9px 0; border-top: 1px solid var(--line-ink-soft);
+      }
+      .buildlog dt { color: var(--on-ink-mut); letter-spacing: 0.08em; }
+      .buildlog dd { text-align: right; color: var(--on-ink); }
+      .buildlog dd b { color: var(--lime); font-weight: 700; }
+
+      .nowcard { border: 1px solid var(--line-ink); padding: 18px 20px; }
+      .nowcard .tag { color: var(--amber); display: block; margin-bottom: 9px; }
+      .nowcard p { font-size: 0.9rem; line-height: 1.6; color: var(--on-ink-mut); }
+      .hero__cta { display: flex; gap: 12px; flex-wrap: wrap; }
+      .btn {
+        font-family: var(--f-mono); font-weight: 700; font-size: 0.74rem; letter-spacing: 0.06em;
+        text-decoration: none; padding: 13px 18px; border: 1px solid var(--line-ink);
+        color: var(--on-ink); transition: background 0.15s, color 0.15s, border-color 0.15s;
+      }
+      .btn:hover { border-color: var(--lime); color: var(--lime); }
+      .btn--fill { background: var(--lime); color: var(--on-lime); border-color: var(--lime); }
+      .btn--fill:hover { background: #d7ff5e; color: var(--on-lime); }
+
+      /* ---------- ticker ---------- */
+      .ticker {
+        background: var(--lime); color: var(--on-lime);
+        border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink);
+        overflow: hidden; white-space: nowrap; padding: 12px 0;
+      }
+      .ticker__track { display: inline-flex; will-change: transform; animation: ticker 26s linear infinite; }
+      .ticker span {
+        font-family: var(--f-pixel); font-size: 0.92rem; letter-spacing: 0.02em;
+        padding: 0 6px;
+      }
+      .ticker .sep { color: rgba(10,10,11,0.45); }
+      @keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+      /* ============================================================
+         INTRO — have you ever / what is okc
+         ============================================================ */
+      .painlist { border-top: 1px solid var(--line-ink); margin-top: 10px; }
+      .pain {
+        display: grid; grid-template-columns: 44px 1fr; gap: 16px; align-items: start;
+        padding: 22px 0; border-bottom: 1px solid var(--line-ink);
+      }
+      .pain__q {
+        width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line-lime);
+        color: var(--lime); font-family: var(--f-mono); font-weight: 700; font-size: 0.85rem;
+        display: grid; place-items: center;
+      }
+      .pain p { font-size: clamp(1rem, 1.4vw, 1.14rem); line-height: 1.62; color: var(--on-ink); }
+      .pain em { font-style: italic; color: var(--on-ink-mut); }
+      .pain b { color: var(--lime); font-weight: 700; }
+      .hook {
+        margin-top: 36px; border-left: 3px solid var(--lime); padding: 6px 0 6px 24px;
+        font-size: clamp(1.05rem, 1.5vw, 1.28rem); line-height: 1.6; max-width: 66ch; color: var(--on-ink);
+      }
+      .hook b { color: var(--lime); }
+
+      .whatis-flow {
+        margin-top: 36px; border: 1px solid var(--lime); background: rgba(201, 242, 75, 0.05);
+        padding: clamp(24px, 3.4vw, 40px);
+      }
+      .chain { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 14px; }
+      .chain .node { font-family: var(--f-disp); font-weight: 800; font-size: clamp(1.05rem, 2vw, 1.5rem); letter-spacing: -0.01em; }
+      .chain .node.hl { color: var(--lime); }
+      .chain .node.end { border-bottom: 3px solid var(--lime); padding-bottom: 2px; }
+      .chain .arrow { color: var(--lime); font-family: var(--f-mono); font-size: 1.1rem; }
+      .whatis-flow p { margin-top: 16px; font-family: var(--f-mono); font-size: 0.8rem; color: var(--on-ink-mut); }
+
+      /* ============================================================
+         WHY — risks + ledger + recycle
+         ============================================================ */
+      .risks {
+        display: grid; grid-template-columns: repeat(2, 1fr);
+        border: 1px solid var(--line-paper); margin-top: 8px;
+      }
+      .risk { padding: 26px 28px; border-top: 1px solid var(--line-paper); border-left: 1px solid var(--line-paper); }
+      .risk:nth-child(-n+2) { border-top: none; }
+      .risk:nth-child(odd) { border-left: none; }
+      .risk .tag { color: var(--rose); display: block; margin-bottom: 12px; }
+      .risk h3 { margin-bottom: 8px; }
+      .risk p { color: var(--on-paper-mut); font-size: 0.96rem; }
+
+      .ledger { width: 100%; border-collapse: collapse; margin-top: 26px; font-size: 0.96rem; }
+      .ledger caption {
+        text-align: left; font-family: var(--f-mono); font-size: 0.66rem; font-weight: 700;
+        letter-spacing: 0.16em; text-transform: uppercase; color: var(--on-paper-mut);
+        padding-bottom: 12px;
+      }
+      .ledger th, .ledger td { text-align: left; padding: 13px 16px; border-top: 1px solid var(--line-paper); vertical-align: top; }
+      .ledger thead th {
+        font-family: var(--f-mono); font-size: 0.64rem; letter-spacing: 0.12em; text-transform: uppercase;
+        color: var(--on-paper-mut); font-weight: 700; border-top: none;
+      }
+      .ledger td:first-child { color: var(--on-paper-mut); width: 46%; }
+      .ledger td:last-child { font-weight: 500; }
+      .ledger td:last-child::before { content: "→ "; color: #6f8b12; font-family: var(--f-mono); }
+
+      .recycle { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; margin-top: 52px; border: 1px solid var(--line-paper); }
+      .recycle > div { padding: 26px 26px; border-left: 1px solid var(--line-paper); }
+      .recycle > div:first-child { border-left: none; }
+      .recycle .idx { font-family: var(--f-mono); font-weight: 700; color: #6f8b12; font-size: 0.8rem; }
+      .recycle h3 { margin: 12px 0 8px; font-size: 1.15rem; }
+      .recycle p { color: var(--on-paper-mut); font-size: 0.94rem; }
+
+      /* ============================================================
+         COMIC
+         ============================================================ */
+      .comic-frame {
+        border: 1px solid var(--line-ink); background: #000; margin-top: 10px;
+        padding: 10px;
+      }
+      .comic-frame img { width: 100%; height: auto; }
+      .comic-pills { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 22px; align-items: center; }
+      .pill {
+        font-family: var(--f-mono); font-weight: 700; font-size: 0.66rem; letter-spacing: 0.12em;
+        border: 1px solid var(--line-ink); border-radius: 999px; padding: 7px 15px; color: var(--on-ink-mut);
+      }
+      .pill.on { border-color: var(--lime); color: var(--lime); }
+      .comic-cap { font-family: var(--f-mono); font-size: 0.78rem; color: var(--on-ink-mut); margin-top: 18px; }
+
+      /* ============================================================
+         TRUST — roles + pipeline
+         ============================================================ */
+      .roles { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line-ink); margin-top: 6px; }
+      .role { padding: 28px 26px; border-left: 1px solid var(--line-ink); }
+      .role:first-child { border-left: none; }
+      .role .who { font-family: var(--f-disp); font-weight: 800; font-size: 1.5rem; }
+      .role .who.ai { color: var(--blue); }
+      .role .who.code { color: var(--lime); }
+      .role .who.human { color: var(--amber); }
+      .role .verb { font-family: var(--f-mono); font-size: 0.66rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--on-ink-mut); margin: 10px 0 14px; }
+      .role p { font-size: 0.95rem; color: var(--on-ink); }
+
+      .pipe {
+        display: grid; grid-template-columns: repeat(4, 1fr) ; gap: 0;
+        border: 1px solid var(--line-ink); margin-top: 44px; position: relative;
+      }
+      .pipe__node { padding: 24px 22px 26px; border-left: 1px solid var(--line-ink); position: relative; }
+      .pipe__node:first-child { border-left: none; }
+      .pipe__node .step { font-family: var(--f-mono); font-weight: 700; font-size: 0.7rem; letter-spacing: 0.12em; color: var(--lime); }
+      .pipe__node h3 { margin: 12px 0 8px; font-size: 1.15rem; }
+      .pipe__node p { font-size: 0.88rem; color: var(--on-ink-mut); line-height: 1.55; }
+      .pipe__node:not(:first-child)::before {
+        content: "▶"; position: absolute; left: -9px; top: 26px; font-size: 0.7rem;
+        color: var(--lime); background: var(--ink); padding: 2px 0;
+      }
+      .pipe__return {
+        margin-top: 14px; font-family: var(--f-mono); font-size: 0.74rem; color: var(--rose);
+        display: flex; align-items: center; gap: 10px;
+      }
+      .pipe__return b { color: var(--rose); }
+
+      /* ============================================================
+         CORE — formulas + stages + gate
+         ============================================================ */
+      .defs {
+        font-family: var(--f-mono); font-size: 0.82rem; color: var(--on-paper-mut);
+        border-left: 2px solid #6f8b12; padding: 4px 0 4px 18px; margin: 8px 0 40px;
+        line-height: 1.9;
+      }
+      .defs b { color: var(--on-paper); }
+
+      .formula {
+        border-top: 1.5px solid var(--on-paper); border-bottom: 1px solid var(--line-paper);
+        padding: 20px 0; margin: 4px 0; overflow-x: auto;
+      }
+      .field--ink .formula, .field--ink2 .formula {
+        border-top-color: var(--lime); border-bottom-color: var(--line-ink);
+      }
+      .formula pre {
+        margin: 0; font-family: var(--f-mono); font-size: clamp(0.72rem, 1.1vw, 0.86rem);
+        line-height: 1.95; white-space: pre; color: var(--on-paper);
+      }
+      .field--ink .formula pre, .field--ink2 .formula pre { color: var(--on-ink); }
+      .formula .v { color: #2c66c9; font-weight: 700; }
+      .field--ink .formula .v { color: var(--blue); }
+      .formula .c { color: var(--on-paper-mut); }
+      .field--ink .formula .c { color: var(--on-ink-mut); }
+
+      .stage { display: grid; grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr); gap: clamp(24px, 4vw, 64px); padding: 44px 0; border-top: 1px solid var(--line-paper); }
+      .stage:first-of-type { border-top: none; }
+      .stage__txt .num {
+        font-family: var(--f-mono); font-weight: 700; font-size: 0.72rem; letter-spacing: 0.14em; color: #6f8b12;
+      }
+      .stage__txt h3 { margin: 12px 0 14px; }
+      .stage__txt p { color: var(--on-paper-mut); font-size: 0.96rem; }
+      .stage__txt p + p { margin-top: 0.8em; }
+      .note-mono { font-family: var(--f-mono); font-size: 0.76rem; color: var(--on-paper-mut); margin-top: 12px; line-height: 1.7; }
+      .note-mono b { color: var(--on-paper); }
+
+      .authority {
+        background: var(--ink); color: var(--on-ink); margin-top: 56px;
+        padding: clamp(30px, 4vw, 52px); border: 1px solid var(--lime);
+      }
+      .authority .tag { color: var(--lime); }
+      .authority .eq {
+        font-family: var(--f-disp); font-weight: 800; font-size: clamp(1.3rem, 2.6vw, 2.15rem);
+        line-height: 1.28; letter-spacing: -0.01em; margin: 16px 0 18px;
+      }
+      .authority .eq .plus { color: var(--lime); }
+      .authority p { color: var(--on-ink-mut); font-size: 0.95rem; max-width: 70ch; }
+
+      /* gate board */
+      .gate { margin-top: 30px; border: 1px solid var(--line-ink); }
+      .gate__row {
+        display: grid; grid-template-columns: 54px minmax(0,1fr) minmax(0,1.1fr) 92px;
+        align-items: center; border-top: 1px solid var(--line-ink); min-height: 58px;
+      }
+      .gate__row:first-child { border-top: none; }
+      .gate__row .gi { font-family: var(--f-mono); font-size: 0.72rem; color: var(--on-ink-faint); text-align: center; }
+      .gate__row .gn { font-weight: 700; padding: 8px 6px; }
+      .gate__row .gv { font-family: var(--f-mono); font-size: 0.74rem; color: var(--on-ink-mut); padding: 8px 6px; }
+      .gate__row .gs {
+        font-family: var(--f-mono); font-weight: 700; font-size: 0.72rem; letter-spacing: 0.1em;
+        text-align: center; color: var(--on-lime); background: var(--lime); align-self: stretch;
+        display: grid; place-items: center;
+      }
+      .gate__result {
+        display: flex; align-items: center; justify-content: space-between; gap: 16px;
+        padding: 20px 22px; background: rgba(201,242,75,0.08); border-top: 1px solid var(--lime);
+        flex-wrap: wrap;
+      }
+      .gate__result .lbl { font-family: var(--f-mono); font-size: 0.74rem; letter-spacing: 0.08em; color: var(--on-ink-mut); }
+      .gate__result .out { font-family: var(--f-disp); font-weight: 800; font-size: 1.35rem; color: var(--lime); }
+      .gate__else {
+        font-family: var(--f-mono); font-size: 0.76rem; color: var(--rose); margin-top: 16px;
+        display: flex; align-items: center; gap: 10px; line-height: 1.6;
+      }
+      .gate__else b { color: var(--rose); }
+
+      .coderefs { margin-top: 40px; font-family: var(--f-mono); font-size: 0.78rem; color: var(--on-paper-mut); line-height: 2; }
+      .coderefs .tag { display: block; margin-bottom: 10px; }
+      .coderefs a { color: #2c66c9; text-underline-offset: 3px; }
+
+      /* ============================================================
+         ECOSYSTEM — modules + flow + contracts
+         ============================================================ */
+      .mods { display: grid; grid-template-columns: repeat(2, 1fr); border: 1px solid var(--line-ink); margin-top: 6px; }
+      .mod { padding: 30px 30px; border-left: 1px solid var(--line-ink); border-top: 1px solid var(--line-ink); }
+      .mod:nth-child(-n+2) { border-top: none; }
+      .mod:nth-child(odd) { border-left: none; }
+      .mod__top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+      .mod__name { font-family: var(--f-mono); font-weight: 700; font-size: 1.05rem; color: var(--lime); }
+      .mod__stack { font-family: var(--f-mono); font-size: 0.64rem; letter-spacing: 0.1em; color: var(--on-ink-faint); text-transform: uppercase; }
+      .mod h3 { margin: 14px 0 8px; font-size: 1.15rem; }
+      .mod p { font-size: 0.92rem; color: var(--on-ink-mut); }
+
+      .flow2 { margin-top: 46px; border: 1px solid var(--line-ink); padding: clamp(24px, 3vw, 40px); }
+      .flow2__lane { display: flex; align-items: stretch; gap: 0; flex-wrap: wrap; }
+      .flow2__box { flex: 1 1 150px; border: 1px solid var(--line-ink); padding: 16px 16px; min-width: 130px; }
+      .flow2__box .k { display: block; font-family: var(--f-mono); font-size: 0.64rem; letter-spacing: 0.1em; color: var(--on-ink-faint); text-transform: uppercase; }
+      .flow2__box .n { display: block; font-family: var(--f-mono); font-weight: 700; color: var(--on-ink); margin-top: 6px; }
+      .flow2__box.core { border-color: var(--lime); }
+      .flow2__box.core .n { color: var(--lime); }
+      .flow2__arrow { display: grid; place-items: center; padding: 0 4px; }
+      .flow2__arrow span { font-family: var(--f-mono); font-size: 0.62rem; color: var(--lime); text-align: center; line-height: 1.4; }
+      .flow2__arrow em { display: block; color: var(--on-ink-faint); font-style: normal; }
+
+      .contracts { width: 100%; border-collapse: collapse; margin-top: 30px; font-size: 0.92rem; }
+      .contracts th, .contracts td { text-align: left; padding: 14px 14px; border-top: 1px solid var(--line-ink); vertical-align: top; }
+      .contracts thead th { font-family: var(--f-mono); font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--on-ink-mut); font-weight: 700; border-top: none; }
+      .contracts td code { font-family: var(--f-mono); color: var(--lime); font-size: 0.85rem; }
+      .contracts td:nth-child(2) { color: var(--on-ink-mut); font-family: var(--f-mono); font-size: 0.8rem; }
+
+      /* ============================================================
+         UX — table + two side notes
+         ============================================================ */
+      .uxtable { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 0.94rem; }
+      .uxtable th, .uxtable td { text-align: left; padding: 15px 16px; border-top: 1px solid var(--line-paper); vertical-align: top; }
+      .uxtable thead th { font-family: var(--f-mono); font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--on-paper-mut); font-weight: 700; border-top: none; }
+      .uxtable td:first-child { font-weight: 700; width: 22%; }
+      .uxtable td:nth-child(2) { color: var(--on-paper); width: 39%; }
+      .uxtable td:nth-child(3) { color: var(--on-paper-mut); }
+      .uxnotes { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px; margin-top: 40px; }
+      .uxnote { border: 1px solid var(--line-paper); background: var(--paper-bright); padding: 26px 28px; }
+      .uxnote .mod__name { color: #4a6a0e; }
+      .uxnote ul { margin: 16px 0 0; padding: 0; list-style: none; }
+      .uxnote li { position: relative; padding-left: 22px; margin-bottom: 12px; font-size: 0.92rem; color: var(--on-paper-mut); line-height: 1.55; }
+      .uxnote li::before { content: "✓"; position: absolute; left: 0; top: 0; color: #6f8b12; font-family: var(--f-mono); font-weight: 700; }
+      .uxnote li b { color: var(--on-paper); }
+
+      /* ============================================================
+         DEMO — steps + contradictions + consoles + sequence
+         ============================================================ */
+      .steps { border: 1px solid var(--line-ink); margin-top: 6px; }
+      .step-row { display: grid; grid-template-columns: 60px minmax(0,1fr); border-top: 1px solid var(--line-ink); }
+      .step-row:first-child { border-top: none; }
+      .step-row .sn { font-family: var(--f-disp); font-weight: 800; font-size: 1.4rem; color: var(--lime); display: grid; place-items: center; border-right: 1px solid var(--line-ink); }
+      .step-row .sc { padding: 18px 22px; }
+      .step-row .sc h3 { font-size: 1.08rem; margin-bottom: 5px; }
+      .step-row .sc p { font-size: 0.9rem; color: var(--on-ink-mut); }
+      .step-row.stale .sn { color: var(--rose); }
+      .step-row .flag { font-family: var(--f-mono); font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em; padding: 3px 9px; border-radius: 3px; margin-left: 8px; vertical-align: middle; }
+      .flag.rose { color: var(--rose); border: 1px solid var(--rose); }
+      .flag.amber { color: var(--amber); border: 1px solid var(--amber); }
+      .flag.lime { color: var(--lime); border: 1px solid var(--lime); }
+
+      .contra { width: 100%; border-collapse: collapse; margin-top: 46px; font-size: 0.92rem; }
+      .contra caption { text-align: left; font-family: var(--f-mono); font-size: 0.66rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--amber); padding-bottom: 12px; }
+      .contra th, .contra td { text-align: left; padding: 12px 14px; border-top: 1px solid var(--line-ink); }
+      .contra thead th { font-family: var(--f-mono); font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--on-ink-mut); font-weight: 700; border-top: none; }
+      .contra td:first-child { font-weight: 700; }
+      .contra td:nth-child(2), .contra td:nth-child(3) { font-family: var(--f-mono); font-size: 0.84rem; color: var(--on-ink-mut); }
+
+      .consoles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; margin-top: 46px; }
+      .console { border: 1px solid var(--line-ink); background: #060607; }
+      .console__bar { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line-ink); }
+      .console__bar .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--on-ink-faint); }
+      .console__bar .t { font-family: var(--f-mono); font-size: 0.66rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--on-ink-mut); margin-left: auto; }
+      .console__body { padding: 18px 16px; font-family: var(--f-mono); font-size: 0.82rem; line-height: 1.85; }
+      .console__body .ok { color: var(--lime); }
+      .console__body .amb { color: var(--amber); }
+      .console__body .dim { color: var(--on-ink-mut); }
+
+      .seq { margin-top: 52px; border-left: 2px solid var(--line-ink); padding-left: 0; }
+      .seq__ph { display: grid; grid-template-columns: 130px minmax(0,1fr); border-top: 1px solid var(--line-ink); }
+      .seq__ph:first-child { border-top: none; }
+      .seq__ph .ph { padding: 18px 18px; }
+      .seq__ph .ph .pk { font-family: var(--f-mono); font-weight: 700; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--lime); }
+      .seq__ph .ph .pn { font-size: 0.9rem; margin-top: 4px; }
+      .seq__ph .body { padding: 18px 18px; border-left: 1px solid var(--line-ink); font-family: var(--f-mono); font-size: 0.78rem; color: var(--on-ink-mut); line-height: 1.75; }
+      .seq__ph .body b { color: var(--on-ink); }
+
+      /* ============================================================
+         PROOF — test list
+         ============================================================ */
+      .proof { border: 1px solid var(--line-ink); margin-top: 6px; }
+      .proof__row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 15px 22px; border-top: 1px solid var(--line-ink); }
+      .proof__row:first-child { border-top: none; }
+      .proof__row .area { font-family: var(--f-mono); font-size: 0.92rem; }
+      .proof__row .cnt { font-family: var(--f-mono); font-weight: 700; font-size: 0.9rem; color: var(--lime); white-space: nowrap; }
+      .proof__row .cnt::before { content: "✓ "; }
+      .proof__row.bridge { background: rgba(201,242,75,0.06); }
+      .proof-note { margin-top: 22px; font-size: 0.9rem; color: var(--on-ink-mut); max-width: 72ch; }
+      .proof-note b { color: var(--on-ink); }
+
+      /* ============================================================
+         SCOPE — honest limits
+         ============================================================ */
+      .limits { list-style: none; margin: 6px 0 0; padding: 0; border-top: 1px solid var(--line-paper); }
+      .limits li { padding: 16px 0 16px 30px; border-bottom: 1px solid var(--line-paper); position: relative; color: var(--on-paper); font-size: 0.98rem; }
+      .limits li::before { content: "▸"; position: absolute; left: 4px; top: 16px; color: var(--amber); }
+      .limits li b { font-weight: 700; }
+      .why-disclose { margin-top: 34px; font-family: var(--f-disp); font-weight: 700; font-size: clamp(1.1rem, 2vw, 1.5rem); line-height: 1.4; max-width: 30ch; }
+
+      /* ============================================================
+         FOOTER
+         ============================================================ */
+      .foot { background: var(--ink); color: var(--on-ink); border-top: 1px solid var(--line-ink); }
+      .foot__hero { padding: var(--sec) 0 clamp(40px,5vw,72px); }
+      .foot__hero .big { font-family: var(--f-disp); font-weight: 800; font-size: clamp(2rem, 5vw, 4rem); line-height: 1.04; letter-spacing: -0.02em; max-width: 18ch; }
+      .foot__hero .big .em-lime { color: var(--lime); }
+      .foot__hero p { color: var(--on-ink-mut); max-width: 62ch; margin-top: 22px; font-size: 1rem; }
+      .install { margin-top: 40px; border: 1px solid var(--line-ink); }
+      .install .tag { display: block; padding: 12px 18px; border-bottom: 1px solid var(--line-ink); color: var(--lime); }
+      .install pre { margin: 0; padding: 18px; font-family: var(--f-mono); font-size: 0.84rem; color: var(--on-ink); overflow-x: auto; line-height: 1.8; }
+      .install pre .c { color: var(--on-ink-faint); }
+      .foot__links { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; }
+      .foot__bar { border-top: 1px solid var(--line-ink); padding: 24px 0 40px; display: flex; flex-wrap: wrap; gap: 16px 26px; align-items: center; justify-content: space-between; }
+      .foot__bar .mods-line { font-family: var(--f-mono); font-size: 0.72rem; color: var(--on-ink-mut); letter-spacing: 0.04em; }
+      .foot__bar .status { font-family: var(--f-mono); font-size: 0.66rem; font-weight: 700; letter-spacing: 0.12em; color: var(--on-lime); background: var(--amber); padding: 6px 12px; }
+
+      /* ============================================================
+         RESPONSIVE
+         ============================================================ */
+      @media (max-width: 960px) {
+        .mast__nav { display: none; }
+        .hero__grid { grid-template-columns: 1fr; }
+        .roles, .mods, .recycle, .risks { grid-template-columns: 1fr; }
+        .mod { border-left: none; border-top: 1px solid var(--line-ink); }
+        .mod:nth-child(-n+2) { border-top: none; }
+        .mod:first-child { border-top: none; }
+        .role { border-left: none; border-top: 1px solid var(--line-ink); }
+        .role:first-child { border-top: none; }
+        .risk { border-left: none; }
+        .risk:nth-child(2) { border-top: 1px solid var(--line-paper); }
+        .recycle > div { border-left: none; border-top: 1px solid var(--line-paper); }
+        .recycle > div:first-child { border-top: none; }
+        .pipe { grid-template-columns: 1fr; }
+        .pipe__node { border-left: none; border-top: 1px solid var(--line-ink); }
+        .pipe__node:first-child { border-top: none; }
+        .pipe__node:not(:first-child)::before { content: "▼"; left: 24px; top: -9px; }
+        .stage { grid-template-columns: 1fr; gap: 20px; }
+        .consoles, .uxnotes { grid-template-columns: 1fr; }
+      }
+      @media (max-width: 620px) {
+        .brand__sub { display: none; }
+        .gate__row { grid-template-columns: 40px minmax(0,1fr) 78px; }
+        .gate__row .gv { grid-column: 2 / 4; padding-top: 0; }
+        .seq__ph { grid-template-columns: 1fr; }
+        .seq__ph .body { border-left: none; border-top: 1px solid var(--line-ink); }
+        .ledger td:first-child, .uxtable td:first-child { width: auto; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .ticker__track { animation: none; }
+        .stamp__rot { animation: none; }
+        * { scroll-behavior: auto; }
+      }
+
+      /* rotating stamp */
+      .stamp__rot { transform-origin: 100px 100px; animation: spin 22s linear infinite; }
+      @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+  </head>
+
+  <body id="top">
+    <a class="skip" href="#why">본문으로 건너뛰기</a>
+    <div class="progress" aria-hidden="true"><i id="progbar"></i></div>
+
+    <!-- ===================== MASTHEAD ===================== -->
+    <header class="mast">
+      <div class="mast__in">
+        <a class="brand" href="#top" aria-label="OKC 처음으로">
+          <span class="brand__seal" aria-hidden="true"></span>
+          <span>
+            <span class="brand__name">OKC</span>
+          </span>
+          <span class="brand__sub">Obsidian&nbsp;Knowledge&nbsp;Compilation</span>
+        </a>
+        <nav class="mast__nav" aria-label="섹션">
+          <a href="#why">왜</a>
+          <a href="#what">신뢰</a>
+          <a href="#core">병합 로직</a>
+          <a href="#ecosystem">에코시스템</a>
+          <a href="#ux">경험</a>
+          <a href="#demo">데모</a>
+          <a href="#proof">증거</a>
+          <a href="#scope">범위</a>
+        </nav>
+        <a class="mast__gh" href="https://github.com/HappySPigs/okc" target="_blank" rel="noopener">GITHUB ↗</a>
+      </div>
+    </header>
+
+    <!-- ===================== HERO ===================== -->
+    <section class="hero" aria-label="소개">
+      <div class="hero__grid">
+        <div class="hero__thesis">
+          <div class="hero__kick kicker">지식 컴파일러 · Knowledge, but verifiable</div>
+          <h1 class="hero__title">
+            <span class="display">검증 가능한<br />조직 기억.</span>
+            <small>
+              여러 팀의 Obsidian Vault를 하나의 결정론적이고, 출처를 추적할 수 있으며,
+              다시 검증 가능한 지식 베이스로 <b>컴파일</b>합니다.
+            </small>
+          </h1>
+          <div class="hero__oneliner">AI는 제안하고 · 코드는 검증하며 · 사람만 승인합니다</div>
+
+          <svg class="hero__stamp" viewBox="0 0 200 200" aria-hidden="true">
+            <g class="stamp__rot">
+              <defs>
+                <path id="ring" d="M100,100 m-74,0 a74,74 0 1,1 148,0 a74,74 0 1,1 -148,0" />
+              </defs>
+              <text font-family="Space Mono, monospace" font-size="13.2" font-weight="700" fill="#0a0a0b" letter-spacing="1.5">
+                <textPath href="#ring" startOffset="0">AI PROPOSES · CODE VERIFIES · HUMAN APPROVES · </textPath>
+              </text>
+            </g>
+            <circle cx="100" cy="100" r="40" fill="#0a0a0b" />
+            <text x="100" y="107" text-anchor="middle" font-family="Space Mono, monospace" font-size="26" font-weight="700" fill="#c9f24b">✓</text>
+          </svg>
+        </div>
+
+        <aside class="hero__side">
+          <div class="buildlog">
+            <div class="buildlog__h">BUILD LOG</div>
+            <dl>
+              <dt>PROJECT</dt><dd>OKC <b>0.3.0</b></dd>
+              <dt>MODULES</dt><dd>4 <span class="mut">— core · hooks · web · mcp</span></dd>
+              <dt>CONTRACTS</dt><dd>3</dd>
+              <dt>CI WORKFLOWS</dt><dd>6 <span class="mut">path-scoped</span></dd>
+              <dt>BRIDGE</dt><dd>four-module · <b>1 pass</b></dd>
+              <dt>STATUS</dt><dd>development-stage</dd>
+            </dl>
+          </div>
+
+          <div class="nowcard">
+            <span class="tag">지금 · honest scope</span>
+            <p>
+              <code>okc-web</code>은 single-organization · single-process 해커톤 MVP이고,
+              현재 산출물은 Markdown 중심입니다. 경계를 숨기지 않습니다 —
+              <a href="#scope" class="em-amber">현재 범위 보기</a>.
+            </p>
+          </div>
+
+          <div class="hero__cta">
+            <a class="btn btn--fill" href="https://github.com/HappySPigs/okc" target="_blank" rel="noopener">GitHub에서 보기</a>
+            <a class="btn" href="#install">설치 한 줄 보기</a>
+          </div>
+        </aside>
+      </div>
+
+      <!-- pixel ticker -->
+      <div class="ticker" aria-hidden="true">
+        <div class="ticker__track" id="ticker">
+          <span>TAXONOMY</span><span class="sep">&gt;&gt;</span><span>DISPOSITION</span><span class="sep">&gt;&gt;</span><span>EVIDENCE</span><span class="sep">&gt;&gt;</span><span>CRITIC</span><span class="sep">&gt;&gt;</span><span>APPROVAL</span><span class="sep">&gt;&gt;</span><span>COMPILE</span><span class="sep">&gt;&gt;</span><span>VERIFY</span><span class="sep">&gt;&gt;</span><span>EXPLAIN</span><span class="sep">&gt;&gt;</span>
+          <span>TAXONOMY</span><span class="sep">&gt;&gt;</span><span>DISPOSITION</span><span class="sep">&gt;&gt;</span><span>EVIDENCE</span><span class="sep">&gt;&gt;</span><span>CRITIC</span><span class="sep">&gt;&gt;</span><span>APPROVAL</span><span class="sep">&gt;&gt;</span><span>COMPILE</span><span class="sep">&gt;&gt;</span><span>VERIFY</span><span class="sep">&gt;&gt;</span><span>EXPLAIN</span><span class="sep">&gt;&gt;</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== INTRO 1 · HAVE YOU EVER ===================== -->
+    <section class="field field--ink" id="intro">
+      <div class="wrap">
+        <div class="sec-head">
+          <span class="kicker em-lime">Have you ever… · 공감</span>
+          <h2 class="h2">혹시, 이런 적<br />없으셨나요?</h2>
+        </div>
+
+        <div class="painlist">
+          <div class="pain">
+            <span class="pain__q" aria-hidden="true">?</span>
+            <p>Obsidian으로 작업하다 어떤 문제를 <b>멋지게 해결한 세션</b>이 있었는데, 몇 주 뒤 똑같은 상황에서 <em>“그때 어떻게 했더라…”</em> 하며 처음부터 다시 헤맨 적</p>
+          </div>
+          <div class="pain">
+            <span class="pain__q" aria-hidden="true">?</span>
+            <p>분명 <b>정리는 해뒀는데</b>, 정작 필요할 때 그 노트를 못 찾은 적</p>
+          </div>
+          <div class="pain">
+            <span class="pain__q" aria-hidden="true">?</span>
+            <p><b>옆 팀·동료가 이미 풀어 둔 세션</b>을, 그런 게 있는 줄 몰라서 똑같이 다시 푼 적</p>
+          </div>
+          <div class="pain">
+            <span class="pain__q" aria-hidden="true">?</span>
+            <p>남이 정리해 준 지식을 보며 <em>“그럴듯한데… 이거 진짜 근거가 맞나?”</em> 싶어 <b>못 믿은</b> 적</p>
+          </div>
+        </div>
+
+        <p class="hook">
+          하나라도 뜨끔했다면, OKC는 바로 그 순간들을 위해 만들었습니다.
+          <b>잘 풀린 세션은 다시 꺼내 쓰고, 남들이 남긴 세션도 믿고 가져다 쓰게</b> 하는 것 —
+          그게 출발점이었습니다.
+        </p>
+      </div>
+    </section>
+
+    <!-- ===================== INTRO 2 · WHAT IS OKC ===================== -->
+    <section class="field field--ink2" id="whatis">
+      <div class="wrap">
+        <div class="sec-head">
+          <span class="kicker em-lime">What is OKC · 한 줄 정의</span>
+          <h2 class="h2">OKC가 뭔가요?</h2>
+          <p class="lead mut">
+            흩어진 <a href="https://obsidian.md" target="_blank" rel="noopener" style="color:var(--lime);text-underline-offset:3px">Obsidian</a>
+            노트 모음(Vault)을 하나의 신뢰할 수 있는 지식 베이스로 <b>“컴파일”</b>하는 시스템입니다.
+            소스 코드를 빌드하듯이 —
+          </p>
+        </div>
+
+        <div class="whatis-flow">
+          <div class="chain">
+            <span class="node">여러 팀의 노트</span><span class="arrow" aria-hidden="true">→</span>
+            <span class="node hl">AI가 제안</span><span class="arrow" aria-hidden="true">→</span>
+            <span class="node hl">코드가 검증</span><span class="arrow" aria-hidden="true">→</span>
+            <span class="node hl">사람이 승인</span><span class="arrow" aria-hidden="true">→</span>
+            <span class="node end">하나의 결과물</span>
+          </div>
+          <p>여러 팀의 노트를 모아 → AI가 정리안을 제안하고 → 코드가 검증하고 → 사람이 승인해야 → 하나의 결과물이 나옵니다.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== WHY ===================== -->
+    <section class="field field--paper" id="why">
+      <div class="wrap">
+        <div class="sec-head">
+          <span class="kicker">왜 필요한가 · The problem</span>
+          <h2 class="h2">Vault를 합치는 순간,<br />지식보다 판단이 먼저 섞입니다.</h2>
+          <p class="lead mut">
+            각 팀이 로컬 Obsidian을 아무리 잘 써도, 조직 단위로 통합하려는 순간 네 가지 위험이
+            생깁니다. OKC는 이걸 검색·챗봇 기능이 아니라 <b>컴파일 문제</b>로 다뤄 구조적으로 막습니다.
+          </p>
+        </div>
+
+        <div class="risks">
+          <div class="risk">
+            <span class="tag">RISK / 01</span>
+            <h3 class="h3">출처 소실</h3>
+            <p>합성된 문장이 어느 팀의 어떤 노트에서 왔는지 알기 어렵습니다.</p>
+          </div>
+          <div class="risk">
+            <span class="tag">RISK / 02</span>
+            <h3 class="h3">모순 은폐</h3>
+            <p>서로 다른 출시일·정책이 매끄러운 한 문장으로 뭉개집니다.</p>
+          </div>
+          <div class="risk">
+            <span class="tag">RISK / 03</span>
+            <h3 class="h3">승인 드리프트</h3>
+            <p>승인 후 제안이 수정돼도 과거 승인 기록이 그대로 남습니다.</p>
+          </div>
+          <div class="risk">
+            <span class="tag">RISK / 04</span>
+            <h3 class="h3">버전 혼동</h3>
+            <p>최신 발행본과 오래된 로컬 지식이 조용히 섞입니다.</p>
+          </div>
+        </div>
+
+        <table class="ledger">
+          <caption>단순 병합의 문제 → OKC가 적용하는 통제</caption>
+          <thead>
+            <tr><th scope="col">단순 병합에서 생기는 문제</th><th scope="col">OKC가 적용하는 통제</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>입력이 계속 바뀜</td><td>source revision을 수집한 뒤 freeze</td></tr>
+            <tr><td>AI 결과가 곧 최종 결과가 됨</td><td>proposal로만 받고 로컬 검증 수행</td></tr>
+            <tr><td>중요한 비평도 사람이 무시할 수 있음</td><td>Major/Critical finding은 compile 차단</td></tr>
+            <tr><td>승인 후 내용이 바뀔 수 있음</td><td>승인을 대상 hash에 바인딩</td></tr>
+            <tr><td>결과 파일의 무결성을 재확인하기 어려움</td><td>embedded plan에서 결과를 다시 유도해 byte 비교</td></tr>
+            <tr><td>과거와 현재 지식이 섞임</td><td>revision-pinned read · history · restore</td></tr>
+          </tbody>
+        </table>
+
+        <div class="recycle">
+          <div>
+            <span class="idx">RECYCLE 01</span>
+            <h3 class="h3">내 세션 재사용</h3>
+            <p><code>okc-mcp</code>에게 “이번 세션을 관련 노트에 기록해줘” 한마디면, 다음 작업에서 그대로 다시 꺼내 씁니다.</p>
+          </div>
+          <div>
+            <span class="idx">RECYCLE 02</span>
+            <h3 class="h3">남의 세션 활용</h3>
+            <p>동료·다른 팀이 남긴 세션·런북도 부서 공동 아카이브에서 “우리 팀은 전에 이거 어떻게 했지?”로 재사용합니다.</p>
+          </div>
+          <div>
+            <span class="idx">RECYCLE 03</span>
+            <h3 class="h3">믿고 쓰는 재사용</h3>
+            <p>가져다 쓰는 지식이 <b>출처가 추적되고 사람이 승인한</b> 검증된 내용이라, “이거 맞나?” 다시 의심할 필요가 없습니다.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== COMIC ===================== -->
+    <section class="field field--ink" aria-label="지식 순환">
+      <div class="wrap">
+        <div class="sec-head">
+          <span class="kicker em-lime">지식 순환 · Knowledge flywheel</span>
+          <h2 class="h2">한 번 잘 푼 문제를,<br />다음 작업의 출발점으로.</h2>
+        </div>
+        <!-- 만화 이미지: 나중에 고해상도 원본으로 교체하려면 이 경로(assets/okc-comic.jpg)에 덮어쓰세요. -->
+        <figure class="comic-frame">
+          <img
+            src="assets/okc-comic.jpg"
+            alt="6컷 만화. 1) Obsidian MCP로 결정·명령·해결법을 바로 기록 2) 다음 세션에는 지난 지식을 곧바로 재사용 3) 각자의 Vault는 유지하고 지식은 부서 아카이브로 4) OKC가 출처·승인·모순을 지켜 함께 정리 5) 코딩 에이전트가 과거 결정과 런북을 재사용 6) 새 배움도 돌아와 조직 지식이 자랍니다"
+            width="1200" height="630"
+          />
+        </figure>
+        <div class="comic-pills" aria-hidden="true">
+          <span class="pill on">CAPTURE</span>
+          <span class="pill on">ARCHIVE</span>
+          <span class="pill on">REUSE</span>
+          <span class="pill on">GROW</span>
+        </div>
+        <p class="comic-cap">
+          개인 Vault에 기록 → 부서 공동 아카이브 → 코딩 에이전트의 재사용 → 새 배움의 환류.
+          개인의 기록이 부서의 자산이 되고, 다음 개발의 출발점이 됩니다.
+        </p>
+      </div>
+    </section>
+
+    <!-- ===================== TRUST ===================== -->
+    <section class="field field--ink2" id="what">
+      <div class="wrap">
+        <div class="sec-head">
+          <span class="kicker em-lime">핵심 아이디어 · The trust model</span>
+          <h2 class="h2">AI는 제안하고, 코드는 검증하며,<br />사람만 승인합니다.</h2>
+          <p class="lead mut">
+            OKC에서 AI 출력은 신뢰의 종착점이 아니라 <b>검증의 입력</b>입니다.
+            소스 텍스트는 명령이 아니라 잠재적으로 적대적인 evidence로 취급합니다.
+          </p>
+        </div>
+
+        <div class="roles">
+          <div class="role">
+            <div class="who ai">AI</div>
+            <div class="verb">proposes / 제안</div>
+            <p>문서 분류(taxonomy), 클러스터별 합성(synthesis), 독립 critic 결과를 <b>제안</b>합니다. 응답은 로컬에서 파싱·검증한 뒤 입력과 해시에 묶습니다.</p>
+          </div>
+          <div class="role">
+            <div class="who code">CODE</div>
+            <div class="verb">verifies / 검증</div>
+            <p>근거·해시·누락·비평 심각도를 코드로 <b>검증</b>합니다. Major 또는 Critical finding이 남으면 compile 자체가 차단됩니다.</p>
+          </div>
+          <div class="role">
+            <div class="who human">HUMAN</div>
+            <div class="verb">approves / 승인</div>
+            <p>큐레이터가 명시적으로 <b>승인</b>합니다. 승인은 대상 hash에 묶여, 승인한 내용을 수정하면 기존 승인은 더 이상 유효하지 않습니다.</p>
+          </div>
+        </div>
+
+        <div class="pipe">
+          <div class="pipe__node">
+            <span class="step">STEP 1 · AI</span>
+            <h3 class="h3">가능성을 제안</h3>
+            <p>LLM provider가 분류·합성·critic을 제안. 소스는 검증 대상 evidence.</p>
+          </div>
+          <div class="pipe__node">
+            <span class="step">STEP 2 · CODE</span>
+            <h3 class="h3">통과 조건을 검사</h3>
+            <p>완전 분할·단일 disposition·evidence 일치·critic 심각도를 코드로 강제.</p>
+          </div>
+          <div class="pipe__node">
+            <span class="step">STEP 3 · HUMAN</span>
+            <h3 class="h3">대상에 묶인 승인</h3>
+            <p>taxonomy·proposal·critic·revision hash에 연결. Major/Critical은 waive 불가.</p>
+          </div>
+          <div class="pipe__node">
+            <span class="step">STEP 4 · DETERMINISTIC</span>
+            <h3 class="h3">provider 없이 확정</h3>
+            <p>승인 뒤 compile·verify·explain은 LLM 호출 없이 결정론적으로 동작.</p>
+          </div>
+        </div>
+        <div class="pipe__return">
+          <span aria-hidden="true">↩︎</span>
+          <span>Major/Critical finding이 하나라도 남으면 승인 경로가 아니라 <b>재생성(regenerate) 경로</b>로 돌아갑니다.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== CORE MERGE LOGIC ===================== -->
+    <section class="field field--paper" id="core">
+      <div class="wrap">
+        <div class="sec-head">
+          <span class="kicker">okc-core · How it merges</span>
+          <h2 class="h2">okc-core는 어떻게 병합하는가.</h2>
+          <p class="lead mut">
+            비슷한 문서를 곧바로 합치지 않습니다. 유사도는 함께 <b>검토할 후보</b>를 찾는 신호일 뿐,
+            실제 병합은 모든 입력 조각의 처리 방식·근거·critic·승인이 하나의 계획 안에서 완전히 닫힌 뒤에만 가능합니다.
+          </p>
+        </div>
+
+        <p class="defs">
+          <b>δ</b> = hash domain · <b>lp(x)</b> = byte 길이를 앞에 붙인 값 ·
+          <b>C(x)</b> = key 정렬 + 배열 순서 보존 canonical JSON · <b>1[조건]</b> = 조건이 참이면 1인 지시 함수
+        </p>
+
+        <div class="formula" aria-label="핵심 해시 정의">
+<pre><span class="v">H_δ</span>(x)          = SHA-256( UTF8(δ) ‖ x )
+<span class="v">ID_δ</span>[p1,…,pn] = SHA-256( UTF8(δ) ‖ lp(p1) ‖ … ‖ lp(pn) )
+<span class="v">lp</span>(x)          = ULEB128( byte_length(x) ) ‖ x</pre>
+        </div>
+
+        <!-- STAGE 1 -->
+        <div class="stage">
+          <div class="stage__txt">
+            <span class="num">STAGE 01</span>
+            <h3 class="h3">움직이는 원본을 내용 기반 ID로 봉인</h3>
+            <p>Markdown을 document·block·metadata로 나누고 정렬한 뒤 내용 기반 hash를 계산합니다. 같은 문장이 여러 Vault에 있어도 occurrence ID가 분리되어 “어느 source의 어느 block인가”를 잃지 않습니다.</p>
+            <p class="note-mono">봉인된 정규화 텍스트나 corpus 구성이 바뀌면 hash가 바뀌고, 이전 제안과 승인은 <b>stale</b>로 거부됩니다.</p>
+          </div>
+          <div class="formula">
+<pre><span class="c">δ_block  = "okc:block-content:v3\0"</span>
+<span class="c">δ_corpus = "okc:integration-corpus:v3\0"</span>
+
+<span class="v">BlockHash</span>(b) = H_δ_block( UTF8( normalized_text(b) ) )
+<span class="v">CorpusHash</span>   = H_δ_corpus( C(documents sorted by DocumentId) )</pre>
+          </div>
+        </div>
+
+        <!-- STAGE 2 -->
+        <div class="stage">
+          <div class="stage__txt">
+            <span class="num">STAGE 02</span>
+            <h3 class="h3">두 종류의 점수로 검토 범위만 좁힘</h3>
+            <p>body·frontmatter hash가 모두 같은 exact group을 찾고, Unicode 5-grapheme shingle의 MinHash로 near-duplicate 후보를, embedding cosine으로 semantic 후보를 만듭니다.</p>
+            <p class="note-mono">기본값: <b>128</b> component · <b>32</b> bands × <b>4</b> rows · threshold <b>0.85</b> · 문서당 최대 100 후보. 108/128 = 0.84375는 탈락, 109/128 = 0.8515625부터 후보. 어느 점수도 문서를 자동 삭제하거나 진실을 결정하지 않습니다.</p>
+          </div>
+          <div class="formula">
+<pre><span class="v">ExactKey</span>(d)  = ( BodyHash(d), FrontmatterHash(d) )
+<span class="c">S5(d)        = d의 고유 연속 5-grapheme 집합</span>
+<span class="v">sim_MH</span>(a,b)  = (1/128) · Σ 1[ m_j(a) = m_j(b) ]
+
+<span class="v">u</span>(d)         = v(d) / ‖v(d)‖₂
+<span class="v">sim_cos</span>(a,b) = u(a) · u(b)
+<span class="v">Candidate</span>(a) = Top8 { b : sim_cos(a,b) ≥ 0.55 }</pre>
+          </div>
+        </div>
+
+        <!-- STAGE 3 -->
+        <div class="stage">
+          <div class="stage__txt">
+            <span class="num">STAGE 03</span>
+            <h3 class="h3">Taxonomy는 전체 문서의 완전 분할</h3>
+            <p>모든 문서는 정확히 하나의 cluster에만 속해야 합니다. 문서가 빠지거나, 두 cluster에 들어가거나, 빈 cluster나 알 수 없는 ID가 있으면 hard-fail입니다.</p>
+            <p class="note-mono">Singleton cluster도 synthesis·critic·승인을 모두 거칩니다.</p>
+          </div>
+          <div class="formula">
+<pre><span class="v">∀ d ∈ Docs</span> :   Σ 1[ d ∈ Ci ] = 1
+
+⋃ Ci = Docs        <span class="c">(누락 없음)</span>
+Ci ∩ Cj = ∅  (i ≠ j) <span class="c">(중복 없음)</span></pre>
+          </div>
+        </div>
+
+        <!-- STAGE 4 -->
+        <div class="stage">
+          <div class="stage__txt">
+            <span class="num">STAGE 04</span>
+            <h3 class="h3">모든 조각에 정확히 하나의 처리 + evidence closure</h3>
+            <p>각 target은 Integrated · PreservedVerbatim · OmissionProposed 중 정확히 하나를 가져야 합니다. 합쳤다고 표시한 block은 실제 output evidence에 등장해야 하고, omission에는 사유와 사람 승인이 필요합니다.</p>
+            <p class="note-mono">Evidence의 세 값은 현재 cluster의 실제 원본 block과 다시 대조됩니다.</p>
+          </div>
+          <div class="formula">
+<pre><span class="v">T_c</span> = Blocks_c ∪ Metadata_c
+set( DispositionTargets_c ) = T_c
+<span class="v">IntegratedBlocks_c</span> ⊆ CitedEvidenceBlocks_c
+
+<span class="v">Evidence</span> = ( DocumentId, BlockId, ContentHash )</pre>
+          </div>
+        </div>
+
+        <!-- STAGE 5 -->
+        <div class="stage">
+          <div class="stage__txt">
+            <span class="num">STAGE 05</span>
+            <h3 class="h3">Critic과 승인을 하나의 revision hash로 결합</h3>
+            <p>Major/Critical은 waive할 수 없습니다. Minor는 finding ID 전체와 정확히 일치하는 waiver·curator·사유가 필요합니다. 제안·critic·omission·waiver 중 하나라도 바뀌면 revision hash와 plan ID가 달라집니다.</p>
+            <p class="note-mono">과거 승인 기록만으로 수정된 결과를 통과시킬 수 없는 이유입니다.</p>
+          </div>
+          <div class="formula">
+<pre><span class="v">MajorFindings ∪ CriticalFindings = ∅</span>
+MinorFindingIds = WaivedFindingIds
+
+<span class="v">ClusterRevisionHash</span> = H_δ_revision( C({
+    taxonomy_hash, proposal, critic,
+    omission_approvals, minor_waivers }) )
+
+<span class="v">IntegrationPlanId</span> = "integration_" ‖ hex( H_δ_plan(…) )</pre>
+          </div>
+        </div>
+
+        <!-- STAGE 6 -->
+        <div class="stage">
+          <div class="stage__txt">
+            <span class="num">STAGE 06</span>
+            <h3 class="h3">승인된 계획에서 최종 byte를 다시 생성</h3>
+            <p>Materializer F는 provider 호출 없이 승인 계획에서 cluster당 하나의 note, 원본을 가리키는 legacy stub, plan·provenance·manifest·checksum을 만듭니다. 같은 승인 계획은 같은 byte를 유도합니다.</p>
+            <p class="note-mono">Core는 staging에서 <b>verify(stage)</b>를 먼저 통과해야만 기존 경로를 덮어쓰지 않는 no-clobber 방식으로 publish합니다. 발행 파일을 몰래 수정하면 read도 <b>VERIFICATION_FAILED</b>로 거부됩니다.</p>
+          </div>
+          <div class="formula">
+<pre><span class="v">Expected</span> = F( ApprovedPlan )
+
+<span class="v">Verify</span> = ( ActualPaths = ExpectedPaths )
+       ∧ ( ∀ p : ActualBytes(p) = ExpectedBytes(p) )
+       ∧ ( Manifest, Provenance re-derived from ApprovedPlan )</pre>
+          </div>
+        </div>
+
+        <!-- AUTHORITY EQUATION + GATE -->
+        <div class="authority">
+          <span class="tag">병합 권한의 정의 · Merge authority</span>
+          <p class="eq">
+            병합 권한 = 완전 분할 <span class="plus">+</span> 100% disposition
+            <span class="plus">+</span> evidence closure <span class="plus">+</span> blocking critic 0건
+            <span class="plus">+</span> hash-bound human approval
+          </p>
+          <p>0.85와 0.55는 자동 병합 기준이 아니라 <b>후보를 줄이는 기준</b>입니다. 유사도는 검토 후보만 좁히고, 완전성·근거·critic·해시 결합 승인이 실제 컴파일 권한을 결정합니다.</p>
+
+          <div class="gate" role="img" aria-label="fail-closed 게이트: 다섯 invariant가 모두 PASS일 때만 컴파일이 허용됩니다">
+            <div class="gate__row">
+              <div class="gi">0x01</div><div class="gn">완전 분할</div>
+              <div class="gv">∀d: Σ 1[d∈Ci] = 1</div><div class="gs">PASS</div>
+            </div>
+            <div class="gate__row">
+              <div class="gi">0x02</div><div class="gn">완전 disposition</div>
+              <div class="gv">set(DispositionTargets_c) = T_c</div><div class="gs">PASS</div>
+            </div>
+            <div class="gate__row">
+              <div class="gi">0x03</div><div class="gn">evidence closure</div>
+              <div class="gv">IntegratedBlocks_c ⊆ CitedEvidence</div><div class="gs">PASS</div>
+            </div>
+            <div class="gate__row">
+              <div class="gi">0x04</div><div class="gn">critic 통과</div>
+              <div class="gv">Major ∪ Critical = ∅</div><div class="gs">PASS</div>
+            </div>
+            <div class="gate__row">
+              <div class="gi">0x05</div><div class="gn">hash-bound 승인</div>
+              <div class="gv">approval ↔ revision hash</div><div class="gs">PASS</div>
+            </div>
+            <div class="gate__result">
+              <span class="lbl">AND · 다섯 invariant가 모두 참일 때만</span>
+              <span class="out">COMPILE ALLOWED ✓</span>
+            </div>
+          </div>
+          <p class="gate__else">
+            <span aria-hidden="true">✕</span>
+            <span>invariant가 하나라도 <b>FAIL</b>이면 결과는 열리지 않습니다 — 상태는 <b>COMPILE BLOCKED</b> (fail-closed).</span>
+          </p>
+        </div>
+
+        <div class="coderefs">
+          <span class="tag">코드 근거 · source</span>
+          <a href="https://github.com/HappySPigs/okc/blob/main/okc-core/crates/okc-core/src/identity.rs#L17-L31" target="_blank" rel="noopener">identity &amp; 길이-prefix hash</a> ·
+          <a href="https://github.com/HappySPigs/okc/blob/main/okc-core/crates/okc-core/src/dedup.rs#L107-L216" target="_blank" rel="noopener">MinHash/LSH 후보</a> ·
+          <a href="https://github.com/HappySPigs/okc/blob/main/okc-core/crates/okc-app/src/integration_execution.rs#L424-L500" target="_blank" rel="noopener">cosine top-8</a> ·
+          <a href="https://github.com/HappySPigs/okc/blob/main/okc-core/crates/okc-core/src/integration.rs#L749-L817" target="_blank" rel="noopener">taxonomy 완전 분할</a> ·
+          <a href="https://github.com/HappySPigs/okc/blob/main/okc-core/crates/okc-core/src/integration.rs#L821-L1170" target="_blank" rel="noopener">evidence·critic·승인 closure</a> ·
+          <a href="https://github.com/HappySPigs/okc/blob/main/okc-core/crates/okc-core/src/integration.rs#L1324-L1496" target="_blank" rel="noopener">compile &amp; verify</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== ECOSYSTEM ===================== -->
+    <section class="field field--ink" id="ecosystem">
+      <div class="wrap">
+        <div class="sec-head">
+          <span class="kicker em-lime">에코시스템 · Four modules</span>
+          <h2 class="h2">네 모듈이 하나의<br />지식 순환을 만듭니다.</h2>
+        </div>
+
+        <div class="mods">
+          <div class="mod">
+            <div class="mod__top"><span class="mod__name">okc-core</span><span class="mod__stack">Rust · engine</span></div>
+            <h3 class="h3">신뢰 규칙을 실행하는 컴파일 엔진</h3>
+            <p>입력을 불변 snapshot으로 봉인하고, 제안을 검증하고, 승인된 계획을 결정론적으로 컴파일합니다. 발행 전에 staging 산출물을 스스로 verify합니다.</p>
+          </div>
+          <div class="mod">
+            <div class="mod__top"><span class="mod__name">okc-hooks</span><span class="mod__stack">Rust · daemon</span></div>
+            <h3 class="h3">변경을 놓치지 않는 동기화 계층</h3>
+            <p>Obsidian Vault 변경을 감지하고 재시도·재개 가능한 업로드를 수행합니다. 후속 업로드는 같은 논리 소스의 새 revision으로 기록됩니다.</p>
+          </div>
+          <div class="mod">
+            <div class="mod__top"><span class="mod__name">okc-web</span><span class="mod__stack">Python · FastAPI + React</span></div>
+            <h3 class="h3">사람이 통제하는 큐레이션 계층</h3>
+            <p>여러 팀의 revision을 모으고, 입력을 freeze하고, taxonomy·cluster review를 진행하고, 승인된 산출물을 발행합니다. 인증·gate·history·restore가 여기 모입니다.</p>
+          </div>
+          <div class="mod">
+            <div class="mod__top"><span class="mod__name">okc-mcp</span><span class="mod__stack">Node · TypeScript</span></div>
+            <h3 class="h3">저작과 소비를 잇는 에이전트 인터페이스</h3>
+            <p>사람·AI 에이전트가 로컬 소스 노트를 명시적으로 작성하고, 발행된 revision-pinned 지식을 읽습니다. web 오류 시 조용한 로컬 fallback이 없습니다.</p>
+          </div>
+        </div>
+
+        <div class="flow2" aria-label="발행 흐름: 저작 → hooks → web(+core) → mcp 읽기, 세 계약으로 연결">
+          <div class="flow2__lane">
+            <div class="flow2__box"><span class="k">author</span><span class="n">Obsidian / okc-mcp</span></div>
+            <div class="flow2__arrow"><span><em>/api/sync</em>▶</span></div>
+            <div class="flow2__box"><span class="k">watch + upload</span><span class="n">okc-hooks</span></div>
+            <div class="flow2__arrow"><span>▶</span></div>
+            <div class="flow2__box core"><span class="k">integrate + serve</span><span class="n">okc-web ↔ okc-core</span></div>
+            <div class="flow2__arrow"><span><em>/api/serving</em>▶</span></div>
+            <div class="flow2__box"><span class="k">read (verified)</span><span class="n">okc-mcp → AI</span></div>
+          </div>
+        </div>
+
+        <table class="contracts">
+          <thead><tr><th scope="col">계약</th><th scope="col">연결</th><th scope="col">전달하는 것</th></tr></thead>
+          <tbody>
+            <tr><td><code>/api/sync</code></td><td>hooks → web</td><td>canonical CBOR · 재개 가능한 source revision</td></tr>
+            <tr><td><code>okc</code> Python binding</td><td>web ↔ core</td><td>sealed corpus · review 결정 · compiled artifact</td></tr>
+            <tr><td><code>/api/serving</code></td><td>web → mcp</td><td>pinned revision · files · verify · explain</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===================== UX ===================== -->
+    <section class="field field--paper" id="ux">
+      <div class="wrap">
+        <div class="sec-head">
+          <span class="kicker">경험 · Strict inside, simple outside</span>
+          <h2 class="h2">엄격한 내부,<br />단순한 사용자 경험.</h2>
+          <p class="lead mut">기록은 코딩 대화 안에서, 동기화는 백그라운드에서, 재사용은 다음 세션에서 이루어집니다.</p>
+        </div>
+
+        <table class="uxtable">
+          <thead><tr><th scope="col">순간</th><th scope="col">사용자가 하는 일</th><th scope="col">OKC가 뒤에서 하는 일</th></tr></thead>
+          <tbody>
+            <tr><td>처음 연결할 때</td><td>설정을 채우고 upload 고지 확인 후 standing consent 1회 부여</td><td>setup이 MCP 등록·watcher auto-start를 구성, 동의 전 업로드는 차단</td></tr>
+            <tr><td>문제를 해결한 직후</td><td>“이번 세션을 관련 노트에 기록해줘”라고 요청</td><td>okc-mcp가 관련 노트·section·폴더를 찾아 변경안을 미리 보여줌</td></tr>
+            <tr><td>Obsidian에 저장한 뒤</td><td>평소처럼 다음 작업을 계속함</td><td>okc-hooks가 변경을 감지해 새 source revision을 전송</td></tr>
+            <tr><td>전송 중 네트워크가 끊겼을 때</td><td>일시적 오류라면 별도 작업 없음</td><td>server offset부터 재개하고 새 event 없이 스스로 재시도</td></tr>
+            <tr><td>다음 프로젝트·세션</td><td>“우리 팀은 전에 어떻게 해결했지?”라고 질문</td><td>고정된 부서 archive에서 과거 결정·명령·런북을 읽음</td></tr>
+          </tbody>
+        </table>
+
+        <div class="uxnotes">
+          <div class="uxnote">
+            <div class="mod__top"><span class="mod__name">okc-mcp</span><span class="mod__stack">authoring</span></div>
+            <ul>
+              <li><b>한 문장 세션 기록</b> — user-selected 선언마다 실행, 자동 수집 없음</li>
+              <li><b>저장 전 dry-run 미리보기</b> — 경로·이유·현재 hash·내용 미리보기</li>
+              <li><b>충돌·중복 방지</b> — expected SHA-256 재확인 · Vault 밖 backup · atomic write · read-back hash 검증</li>
+              <li><b>저작/읽기 분리</b> — write는 로컬 vault만, 읽기는 발행 revision에 고정</li>
+            </ul>
+          </div>
+          <div class="uxnote">
+            <div class="mod__top"><span class="mod__name">okc-hooks</span><span class="mod__stack">sync</span></div>
+            <ul>
+              <li><b>최초 1회 동의</b> — 없거나 상태가 의심스러우면 업로드 차단, 언제든 철회</li>
+              <li><b>놓친 변경 복구</b> — 실시간 event + 시작·주기 reconciliation scan</li>
+              <li><b>필요한 blob만 전송</b> — manifest negotiate 후 없는 blob·덜 보낸 구간만 chunk</li>
+              <li><b>잘못된 대상 방지</b> — state를 vault path·endpoint·token fingerprint에 바인딩</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== DEMO ===================== -->
+    <section class="field field--ink2" id="demo">
+      <div class="wrap">
+        <div class="sec-head">
+          <span class="kicker em-lime">실제 동작 · It works</span>
+          <h2 class="h2">실제로 이렇게 돌아갑니다.</h2>
+          <p class="lead mut">
+            5개 부서 vault → 내 vault를 okc-mcp로 편집 → okc-hooks가 감지 → web이 <span class="em-rose">stale</span> 표시 →
+            큐레이터 재병합(모순 보존) → 새 compiled revision 발행. 로컬에서 한 번에 재현됩니다.
+          </p>
+        </div>
+
+        <div class="steps">
+          <div class="step-row">
+            <div class="sn">1</div>
+            <div class="sc"><h3 class="h3">5개 vault 업로드</h3><p>eng · product · sales · support · mine 를 실제 upload API로 등록.</p></div>
+          </div>
+          <div class="step-row">
+            <div class="sn">2</div>
+            <div class="sc"><h3 class="h3">okc-mcp로 “mine” 편집</h3><p>스크립트가 실제 okc-mcp 서버에 <code>apply_session_capture</code>로 새 세션 노트를 씀.</p></div>
+          </div>
+          <div class="step-row">
+            <div class="sn">3</div>
+            <div class="sc"><h3 class="h3">okc-hooks가 변경 감지</h3><p>file-watch → debounce → manifest diff → consent 확인 후 업로드.</p></div>
+          </div>
+          <div class="step-row stale">
+            <div class="sn">4</div>
+            <div class="sc"><h3 class="h3">web이 상태 변화 표시 <span class="flag rose">STALE</span></h3><p>“소스가 변경되어 이전 승인이 무효화되었습니다” — 프로젝트 수준 신호.</p></div>
+          </div>
+          <div class="step-row">
+            <div class="sn">5</div>
+            <div class="sc"><h3 class="h3">재병합 + 모순 처리 <span class="flag amber">승자 없음</span></h3><p>re-freeze → re-integrate → taxonomy 승인 → cluster review(모순 보존) → compile.</p></div>
+          </div>
+          <div class="step-row">
+            <div class="sn">6</div>
+            <div class="sc"><h3 class="h3">revision 2 발행 <span class="flag lime">PUBLISHED</span></h3><p>okc-mcp가 고정된 revision에서 갱신된 부서 지식을 읽음.</p></div>
+          </div>
+        </div>
+
+        <table class="contra">
+          <caption>설계된 모순 — 근접 중복 쌍으로 클러스터링, 승자 없이 보존</caption>
+          <thead><tr><th scope="col">주제 (공유 제목)</th><th scope="col">Vault A</th><th scope="col">Vault B</th></tr></thead>
+          <tbody>
+            <tr><td>환불 정책</td><td>sales · 30일</td><td>support · 14일</td></tr>
+            <tr><td>배포 절차</td><td>eng · 자동(무승인)</td><td>product · PM 승인 필수</td></tr>
+            <tr><td>온콜 로테이션</td><td>eng · 월요일</td><td>support · 목요일</td></tr>
+            <tr><td>Pro 요금제</td><td>sales · $49</td><td>product · $39</td></tr>
+            <tr><td>로그 보관 정책</td><td>eng · 30일 삭제</td><td>support · 90일 보관</td></tr>
+          </tbody>
+        </table>
+
+        <div class="consoles">
+          <div class="console">
+            <div class="console__bar"><span class="dot"></span><span class="t">sources</span></div>
+            <div class="console__body">
+              <div><span class="dim">$</span> freeze source set</div>
+              <div class="ok">✓ frozen — 입력 고정</div>
+              <div class="dim">이후 입력 변경 시 downstream 승인 무효화</div>
+            </div>
+          </div>
+          <div class="console">
+            <div class="console__bar"><span class="dot"></span><span class="t">compiled vault</span></div>
+            <div class="console__body">
+              <div><span class="dim">$</span> compile → verify(stage)</div>
+              <div class="ok">✓ verify PASS — 8 files</div>
+              <div class="dim">knowledge/ · legacy/ · .okc/ · no-clobber publish</div>
+            </div>
+          </div>
+          <div class="console">
+            <div class="console__bar"><span class="dot"></span><span class="t">provenance</span></div>
+            <div class="console__body">
+              <div><span class="dim">$</span> explain output.md</div>
+              <div class="ok">✓ Verified</div>
+              <div class="amb">owner 라벨 = 비검증 장식 정보</div>
+              <div class="dim">Verified = 승인 계획과 현재 산출물의 내부 일관성</div>
+            </div>
+          </div>
+          <div class="console">
+            <div class="console__bar"><span class="dot"></span><span class="t">overview</span></div>
+            <div class="console__body">
+              <div class="dim">sources · freeze · findings · verify</div>
+              <div class="ok">✓ blocking findings: 0</div>
+              <div class="ok">✓ verify PASS</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="seq" aria-label="End-to-end 흐름: 5단계">
+          <div class="seq__ph">
+            <div class="ph"><div class="pk">1 · AUTHOR</div><div class="pn">노트 작성</div></div>
+            <div class="body">로컬 Obsidian vault에 직접 또는 <b>okc-mcp</b> 저작 도구로 작성</div>
+          </div>
+          <div class="seq__ph">
+            <div class="ph"><div class="pk">2 · UPLOAD</div><div class="pn">감지 + push</div></div>
+            <div class="body"><b>okc-hooks</b>: negotiate → blob PUT(resumable) → commit · auth token · canonical CBOR</div>
+          </div>
+          <div class="seq__ph">
+            <div class="ph"><div class="pk">3 · INTEGRATE</div><div class="pn">권한 게이트</div></div>
+            <div class="body">create → token → freeze → provider → preflight → integrate → taxonomy approve → cluster approve/regenerate → review gate → compile</div>
+          </div>
+          <div class="seq__ph">
+            <div class="ph"><div class="pk">4 · SERVE</div><div class="pn">발행</div></div>
+            <div class="body">version-pinned revision 발행 · history · restore</div>
+          </div>
+          <div class="seq__ph">
+            <div class="ph"><div class="pk">5 · READ</div><div class="pn">소비</div></div>
+            <div class="body"><b>okc-mcp</b>가 <code>/api/serving</code>로 읽음 · web 오류가 조용히 로컬 지식으로 fallback하지 않음</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== ENGINEERING PROOF ===================== -->
+    <section class="field field--ink" id="proof">
+      <div class="wrap">
+        <div class="sec-head">
+          <span class="kicker em-lime">엔지니어링 증거 · Verified locally</span>
+          <h2 class="h2">해커톤 MVP를 넘어선<br />엔지니어링 증거.</h2>
+          <p class="lead mut">각 숫자는 서로 다른 모듈에서 실행한 최신 로컬 결과이며, 하나의 합산 스위트 수치가 아닙니다.</p>
+        </div>
+
+        <div class="proof">
+          <div class="proof__row"><span class="area">Core · Rust</span><span class="cnt">130 passed</span></div>
+          <div class="proof__row"><span class="area">Core · Python binding</span><span class="cnt">12 passed</span></div>
+          <div class="proof__row"><span class="area">Core · Node binding</span><span class="cnt">13 passed</span></div>
+          <div class="proof__row"><span class="area">Hooks</span><span class="cnt">250 passed</span></div>
+          <div class="proof__row"><span class="area">MCP</span><span class="cnt">103 passed</span></div>
+          <div class="proof__row"><span class="area">Web · backend</span><span class="cnt">114 passed</span></div>
+          <div class="proof__row"><span class="area">Web · frontend</span><span class="cnt">8 passed</span></div>
+          <div class="proof__row bridge"><span class="area">Four-module bridge</span><span class="cnt">1 passed</span></div>
+        </div>
+
+        <p class="proof-note">
+          <b>Four-module bridge</b>는 실제 MCP subprocess · Rust CBOR encoder · FastAPI 서비스 · native core binding을
+          하나의 경로로 연결합니다(LLM은 synthetic provider). 저장소에는 <b>6개 path-scoped CI workflow</b>가 정의되어 있고,
+          핵심 상태·업로드·저작 로직에는 property-based test를, native binding 경계에는 Rust·Python·Node가 동일 fixture byte에 합의하는
+          <b>golden test</b>를 적용했습니다.
+        </p>
+      </div>
+    </section>
+
+    <!-- ===================== SCOPE ===================== -->
+    <section class="field field--paper" id="scope">
+      <div class="wrap">
+        <div class="sec-head">
+          <span class="kicker">현재 범위 · Honest boundaries</span>
+          <h2 class="h2">현재 범위도<br />명확하게 공개합니다.</h2>
+        </div>
+
+        <ul class="limits">
+          <li>development-stage 프로젝트이며 <b>okc-web</b>은 single-organization · single-process 해커톤 MVP입니다.</li>
+          <li>현재 컴파일 산출물은 <b>Markdown 중심</b>입니다. Attachment · Canvas · Base · Pack materialization은 현재 노출 경로 밖입니다.</li>
+          <li>live third-party provider 품질 검증, 전체 native OS service 설치 검증, 성능·배포·package release gate는 <b>후속 과제</b>입니다.</li>
+          <li>MinHash/LSH와 cosine·HNSW를 합치는 통합은 아직 <b>release blocker</b>이며, 현재 organizer가 받는 semantic 후보는 cosine 경로입니다.</li>
+          <li>해시는 무결성·staleness를 뜻하며 <b>authorship · publisher 신원 · 객관적 진실 · 의미 동등성</b>을 증명하지 않습니다.</li>
+        </ul>
+
+        <p class="why-disclose">
+          이 경계를 숨기지 않는 이유는 간단합니다 — OKC가 파는 가치 자체가 <span style="color:#4a6a0e">“검증 가능한 주장”</span>이기 때문입니다.
+        </p>
+      </div>
+    </section>
+
+    <!-- ===================== FOOTER ===================== -->
+    <footer class="foot">
+      <div class="wrap foot__hero">
+        <p class="big">AI 시대의 지식에는 답만큼 <span class="em-lime">“증거”</span>가 필요합니다.</p>
+        <p>
+          OKC는 그럴듯한 요약을 넘어, 누가 무엇을 제안했고 어떤 근거가 승인됐으며
+          지금 읽는 byte가 그 승인 결과와 일치하는지 다시 물을 수 있는 조직 지식을 만듭니다.
+        </p>
+
+        <div class="install" id="install">
+          <span class="tag">okc-hooks + okc-mcp · 한 줄 설치</span>
+<pre>cp okc-install.config.example.json okc-install.config.json
+./install.sh   <span class="c"># Windows: ./install.ps1</span></pre>
+        </div>
+
+        <div class="foot__links">
+          <a class="btn btn--fill" href="https://github.com/HappySPigs/okc" target="_blank" rel="noopener">GitHub · HappySPigs/okc</a>
+          <a class="btn" href="https://github.com/HappySPigs/okc#readme" target="_blank" rel="noopener">Repository README</a>
+          <a class="btn" href="https://github.com/HappySPigs/okc/blob/main/okc-core/README.md" target="_blank" rel="noopener">okc-core</a>
+          <a class="btn" href="https://github.com/HappySPigs/okc/blob/main/okc-mcp/README.md" target="_blank" rel="noopener">okc-mcp</a>
+        </div>
+      </div>
+      <div class="wrap foot__bar">
+        <span class="mods-line">okc-core · okc-hooks · okc-web · okc-mcp — 하나의 지식 순환</span>
+        <span class="status">STATUS: DEVELOPMENT-STAGE</span>
+      </div>
+    </footer>
+
+    <script>
+      (function () {
+        // reading progress
+        var bar = document.getElementById("progbar");
+        function onScroll() {
+          var h = document.documentElement;
+          var max = h.scrollHeight - h.clientHeight;
+          var p = max > 0 ? (h.scrollTop || document.body.scrollTop) / max : 0;
+          bar.style.width = (p * 100).toFixed(2) + "%";
+        }
+        document.addEventListener("scroll", onScroll, { passive: true });
+        onScroll();
+
+        // seamless ticker: match duration to content width so speed is even
+        var track = document.getElementById("ticker");
+        if (track && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          var w = track.scrollWidth / 2; // two copies
+          var dur = Math.max(18, w / 55); // ~55px/s
+          track.style.animationDuration = dur.toFixed(1) + "s";
+        }
+      })();
+    </script>
+  </body>
+</html>
