@@ -13,6 +13,20 @@ explanation are provider-free and reproducible.
 > single-process, local/trusted environment). Several gates remain open — see
 > each module's README for its own boundary and caveats.
 
+## The problem
+
+Whenever an organization tries to **combine knowledge across people** — onboarding a
+new hire, a quarterly knowledge-integration cycle, folding in each new contributor
+batch — merging scattered Obsidian vaults by hand (or via Obsidian Sync, a shared
+wiki, or a RAG ingest) loses **provenance** (which team's note did this come from?),
+hides **contradictions** (conflicting policies flattened into one smooth sentence),
+lets **approvals drift** (content changes after sign-off), and **blurs versions**
+(latest publication silently mixed with stale local notes). It recurs on every
+integration cycle, not once. OKC treats this as a **compilation problem** and blocks
+all four structurally — see [`showcase/WHY-OKC.md`](showcase/WHY-OKC.md) for the
+narrative and [`okc-web/README.md`](okc-web/README.md#how-its-different) for how it
+differs from those tools, mapped to code.
+
 ### CI
 
 Per-module build + test runs on every push (definitions in
