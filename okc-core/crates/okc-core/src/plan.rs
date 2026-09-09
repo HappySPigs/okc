@@ -1573,6 +1573,14 @@ pub fn build_plan(inspection: &Inspection, policy: &CompilerPolicy) -> Result<Dr
         conflicts,
         diagnostics,
     };
+    tracing::info!(
+        target: "okc::plan",
+        plan_id = %plan.plan_id,
+        operations = plan.operations.len(),
+        conflicts = plan.conflicts.len(),
+        diagnostics = plan.diagnostics.len(),
+        "built draft integration plan"
+    );
     plan.validate_integrity()?;
     Ok(plan)
 }
