@@ -330,3 +330,19 @@ AIDLC 사용해서
 **Context**: Construction, U2/U3/U4. Security: no okc-hooks security posture change; tokens kept in 0600 files under gitignored `demo/state/`; demo admin bootstrap password is local-only. Scope guard held (no new web UI, okc-web change limited to the optional `role`).
 
 ---
+
+## Full-Flow Demo — Construction: provider pivot to deterministic curation provider + END-TO-END PASS
+
+**Timestamp**: 2026-09-09T12:20:00Z
+
+**AI Response (investigation)**: Attempted the real-LLM merge (Claude via the Bedrock shim + local nomic embeddings). Fixed a genuine shim bug (Bedrock Converse double-encoded the forced-tool output → okc-core saw `clusters` as a string; added `_unwrap_tool_input` to the shim). Organizer then produced a valid taxonomy, but synthesis/critic kept failing okc-core decode (`json_error_class: Data`): root-caused to okc-core's strict typed contracts — the critic emitted a `metadata_loss` finding citing a `metadata_…` id in a field typed `BlockId` (`block_…`), and more generally the model must echo exact `content_hash`/`block_id`/`document_id` identifiers. okc-core's own tests compile against a deterministic fixture provider (README: provider tests are "not live-model quality evidence"), so a live LLM through any transport does not reliably satisfy the synthesis/critic contracts.
+
+**User Input**: (clarifying question) "Deterministic provider로 full flow 완주 (추천)".
+
+**AI Response (decision + build)**: Pivoted step-5 generation to a small, input-aware DETERMINISTIC curation provider (`demo/scripts/curation_provider.py`) that speaks the Ollama wire, echoes okc-core's exact identifiers (so decode passes), groups the near-duplicate note pairs into topic clusters, and PRESERVES the cross-team contradictions ("승자 없음"). This drops Ollama/Bedrock entirely for the merge — fully local, offline, reproducible. Rewired demo (`providers.json` = single `curation` provider bound to all roles; `10_up` starts it; `00_preflight`/`down`/`lib.sh` updated). Rewrote the Playwright flow to drive all mutations via the authenticated session API (reliable/fast) with the UI navigated+screenshotted per beat, made reads tolerate `409 PROJECT_BUSY`, and modeled okc-core's RE-ENTRANT integrate (integrate → [approve taxonomy] → integrate → synthesis+critic → [approve clusters] → integrate → ready → compile).
+
+**Verification (END-TO-END, `demo/run-demo.sh --fresh`, ~2 min)**: preflight → up → seed (5 sources) → BASELINE Playwright merge → **revision 1 published** (`2b1c4dc4…`, 10.1s, PASS) → MCP `apply_session_capture` edits "mine" → real `watcher-bin` DETECTS the change (log shows the cycle + the honest `UnknownIssuer` TLS line) → change uploaded via the upload API → project **STALE** → RE-MERGE Playwright → **revision 2 published** (`8f9f2520…`, 10.3s, PASS) → **publication history = 2 revisions**. 7 clusters, **5 preserved contradictions**, compiled vault (23 files). 11 screenshots captured (`01-overview … 10-served-published` + `01-stale-banner`). okc-web change gate: ruff + mypy clean, `test_u3_orchestration.py` 9/9 (incl. new per-role routing test).
+
+**Context**: CONSTRUCTION COMPLETE for the demo initiative. Fully local/offline (no Ollama/Bedrock/API keys). Honesty preserved: steps 1–4 exercise real okc-web/okc-hooks/okc-mcp paths; step-5 merge content is deterministic-synthetic (labeled in `demo/README.md`), a documented consequence of okc-core's strict live-model contracts. The Bedrock shim's `_unwrap_tool_input` fix is a real improvement but is no longer on the demo path. No commits made.
+
+---

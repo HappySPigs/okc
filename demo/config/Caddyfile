@@ -1,0 +1,19 @@
+# TLS front for the okc full-flow demo.
+#
+# okc-hooks (watcher-bin) hard-rejects non-HTTPS endpoints, so the watcher cannot
+# talk to okc-web on http://127.0.0.1:8000 directly. Caddy terminates TLS with its
+# internal local CA (installed into the system trust store via `caddy trust`, which
+# rustls in the watcher then honors) and reverse-proxies to the plain-HTTP backend.
+#
+# Run:  caddy start --config demo/config/Caddyfile
+#       caddy trust            # one-time; installs the local CA (may prompt for admin)
+# The watcher's server_endpoint is then https://localhost:8443/api/sync
+
+{
+	auto_https disable_redirects
+}
+
+https://localhost:8443 {
+	tls internal
+	reverse_proxy 127.0.0.1:8000
+}

@@ -1,0 +1,12 @@
+{
+  "name": "okc-demo-e2e",
+  "private": true,
+  "type": "module",
+  "description": "Playwright walkthrough of the okc full-flow demo (admin console).",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0"
+  }
+}

@@ -1,0 +1,9 @@
+[
+  {
+    "name": "curation",
+    "kind": "ollama",
+    "endpoint": "http://127.0.0.1:8797",
+    "model": "curation",
+    "timeout_ms": 600000
+  }
+]

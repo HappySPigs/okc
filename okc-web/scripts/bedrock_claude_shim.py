@@ -172,7 +172,18 @@ class Handler(BaseHTTPRequestHandler):
         try:
             with urllib.request.urlopen(http_req, timeout=120) as resp:
                 wire = json.loads(resp.read())
-            self._send(200, _from_converse(model, wire))
+            payload = _from_converse(model, wire)
+            self._send(200, payload)
+            if os.environ.get("SHIM_DEBUG_DUMP"):
+                try:
+                    import time as _t
+                    sch = (req.get("output_config") or {}).get("format", {}).get("schema", {})
+                    props = sorted((sch.get("properties") or {}).keys())
+                    os.makedirs("/tmp/shim-dumps", exist_ok=True)
+                    with open(f"/tmp/shim-dumps/{int(_t.time()*1000)}-{'_'.join(props)[:40]}.json", "w") as fh:
+                        json.dump({"schema_props": props, "text": payload["content"][0]["text"]}, fh, ensure_ascii=False)
+                except Exception:  # noqa: BLE001
+                    pass
             print(f"[shim] 200 model={model} in={wire.get('usage',{}).get('inputTokens')} out={wire.get('usage',{}).get('outputTokens')}", flush=True)
         except urllib.error.HTTPError as e:
             detail = e.read().decode("utf-8", "replace")[:800]

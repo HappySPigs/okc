@@ -1,0 +1,14 @@
+# Ephemeral demo runtime state — never commit (contains tokens, cookies, DB, logs).
+state/
+*.pid
+*.log
+cookies.txt
+
+# Rendered per-module configs may carry tokens — keep them out of git.
+config/hooks.rendered.json
+config/mcp.rendered.json
+
+# Playwright artifacts
+e2e/node_modules/
+e2e/test-results/
+e2e/playwright-report/

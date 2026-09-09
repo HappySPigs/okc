@@ -90,8 +90,9 @@ All installed extension rule files have opt-in prompts. No always-on extension w
 - [x] Requirements Analysis — [demo-full-flow-requirements.md](inception/requirements/demo-full-flow-requirements.md).
 - [x] Workflow Planning — [demo-full-flow-execution-plan.md](inception/plans/demo-full-flow-execution-plan.md). Skips: Reverse Engineering, User Stories, Application Design, NFR/Infra Design. Executes: Units (light), Functional Design (light, where needed), Code Generation, Build & Test.
 - [x] Units Generation (light) — [demo-full-flow-unit-of-work.md](inception/plans/demo-full-flow-unit-of-work.md): U1 dummy vaults; U2 provider stack + okc-web role routing; U3 env bring-up + TLS; U4 wiring + seed; U5 Playwright + runbook.
-- [ ] Construction — in progress (autopilot).
-- [ ] Build & Test — pending.
+- [x] Construction — DONE. Deliverables under top-level `demo/` (5 curated vaults, `scripts/` for preflight/up/seed/mcp-edit/sync/down/reset, `config/` providers+Caddyfile, `curation_provider.py`, `e2e/` Playwright, `run-demo.sh`, `README.md`). okc-web enhancements (per-role `role`, provider `timeout_ms`) with tests. Step-5 generation pivoted to a deterministic curation provider (fully local; real LLM cannot reliably satisfy okc-core's strict synthesis/critic contracts — okc's own tests use a deterministic fixture).
+- [x] Build & Test — DONE. `run-demo.sh --fresh` PASSES end-to-end (~2 min): baseline Playwright → revision 1, MCP edit → real watcher detection → upload → STALE, re-merge Playwright → revision 2, publication history = 2, 5 preserved contradictions, 11 screenshots. okc-web gate: ruff + mypy clean, orchestration tests 9/9. Summary: [demo-full-flow-build-and-test-summary.md](construction/build-and-test/demo-full-flow-build-and-test-summary.md).
+- Status: CONSTRUCTION COMPLETE for this initiative. Operations/deployment not requested. No commits made.
 
 ### Extension Configuration (Current Initiative)
 | Extension | Enabled | Decided At |

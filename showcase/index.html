@@ -1,0 +1,805 @@
+<!doctype html>
+<html lang="ko" class="scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="OKC가 여러 Obsidian Vault를 검증 가능한 조직 지식으로 컴파일하는 과정을 설명하는 웹 프레젠테이션"
+    />
+    <meta name="theme-color" content="#07101f" />
+    <meta property="og:title" content="OKC — 검증 가능한 조직 기억" />
+    <meta
+      property="og:description"
+      content="AI는 제안하고, 코드는 검증하며, 사람만 승인합니다."
+    />
+    <meta property="og:image" content="assets/00-okc-hero.png" />
+    <title>OKC — 검증 가능한 조직 기억</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&amp;family=Noto+Serif+KR:wght@600;700;900&amp;display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['IBM Plex Sans KR', 'sans-serif'],
+              display: ['Noto Serif KR', 'serif'],
+            },
+            colors: {
+              ink: '#07101f',
+              paper: '#f4f1e9',
+              electric: '#6f7dff',
+              mint: '#42d9c2',
+              amber: '#f4b955',
+            },
+          },
+        },
+      };
+    </script>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body>
+    <a class="skip-link" href="#deck">프레젠테이션 본문으로 건너뛰기</a>
+
+    <div class="ambient-noise" aria-hidden="true"></div>
+    <div class="reading-progress" aria-hidden="true">
+      <span id="progressBar"></span>
+    </div>
+
+    <header class="deck-header" aria-label="프레젠테이션 도구">
+      <a class="brand-mark" href="#slide-01" aria-label="첫 슬라이드로 이동">
+        <span class="brand-symbol" aria-hidden="true">O</span>
+        <span class="brand-copy">
+          <strong>OKC</strong>
+          <small>SHOWCASE</small>
+        </span>
+      </a>
+
+      <div class="chapter-indicator" aria-live="polite">
+        <span id="chapterName">OPENING</span>
+        <strong id="currentTitle">검증 가능한 조직 기억</strong>
+      </div>
+
+      <div class="header-actions">
+        <button class="icon-button" id="outlineButton" type="button" aria-label="전체 슬라이드 목차 열기">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        <button class="icon-button" id="printButton" type="button" aria-label="PDF 또는 인쇄하기">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M7 8V4h10v4M7 17H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M7 14h10v6H7z" />
+          </svg>
+        </button>
+        <button class="icon-button" id="fullscreenButton" type="button" aria-label="전체 화면으로 보기">
+          <svg class="fullscreen-enter" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5" />
+          </svg>
+          <svg class="fullscreen-exit" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3 8h5V3M21 8h-5V3M3 16h5v5M21 16h-5v5" />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <aside class="slide-rail" aria-label="슬라이드 바로가기">
+      <div id="railItems"></div>
+    </aside>
+
+    <main id="deck" class="deck" tabindex="-1">
+      <section
+        class="slide slide--cover is-active"
+        id="slide-01"
+        data-title="검증 가능한 조직 기억"
+        data-chapter="OPENING"
+        aria-labelledby="slide-01-title"
+      >
+        <div class="cover-media" aria-hidden="true">
+          <img src="assets/00-okc-hero.png" alt="" />
+        </div>
+        <div class="cover-gradient" aria-hidden="true"></div>
+        <div class="slide-shell cover-layout">
+          <div class="cover-copy">
+            <p class="eyebrow reveal">OBSIDIAN KNOWLEDGE COMPILATION</p>
+            <h1 id="slide-01-title" class="cover-title reveal delay-1">
+              AI가 합친 지식,<br />
+              <em>근거까지 믿을 수 있게.</em>
+            </h1>
+            <p class="cover-summary reveal delay-2">
+              여러 팀의 Obsidian Vault를 <strong>AI 제안 → 코드 검증 → 사람 승인</strong>을 거쳐<br class="desktop-break" />
+              하나의 결정론적이고 출처를 추적할 수 있는 지식 베이스로 컴파일합니다.
+            </p>
+            <div class="cover-pills reveal delay-3" aria-label="프로젝트 핵심 수치">
+              <span><b>4</b> modules</span>
+              <span><b>3</b> contracts</span>
+              <span><b>1</b> verified corpus</span>
+            </div>
+          </div>
+
+          <div class="cover-thesis reveal delay-4">
+            <span class="thesis-index">CORE THESIS</span>
+            <p>AI는 제안하고,<br />코드는 검증하며,<br /><strong>사람만 승인합니다.</strong></p>
+          </div>
+        </div>
+        <div class="cover-footer">
+          <span>HappySPigs / OKC</span>
+          <span class="navigation-hint"><kbd>←</kbd><kbd>→</kbd> 또는 스크롤로 넘겨보세요</span>
+          <span>2026 SHOWCASE</span>
+        </div>
+      </section>
+
+      <section
+        class="slide slide--paper"
+        id="slide-02"
+        data-title="왜 단순 병합으로는 부족한가"
+        data-chapter="THE PROBLEM"
+        aria-labelledby="slide-02-title"
+      >
+        <div class="slide-shell problem-layout">
+          <div class="problem-intro">
+            <p class="eyebrow eyebrow--ink reveal">01 · THE PROBLEM</p>
+            <h2 id="slide-02-title" class="display-title display-title--ink reveal delay-1">
+              Vault를 합치는 순간,<br />
+              <span>지식보다 판단이 먼저 섞입니다.</span>
+            </h2>
+            <p class="lead lead--ink reveal delay-2">
+              자연스러운 한 문장만으로는 그 문장이 <strong>어디서 왔고, 무엇을 숨겼으며, 지금도 같은 결과인지</strong> 알 수 없습니다.
+            </p>
+
+            <div class="question-card reveal delay-3">
+              <span>우리가 정말 필요한 것</span>
+              <p>“읽기 좋은 요약”이 아니라<br /><strong>다시 확인할 수 있는 조직 기억</strong></p>
+            </div>
+          </div>
+
+          <div class="risk-grid" aria-label="단순 지식 병합의 네 가지 위험">
+            <article class="risk-card reveal delay-1">
+              <span class="risk-number">01</span>
+              <div class="risk-icon risk-icon--blue" aria-hidden="true">↗</div>
+              <h3>출처 소실</h3>
+              <p>합성된 문장이 어느 팀의 어떤 노트에서 왔는지 추적하기 어렵습니다.</p>
+              <small>source → sentence 연결이 사라짐</small>
+            </article>
+            <article class="risk-card reveal delay-2">
+              <span class="risk-number">02</span>
+              <div class="risk-icon risk-icon--amber" aria-hidden="true">≠</div>
+              <h3>모순 은폐</h3>
+              <p>서로 다른 정책과 일정이 그럴듯한 한 문장으로 뭉개질 수 있습니다.</p>
+              <small>conflict → smooth summary</small>
+            </article>
+            <article class="risk-card reveal delay-3">
+              <span class="risk-number">03</span>
+              <div class="risk-icon risk-icon--rose" aria-hidden="true">∆</div>
+              <h3>승인 드리프트</h3>
+              <p>승인 뒤 제안이 바뀌어도 과거 승인이 그대로 남을 수 있습니다.</p>
+              <small>approval ≠ current content</small>
+            </article>
+            <article class="risk-card reveal delay-4">
+              <span class="risk-number">04</span>
+              <div class="risk-icon risk-icon--mint" aria-hidden="true">⌛</div>
+              <h3>버전 혼동</h3>
+              <p>최신 발행본과 오래된 로컬 지식이 조용히 섞일 수 있습니다.</p>
+              <small>latest? local? published?</small>
+            </article>
+          </div>
+        </div>
+        <p class="slide-takeaway slide-takeaway--ink">
+          OKC는 이 문제를 검색이나 챗봇 기능이 아니라 <strong>컴파일 문제</strong>로 다룹니다.
+        </p>
+      </section>
+
+      <section
+        class="slide slide--cream"
+        id="slide-03"
+        data-title="개인의 기록이 조직의 자산이 되는 순환"
+        data-chapter="THE VALUE"
+        aria-labelledby="slide-03-title"
+      >
+        <div class="slide-shell story-layout">
+          <div class="story-copy">
+            <p class="eyebrow eyebrow--ink reveal">02 · KNOWLEDGE FLYWHEEL</p>
+            <h2 id="slide-03-title" class="display-title display-title--ink display-title--compact reveal delay-1">
+              기록은 개인에게 남고,<br /><span>가치는 조직으로 순환합니다.</span>
+            </h2>
+            <p class="lead lead--ink reveal delay-2">
+              개발자는 코딩 대화에서 배움을 남기고, 팀은 검증된 아카이브를 만들며, 다음 에이전트는 그 결정을 다시 사용합니다.
+            </p>
+            <ol class="flywheel-steps reveal delay-3">
+              <li><b>Capture</b><span>결정·명령·해결법 기록</span></li>
+              <li><b>Archive</b><span>부서 지식으로 검증·통합</span></li>
+              <li><b>Reuse</b><span>다음 세션의 출발점으로 사용</span></li>
+              <li><b>Grow</b><span>새 배움을 다시 환류</span></li>
+            </ol>
+          </div>
+
+          <button
+            class="zoomable visual-frame story-visual reveal delay-2"
+            type="button"
+            data-image="assets/09-why-okc-comic-v2.png"
+            data-caption="개인 기록에서 부서 아카이브, 다음 개발로 이어지는 OKC 지식 순환"
+            aria-label="OKC 지식 순환 만화를 크게 보기"
+          >
+            <img
+              src="assets/09-why-okc-comic-v2.png"
+              alt="개인 Vault에 개발 지식을 기록하고 부서 아카이브로 검증해 다음 코딩 세션에서 재사용하는 6단계 만화"
+            />
+            <span class="zoom-hint">클릭해서 크게 보기</span>
+          </button>
+        </div>
+      </section>
+
+      <section
+        class="slide slide--visual"
+        id="slide-04"
+        data-title="AI는 제안하고, 코드는 검증한다"
+        data-chapter="TRUST MODEL"
+        aria-labelledby="slide-04-title"
+      >
+        <h2 id="slide-04-title" class="sr-only">AI 제안, 코드 검증, 사람 승인, 결정론적 산출물로 이어지는 신뢰 모델</h2>
+        <button
+          class="zoomable full-bleed-visual"
+          type="button"
+          data-image="assets/01-trust-pipeline.svg"
+          data-caption="Major 또는 Critical finding이 남아 있으면 컴파일을 차단하는 OKC 신뢰 파이프라인"
+          aria-label="OKC 신뢰 파이프라인을 크게 보기"
+        >
+          <img
+            src="assets/01-trust-pipeline.svg"
+            alt="AI 제안, 코드 검증, 사람 승인, 결정론적 산출물로 이어지는 네 단계 OKC 신뢰 파이프라인"
+          />
+        </button>
+        <div class="visual-note">
+          <span>핵심</span>
+          <p>AI 출력은 최종 결과가 아니라 <strong>검증해야 할 입력</strong>입니다.</p>
+        </div>
+      </section>
+
+      <section
+        class="slide slide--visual"
+        id="slide-05"
+        data-title="점수가 아니라 완전성이 발행을 결정한다"
+        data-chapter="MERGE LOGIC"
+        aria-labelledby="slide-05-title"
+      >
+        <h2 id="slide-05-title" class="sr-only">OKC core의 여섯 단계 병합 로직</h2>
+        <button
+          class="zoomable full-bleed-visual"
+          type="button"
+          data-image="assets/10-core-merge-logic.svg"
+          data-caption="유사도는 후보를 좁히고 완전 분할, 증거 회계, critic, 해시 결합 승인이 발행 여부를 결정합니다"
+          aria-label="OKC core 병합 로직을 크게 보기"
+        >
+          <img
+            src="assets/10-core-merge-logic.svg"
+            alt="입력 봉인, 후보 추출, taxonomy 완전 분할, 증거 회계, critic과 승인, byte 재생성의 여섯 단계 병합 로직"
+          />
+        </button>
+        <div class="visual-note visual-note--formula">
+          <span>COMPILE AUTHORITY</span>
+          <p>완전 분할 ∧ 100% 처리 ∧ 증거 폐쇄 ∧ 차단 비평 0 ∧ 해시 결합 승인</p>
+        </div>
+      </section>
+
+      <section
+        class="slide slide--visual"
+        id="slide-06"
+        data-title="네 모듈, 세 계약, 하나의 지식 순환"
+        data-chapter="ARCHITECTURE"
+        aria-labelledby="slide-06-title"
+      >
+        <h2 id="slide-06-title" class="sr-only">OKC 네 모듈과 세 계약의 전체 에코시스템</h2>
+        <button
+          class="zoomable full-bleed-visual"
+          type="button"
+          data-image="assets/02-okc-ecosystem.svg"
+          data-caption="okc-hooks, okc-web, okc-core, okc-mcp가 세 개의 좁은 계약으로 연결됩니다"
+          aria-label="OKC 에코시스템 구조를 크게 보기"
+        >
+          <img
+            src="assets/02-okc-ecosystem.svg"
+            alt="Obsidian Vault에서 hooks, web, core, MCP를 거쳐 AI client까지 이어지는 네 모듈과 세 계약 구조"
+          />
+        </button>
+        <div class="contract-strip" aria-label="세 가지 모듈 간 계약">
+          <span><b>01</b> /api/sync</span>
+          <span><b>02</b> okc binding</span>
+          <span><b>03</b> /api/serving</span>
+        </div>
+      </section>
+
+      <section
+        class="slide slide--visual slide--light-visual"
+        id="slide-07"
+        data-title="엄격한 내부, 단순한 사용자 경험"
+        data-chapter="EXPERIENCE"
+        aria-labelledby="slide-07-title"
+      >
+        <h2 id="slide-07-title" class="sr-only">설정 후에는 두 문장만 기억하면 되는 사용자 경험</h2>
+        <button
+          class="zoomable full-bleed-visual"
+          type="button"
+          data-image="assets/11-mcp-hooks-friendly.svg"
+          data-caption="기록은 코딩 대화에서, 동기화는 백그라운드에서, 재사용은 다음 작업에서 이루어집니다"
+          aria-label="MCP와 hooks 사용자 경험을 크게 보기"
+        >
+          <img
+            src="assets/11-mcp-hooks-friendly.svg"
+            alt="OKC MCP에는 이번 세션 기록을 요청하고 Obsidian에는 평소처럼 저장하면 되는 간단한 사용자 경험"
+          />
+        </button>
+        <div class="visual-note visual-note--light">
+          <span>사용자가 기억할 것</span>
+          <p><strong>“이번 세션을 기록해줘”</strong> · <strong>“Obsidian에서 평소처럼 저장”</strong></p>
+        </div>
+      </section>
+
+      <section
+        class="slide slide--demo-intro"
+        id="slide-08"
+        data-title="말이 아니라 실제 경로로 증명했다"
+        data-chapter="WORKING PROOF"
+        aria-labelledby="slide-08-title"
+      >
+        <div class="slide-shell proof-intro-layout">
+          <div class="proof-intro-copy">
+            <p class="eyebrow reveal">03 · WORKING PROOF</p>
+            <h2 id="slide-08-title" class="display-title reveal delay-1">
+              개념도가 아니라,<br /><span>실제 경로를 연결했습니다.</span>
+            </h2>
+            <p class="lead reveal delay-2">
+              세 부서의 샘플 노트를 실제 <strong>okc-web</strong>과 native <strong>okc-core</strong> 경로로 수집·고정·승인·컴파일·발행·검증했습니다.
+            </p>
+
+            <div class="evidence-disclaimer reveal delay-3">
+              <span>정확한 증명 범위</span>
+              <p>deterministic synthetic provider를 사용했습니다. 아래 화면은 <strong>워크플로와 계약의 실행 증거</strong>이며, live LLM 문장 품질 평가는 아닙니다.</p>
+            </div>
+          </div>
+
+          <div class="screenshot-collage reveal delay-2" aria-label="OKC 실제 실행 화면 미리보기">
+            <figure class="collage-shot collage-shot--one">
+              <img src="assets/04-sources-freeze.png" alt="세 팀의 소스가 고정된 화면" />
+              <figcaption><b>01</b> Freeze inputs</figcaption>
+            </figure>
+            <figure class="collage-shot collage-shot--two">
+              <img src="assets/05-compiled-vault.png" alt="컴파일 결과와 verify pass 화면" />
+              <figcaption><b>02</b> Compile &amp; verify</figcaption>
+            </figure>
+            <figure class="collage-shot collage-shot--three">
+              <img src="assets/06-provenance-verify.png" alt="출처 연결과 검증 화면" />
+              <figcaption><b>03</b> Explain provenance</figcaption>
+            </figure>
+          </div>
+        </div>
+        <div class="demo-timeline" aria-label="실제 데모의 네 단계">
+          <span class="is-done"><b>1</b> Source revisions</span>
+          <span class="is-done"><b>2</b> Frozen set</span>
+          <span class="is-done"><b>3</b> Approved plan</span>
+          <span class="is-done"><b>4</b> Verified revision</span>
+        </div>
+      </section>
+
+      <section
+        class="slide slide--paper"
+        id="slide-09"
+        data-title="1. 입력을 먼저 고정한다"
+        data-chapter="LIVE PATH · 01"
+        aria-labelledby="slide-09-title"
+      >
+        <div class="slide-shell demo-layout">
+          <div class="demo-copy">
+            <p class="eyebrow eyebrow--ink reveal">LIVE PATH · 01 / FREEZE</p>
+            <span class="demo-step reveal delay-1">01</span>
+            <h2 id="slide-09-title" class="display-title display-title--ink display-title--compact reveal delay-1">
+              판단하기 전에,<br /><span>입력을 먼저 고정합니다.</span>
+            </h2>
+            <p class="lead lead--ink reveal delay-2">
+              Product, Engineering, Research 세 팀의 source revision을 등록하고 하나의 source set으로 freeze했습니다.
+            </p>
+            <ul class="explain-list reveal delay-3">
+              <li><b>기준점 생성</b><span>검토가 시작된 정확한 입력 집합을 기록합니다.</span></li>
+              <li><b>변경 감지</b><span>입력이 바뀌면 downstream 승인은 stale이 됩니다.</span></li>
+              <li><b>freeze-then-run</b><span>움직이는 원본 위에 승인을 쌓지 않습니다.</span></li>
+            </ul>
+            <div class="plain-language reveal delay-4">
+              <span>쉽게 말하면</span>
+              <p>“무엇을 보고 승인했는지”가 나중에도 달라지지 않습니다.</p>
+            </div>
+          </div>
+
+          <button
+            class="zoomable screenshot-frame reveal delay-2"
+            type="button"
+            data-image="assets/04-sources-freeze.png"
+            data-caption="Product, Engineering, Research 세 팀의 revision이 등록되고 고정된 Sources 화면"
+            aria-label="Sources와 Freeze 실제 화면을 크게 보기"
+          >
+            <span class="browser-chrome" aria-hidden="true"><i></i><i></i><i></i><b>okc-web / sources</b></span>
+            <img
+              src="assets/04-sources-freeze.png"
+              alt="Product, Engineering, Research 세 팀의 source revision이 등록되고 고정된 OKC Sources 화면"
+            />
+            <span class="screen-label"><b>실제 화면</b> 세 팀의 입력이 고정됨</span>
+          </button>
+        </div>
+      </section>
+
+      <section
+        class="slide slide--paper"
+        id="slide-10"
+        data-title="2. 승인 계획을 Vault로 컴파일한다"
+        data-chapter="LIVE PATH · 02"
+        aria-labelledby="slide-10-title"
+      >
+        <div class="slide-shell demo-layout demo-layout--reverse">
+          <div class="demo-copy">
+            <p class="eyebrow eyebrow--ink reveal">LIVE PATH · 02 / COMPILE</p>
+            <span class="demo-step demo-step--amber reveal delay-1">02</span>
+            <h2 id="slide-10-title" class="display-title display-title--ink display-title--compact reveal delay-1">
+              승인된 계획만<br /><span>읽기 전용 Vault가 됩니다.</span>
+            </h2>
+            <p class="lead lead--ink reveal delay-2">
+              승인 계획으로 knowledge note, 원본을 보존하는 legacy stub, 검증 proof를 결정론적으로 생성했습니다.
+            </p>
+            <ul class="explain-list reveal delay-3">
+              <li><b>8개 산출 파일</b><span><code>knowledge/</code>, <code>legacy/</code>, <code>.okc/</code>로 분리됩니다.</span></li>
+              <li><b>publish 전 verify</b><span>staging 결과를 먼저 독립 검증합니다.</span></li>
+              <li><b>no-clobber</b><span>기존 결과를 덮어쓰지 않고 새 revision으로 발행합니다.</span></li>
+            </ul>
+            <div class="plain-language plain-language--amber reveal delay-4">
+              <span>화면에서 볼 것</span>
+              <p><strong>verify PASS</strong>는 이 결과가 승인 계획과 byte 단위로 일치한다는 뜻입니다.</p>
+            </div>
+          </div>
+
+          <button
+            class="zoomable screenshot-frame reveal delay-2"
+            type="button"
+            data-image="assets/05-compiled-vault.png"
+            data-caption="8개 파일과 verify PASS, knowledge, legacy, .okc 구조를 보여주는 Compiled Vault 화면"
+            aria-label="Compiled Vault 실제 화면을 크게 보기"
+          >
+            <span class="browser-chrome" aria-hidden="true"><i></i><i></i><i></i><b>okc-web / compiled vault</b></span>
+            <img
+              src="assets/05-compiled-vault.png"
+              alt="8개 파일과 verify PASS, knowledge legacy okc 구조를 보여주는 실제 OKC Compiled Vault 화면"
+            />
+            <span class="screen-label screen-label--amber"><b>실제 화면</b> 8 files · verify PASS</span>
+          </button>
+        </div>
+      </section>
+
+      <section
+        class="slide slide--paper"
+        id="slide-11"
+        data-title="3. 결과에서 출처로 되돌아간다"
+        data-chapter="LIVE PATH · 03"
+        aria-labelledby="slide-11-title"
+      >
+        <div class="slide-shell demo-layout">
+          <div class="demo-copy">
+            <p class="eyebrow eyebrow--ink reveal">LIVE PATH · 03 / EXPLAIN</p>
+            <span class="demo-step demo-step--mint reveal delay-1">03</span>
+            <h2 id="slide-11-title" class="display-title display-title--ink display-title--compact reveal delay-1">
+              결과를 믿으라고 하지 않고,<br /><span>근거로 돌아가게 합니다.</span>
+            </h2>
+            <p class="lead lead--ink reveal delay-2">
+              선택한 compiled note를 세 팀의 source revision, synthesis, 승인 계획과 연결해 보여줍니다.
+            </p>
+            <ul class="explain-list reveal delay-3">
+              <li><b>Provenance</b><span>출력 파일이 어느 source에서 왔는지 설명합니다.</span></li>
+              <li><b>Verify</b><span>embedded plan에서 기대 byte를 다시 만들어 대조합니다.</span></li>
+              <li><b>Fail closed</b><span>발행 파일이 바뀌면 읽기 자체를 거부합니다.</span></li>
+            </ul>
+            <div class="plain-language plain-language--mint reveal delay-4">
+              <span>정직한 의미</span>
+              <p><strong>Verified</strong>는 “내용이 객관적 진실”이라는 뜻이 아니라, 승인 계획과 현재 산출물의 <strong>내부 일관성</strong>을 뜻합니다.</p>
+            </div>
+          </div>
+
+          <button
+            class="zoomable screenshot-frame reveal delay-2"
+            type="button"
+            data-image="assets/06-provenance-verify.png"
+            data-caption="compiled note와 세 팀의 source owner 연결, Verified 상태를 보여주는 Provenance 화면"
+            aria-label="Provenance와 Verify 실제 화면을 크게 보기"
+          >
+            <span class="browser-chrome" aria-hidden="true"><i></i><i></i><i></i><b>okc-web / provenance</b></span>
+            <img
+              src="assets/06-provenance-verify.png"
+              alt="선택한 compiled note와 Product Engineering Research source의 연결, Verified 상태를 보여주는 화면"
+            />
+            <span class="screen-label screen-label--mint"><b>실제 화면</b> output → synthesis → sources</span>
+          </button>
+        </div>
+      </section>
+
+      <section
+        class="slide slide--dashboard"
+        id="slide-12"
+        data-title="한 화면에 남는 최종 상태"
+        data-chapter="LIVE RESULT"
+        aria-labelledby="slide-12-title"
+      >
+        <div class="slide-shell result-layout">
+          <div class="result-copy">
+            <p class="eyebrow reveal">04 · LIVE RESULT</p>
+            <h2 id="slide-12-title" class="display-title display-title--compact reveal delay-1">
+              최종 상태는<br /><span>네 개의 신호로 읽힙니다.</span>
+            </h2>
+            <div class="result-metrics reveal delay-2" aria-label="실제 실행 결과 요약">
+              <article><b>3</b><span>source revisions</span></article>
+              <article><b>frozen</b><span>input baseline</span></article>
+              <article><b>0</b><span>blocking findings</span></article>
+              <article><b>PASS</b><span>byte verification</span></article>
+            </div>
+            <p class="lead reveal delay-3">
+              큐레이터는 소스 수, 입력 고정 상태, 차단 비평, 검증 결과와 최근 승인 기록을 한 화면에서 확인합니다.
+            </p>
+            <div class="result-equation reveal delay-4">
+              <span>읽는 순서</span>
+              <p>입력 고정 <i>→</i> 비평 해소 <i>→</i> 승인 기록 <i>→</i> 검증 통과</p>
+            </div>
+          </div>
+
+          <button
+            class="zoomable dashboard-frame reveal delay-2"
+            type="button"
+            data-image="assets/03-overview.png"
+            data-caption="3 sources, frozen, blocking finding 0, verify PASS를 보여주는 OKC Overview"
+            aria-label="OKC Overview 실제 화면을 크게 보기"
+          >
+            <img
+              src="assets/03-overview.png"
+              alt="세 개 source, frozen 상태, blocking finding 0, verify PASS를 보여주는 OKC Overview"
+            />
+            <span class="dashboard-badge">VERIFIED WORKFLOW</span>
+          </button>
+        </div>
+      </section>
+
+      <section
+        class="slide slide--dark"
+        id="slide-13"
+        data-title="세 가지 구조적 차이"
+        data-chapter="WHY IT HOLDS"
+        aria-labelledby="slide-13-title"
+      >
+        <div class="slide-shell engineering-layout">
+          <div class="engineering-heading">
+            <p class="eyebrow reveal">05 · WHY IT HOLDS</p>
+            <h2 id="slide-13-title" class="display-title display-title--compact reveal delay-1">
+              “AI를 잘 썼다”보다<br /><span>“틀려도 통과하지 못한다”에 집중했습니다.</span>
+            </h2>
+            <p class="lead reveal delay-2">신뢰는 모델 이름이 아니라, 결과가 만들어지고 읽히는 경계에서 생깁니다.</p>
+          </div>
+
+          <div class="engineering-cards">
+            <article class="engineering-card reveal delay-1">
+              <div class="engineering-card__top">
+                <span>01</span>
+                <i class="pulse-dot pulse-dot--blue"></i>
+              </div>
+              <h3>발행 전 스스로 검증</h3>
+              <p>staging에 전체 산출물을 만든 뒤 <strong>verify를 먼저 통과</strong>해야 no-replace publish가 일어납니다.</p>
+              <div class="mini-flow" aria-label="컴파일, 검증, 발행 순서">
+                <span>compile</span><b>→</b><span>verify</span><b>→</b><span>publish</span>
+              </div>
+              <small>검증되지 않은 결과는 발행 경로에 들어갈 수 없습니다.</small>
+            </article>
+
+            <article class="engineering-card engineering-card--amber reveal delay-2">
+              <div class="engineering-card__top">
+                <span>02</span>
+                <i class="pulse-dot pulse-dot--amber"></i>
+              </div>
+              <h3>모순을 지우지 않는 모델</h3>
+              <p>큐레이터에게 “승자 선택” 동작이 없습니다. 충돌하는 주장은 각자의 <strong>evidence와 함께 보존</strong>됩니다.</p>
+              <div class="conflict-flow" aria-label="두 주장이 각자의 근거와 함께 보존되는 구조">
+                <span>Claim A<small>evidence A</small></span>
+                <b>≠</b>
+                <span>Claim B<small>evidence B</small></span>
+              </div>
+              <small>Major/Critical finding은 사유를 붙여서도 무시할 수 없습니다.</small>
+            </article>
+
+            <article class="engineering-card engineering-card--mint reveal delay-3">
+              <div class="engineering-card__top">
+                <span>03</span>
+                <i class="pulse-dot pulse-dot--mint"></i>
+              </div>
+              <h3>발행 당시 지식에 고정</h3>
+              <p>새 revision이 나와도 기존 client는 요청한 revision의 <strong>같은 byte</strong>를 계속 읽을 수 있습니다.</p>
+              <div class="revision-flow" aria-label="두 버전이 독립적으로 유지되는 구조">
+                <span>Revision A<b>pinned</b></span>
+                <span>Revision B<b>latest</b></span>
+              </div>
+              <small>존재하지 않는 버전을 최신본으로 조용히 바꾸지 않습니다.</small>
+            </article>
+          </div>
+        </div>
+        <p class="slide-takeaway">Provider-dependent proposal과 provider-free 판단 경로를 <strong>구조적으로 분리</strong>했습니다.</p>
+      </section>
+
+      <section
+        class="slide slide--visual"
+        id="slide-14"
+        data-title="핵심 경계마다 통과 증거를 남겼다"
+        data-chapter="ENGINEERING PROOF"
+        aria-labelledby="slide-14-title"
+      >
+        <h2 id="slide-14-title" class="sr-only">OKC 모듈별 최신 로컬 테스트와 four-module bridge 통과 결과</h2>
+        <button
+          class="zoomable full-bleed-visual"
+          type="button"
+          data-image="assets/08-engineering-proof.svg"
+          data-caption="Core, Hooks, MCP, Web의 최신 로컬 테스트와 실제 four-module bridge 통과 기록"
+          aria-label="OKC 엔지니어링 검증 결과를 크게 보기"
+        >
+          <img
+            src="assets/08-engineering-proof.svg"
+            alt="Core 130, Hooks 250, MCP 103, Web backend 114와 frontend 8 테스트 및 four-module bridge PASS"
+          />
+        </button>
+        <div class="bridge-explainer">
+          <span>FOUR-MODULE BRIDGE</span>
+          <p>실제 MCP subprocess → Rust CBOR encoder → FastAPI → native core binding을 한 경로로 연결했습니다.</p>
+        </div>
+      </section>
+
+      <section
+        class="slide slide--scope"
+        id="slide-15"
+        data-title="증명한 것과 남은 것을 구분한다"
+        data-chapter="HONEST SCOPE"
+        aria-labelledby="slide-15-title"
+      >
+        <div class="slide-shell scope-layout">
+          <div class="scope-heading">
+            <p class="eyebrow eyebrow--ink reveal">06 · HONEST SCOPE</p>
+            <h2 id="slide-15-title" class="display-title display-title--ink reveal delay-1">
+              신뢰할 수 있는 주장은<br /><span>경계까지 정확해야 합니다.</span>
+            </h2>
+            <p class="lead lead--ink reveal delay-2">
+              OKC는 development-stage 프로젝트이며, okc-web은 single-organization · single-process 해커톤 MVP입니다.
+            </p>
+          </div>
+
+          <div class="scope-columns">
+            <article class="scope-card scope-card--done reveal delay-2">
+              <div class="scope-card__header">
+                <span aria-hidden="true">✓</span>
+                <div><small>VERIFIED NOW</small><h3>현재 증명한 것</h3></div>
+              </div>
+              <ul>
+                <li><b>워크플로 실행</b><span>ingest → freeze → review → compile → publish → verify</span></li>
+                <li><b>native 경계</b><span>실제 okc-core binding과 web control plane 연결</span></li>
+                <li><b>출처 설명</b><span>발행 note에서 source와 승인 계획으로 역추적</span></li>
+                <li><b>모듈 간 계약</b><span>MCP · Hooks · Web · Core four-module bridge</span></li>
+              </ul>
+            </article>
+
+            <article class="scope-card scope-card--next reveal delay-3">
+              <div class="scope-card__header">
+                <span aria-hidden="true">→</span>
+                <div><small>RELEASE BLOCKERS</small><h3>아직 남은 것</h3></div>
+              </div>
+              <ul>
+                <li><b>Live provider 품질</b><span>실제 외부 모델별 문장 품질과 비용 검증</span></li>
+                <li><b>Native OS 설치</b><span>전체 서비스 설치 경로의 실환경 검증</span></li>
+                <li><b>운영 규모</b><span>성능, 배포, 다중 조직, 패키지 release gate</span></li>
+                <li><b>검색 확장</b><span>MinHash · cosine · HNSW 후보 경로 통합</span></li>
+              </ul>
+            </article>
+          </div>
+        </div>
+        <p class="slide-takeaway slide-takeaway--ink">
+          한계를 숨기지 않는 이유도 같습니다. OKC가 다루는 핵심 가치가 바로 <strong>검증 가능한 주장</strong>이기 때문입니다.
+        </p>
+      </section>
+
+      <section
+        class="slide slide--closing"
+        id="slide-16"
+        data-title="답만큼 증거가 필요한 시대"
+        data-chapter="CLOSING"
+        aria-labelledby="slide-16-title"
+      >
+        <div class="closing-orbit" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+        <div class="slide-shell closing-layout">
+          <div class="closing-copy">
+            <p class="eyebrow reveal">OBSIDIAN KNOWLEDGE COMPILATION</p>
+            <h2 id="slide-16-title" class="closing-title reveal delay-1">
+              AI 시대의 지식에는<br /><em>답만큼 증거가 필요합니다.</em>
+            </h2>
+            <p class="closing-summary reveal delay-2">
+              OKC는 그럴듯한 요약을 넘어, <strong>누가 무엇을 제안했고 어떤 근거가 승인됐으며 지금 읽는 byte가 그 결과와 일치하는지</strong> 다시 물을 수 있는 조직 지식을 만듭니다.
+            </p>
+
+            <div class="closing-principles reveal delay-3" aria-label="OKC의 네 가지 핵심 원칙">
+              <span><b>AI</b> proposes</span>
+              <span><b>Code</b> verifies</span>
+              <span><b>Human</b> approves</span>
+              <span><b>Revision</b> stays pinned</span>
+            </div>
+
+            <div class="closing-actions reveal delay-4">
+              <a href="https://github.com/HappySPigs/okc" target="_blank" rel="noreferrer">
+                GitHub에서 직접 확인하기
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+              </a>
+              <code>github.com/HappySPigs/okc</code>
+            </div>
+          </div>
+
+          <div class="closing-mark reveal delay-3" aria-hidden="true">
+            <span class="closing-mark__outer"></span>
+            <span class="closing-mark__inner">OKC</span>
+            <span class="closing-mark__seal">VERIFIED</span>
+          </div>
+        </div>
+        <div class="closing-footer">
+          <span>16 / 16</span>
+          <span>THANK YOU FOR READING</span>
+          <button id="restartButton" type="button">처음부터 다시 보기 ↥</button>
+        </div>
+      </section>
+    </main>
+
+    <nav class="deck-controls" aria-label="슬라이드 이동">
+      <button id="previousButton" type="button" aria-label="이전 슬라이드">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+      </button>
+      <span class="slide-count"><b id="currentSlide">01</b><i></i><span id="totalSlides">16</span></span>
+      <button id="nextButton" type="button" aria-label="다음 슬라이드">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+      </button>
+    </nav>
+
+    <div class="outline-panel" id="outlinePanel" role="dialog" aria-modal="true" aria-labelledby="outlineTitle" aria-hidden="true">
+      <div class="outline-backdrop" data-close-dialog></div>
+      <div class="outline-sheet">
+        <div class="outline-header">
+          <div>
+            <p>OKC WEB DECK</p>
+            <h2 id="outlineTitle">전체 슬라이드</h2>
+          </div>
+          <button class="icon-button icon-button--light" id="outlineClose" type="button" aria-label="목차 닫기">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+          </button>
+        </div>
+        <ol id="outlineList" class="outline-list"></ol>
+        <div class="outline-help">
+          <span><kbd>←</kbd><kbd>→</kbd> 슬라이드 이동</span>
+          <span><kbd>M</kbd> 목차</span>
+          <span><kbd>F</kbd> 전체화면</span>
+          <span><kbd>Esc</kbd> 닫기</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="image-dialog" id="imageDialog" role="dialog" aria-modal="true" aria-labelledby="imageCaption" aria-hidden="true">
+      <div class="image-dialog__backdrop" data-close-image></div>
+      <div class="image-dialog__content">
+        <button class="icon-button image-dialog__close" id="imageClose" type="button" aria-label="확대 이미지 닫기">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
+        <img id="imagePreview" src="" alt="" />
+        <p id="imageCaption"></p>
+      </div>
+    </div>
+
+    <noscript>
+      <div class="noscript-note">JavaScript가 꺼져 있어도 스크롤로 모든 슬라이드를 볼 수 있습니다.</div>
+    </noscript>
+
+    <script src="script.js" defer></script>
+  </body>
+</html>
