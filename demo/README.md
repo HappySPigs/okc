@@ -52,6 +52,12 @@ Fictional company **너울(Neoul)**, `demo/vaults/{eng,product,sales,support,min
 - Playwright browser: `cd demo/e2e && npm install && npx playwright install chromium`.
 - **No Ollama/Bedrock/API keys needed** — the merge uses the local deterministic provider.
 
+> **Windows:** the demo harness is POSIX shell + `Caddy`/`lsof`-based, so run it
+> under **WSL2** (Ubuntu) and install the prerequisites inside that Linux
+> environment. The product modules themselves are cross-platform (`install.ps1`
+> covers native Windows install); only this one-command demo script is
+> macOS/Linux/WSL-only.
+
 ## Run it
 
 ```bash
