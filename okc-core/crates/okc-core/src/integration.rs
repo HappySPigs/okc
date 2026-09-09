@@ -1327,6 +1327,12 @@ fn compile_with_hook(
     hook: &mut impl FnMut(PublicationCheckpoint, &Path) -> std::io::Result<()>,
 ) -> Result<CompiledArtifact> {
     plan.validate()?;
+    tracing::debug!(
+        target: "okc::compile",
+        integration_plan_id = %plan.integration_plan_id,
+        destination = %destination.display(),
+        "compiling approved integration plan"
+    );
     if fs::symlink_metadata(destination).is_ok() {
         return Err(OkcError::OutputExists(destination.to_path_buf()));
     }
@@ -1426,6 +1432,13 @@ fn compile_with_hook(
             path: destination.to_path_buf(),
             source,
         })?;
+    tracing::info!(
+        target: "okc::compile",
+        integration_plan_id = %plan.integration_plan_id,
+        destination = %destination.display(),
+        files,
+        "published compiled vault artifact"
+    );
     Ok(CompiledArtifact {
         path: destination.to_path_buf(),
         integration_plan_id: plan.integration_plan_id.clone(),
@@ -1493,6 +1506,12 @@ pub fn verify(root: impl AsRef<Path>) -> Result<CompiledVaultManifest> {
             "Schema 3 artifact bytes do not reproduce its approved plan and audit envelope".into(),
         ));
     }
+    tracing::info!(
+        target: "okc::verify",
+        integration_plan_id = %manifest.integration_plan_id,
+        files = manifest.files.len(),
+        "verified compiled vault artifact"
+    );
     Ok(manifest)
 }
 

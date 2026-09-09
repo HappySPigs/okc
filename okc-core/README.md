@@ -6,6 +6,40 @@ validation, an independent critic, and explicit curator approvals decide what
 may enter the final Schema 3 artifact. Compilation, verification, and
 provenance explanation are provider-free.
 
+## Who this is for, and the problem
+
+**Who.** People and teams who each keep their own knowledge in a personal
+Obsidian Vault — each possibly authored through a *different* community Obsidian
+MCP server, so structure, naming, and conventions diverge from Vault to Vault. A
+concrete instance ships in [demo/](demo/README.md): three teammates who
+separately keep a product, an engineering, and a customer-operations Vault (112
+notes, 434 internal links) that overlap, duplicate, and contradict one another.
+The primary operator is the *knowledge curator* who reviews and approves the
+merge (see the user/surface table in
+[docs/specs/product-and-scope.md](docs/specs/product-and-scope.md)).
+
+**The problem.** The moment you try to combine several people's Vaults — for
+example consolidating team knowledge, onboarding a new member, a handoff, or a
+cross-team merge — you cannot tell which version is authoritative, and there is
+no trustworthy, auditable way to reconcile duplicates and contradictions. When
+the sources come from different MCPs the divergence is worse. The result: even
+an AI handed this knowledge cannot tell what is authoritative or where a claim
+came from.
+
+**How OKC solves it.** OKC compiles the immutable Vault snapshots into one new,
+deterministic, evidence-traceable Vault. AI performs the semantic
+classification and merge, but only proposals that pass local validation, an
+independent critic, and an explicit curator approval enter the result — and
+every output block stays traceable to its source and to the decision that
+placed it. Conflicting claims retain their source, time, and context instead of
+being decided by majority vote. Compilation, verification, and provenance
+explanation run with no provider attached.
+
+<sub>Grounding: `PROJECT_CONTEXT.md` (durable principles);
+`aidlc-docs/inception/reverse-engineering/overview.md`;
+`aidlc-docs/inception/reverse-engineering/decision-intent-timeline.md`
+(S3, user statement 2026-09-01).</sub>
+
 > The repository is a `0.3.0` development tree, not a stable release. The
 > current materializer produces Markdown directories. Attachment, Canvas,
 > Base, full link-rewrite, current OKCPack, semantic-scale, fuzzing,
@@ -114,9 +148,14 @@ okc provider test local
 Run/review the integration and compile only after every required approval:
 
 ```bash
+# Phase 1: propose the taxonomy, then approve it.
 okc --project ./Knowledge.okc-project integrate
 okc --project ./Knowledge.okc-project review taxonomy show
 okc --project ./Knowledge.okc-project review taxonomy approve
+
+# Phase 2: run integrate AGAIN to generate per-cluster synthesis + critic,
+# then review and approve every cluster before compiling.
+okc --project ./Knowledge.okc-project integrate
 okc --project ./Knowledge.okc-project review cluster list
 okc --project ./Knowledge.okc-project review cluster show CLUSTER_ID
 okc --project ./Knowledge.okc-project review cluster approve CLUSTER_ID

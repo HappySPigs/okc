@@ -20,7 +20,48 @@ source_refs:
 
 ## Status
 
-Accepted on 2026-08-16.
+Accepted on 2026-08-16. Superseded as the current provenance contract. This
+ADR describes the retired `vaultc`/Schema 1-era target design — a typed graph of
+`source`/`operation`/`decision`/`proposal`/`approval`/`output`/`edge` records,
+typed edges such as `derived_from`/`rewritten_from`/`deduplicates`, a
+`virtual_audit_envelope` storage class, the virtual graph `E`, `.vaultc/` paths,
+and the `vaultc:provenance:v1` domain. None of these are shipped in the current
+single-source Schema 3 `0.3.0` product path defined by
+[ADR-0027](0027-current-schema-single-source.md) and
+[Current State](../CURRENT_STATE.md). The current normative provenance contract
+is [ALG-PRV-001](../algorithms/stable/provenance-and-evidence.md), which already
+records this graph / virtual-root / cursor model as historical.
+
+> Implemented by (current Schema 3): the shipped provenance is a single flat
+> `ProvenanceRecord` per output written to `.okc/provenance.jsonl`, not a typed
+> node/edge graph. See `crates/okc-core/src/integration.rs`: the struct at
+> `integration.rs:1284` (fields `schema_version`, `record_id`, a string `kind`
+> = `canonical_note`/`legacy_redirect`, `output_path`, `output_hash`,
+> `integration_plan_id`, `cluster_id`, `proposal_hash`, `critic_hash`,
+> `approval_hash`, `evidence`, `source_document`), emitted by `provenance_jsonl`
+> at `integration.rs:1825` under the `okc:provenance:v3` identity domain
+> (`integration.rs:1920`) with `INTEGRATION_SCHEMA_VERSION = 3`
+> (`integration.rs:23`). The typed graph, virtual audit envelope, and paged
+> explanation described below remain retired/future design, not current code.
+
+### Why the shipped record is still structurally distinct (grounded in code)
+
+Even in its flat form the current record captures differentiators that are
+verifiable in `crates/okc-core/src/integration.rs`:
+
+- Provider-free deterministic compile/verify/explain: `compile` "has no
+  provider input and performs no network access" (`integration.rs:1299`) and
+  `explain` is "deliberately provider-free" (`integration.rs:1584`); the record
+  commits `output_hash` under a fixed identity domain.
+- Independent critic gate: a `CriticReport` is sealed separately with its own
+  `critic_recording_hash` (`integration.rs:391`), any `Major`/`Critical`
+  finding hard-blocks approval (`integration.rs:1074`), and the surviving
+  `critic_hash` is bound into every provenance record.
+- Conflict preservation: contradiction sets are retained in the proposal
+  identity (`ContradictionSet`, `integration.rs:287`) and blocks marked
+  `DispositionKind::PreservedVerbatim` (`integration.rs:229`) are emitted
+  verbatim under a "Preserved source material" section (`integration.rs:1744`)
+  rather than being silently dropped.
 
 ## Context
 

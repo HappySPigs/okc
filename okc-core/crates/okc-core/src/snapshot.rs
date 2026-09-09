@@ -210,6 +210,14 @@ pub fn inspect_sources(
             &right.message,
         ))
     });
+    tracing::info!(
+        target: "okc::inspect",
+        sources = snapshots.len(),
+        files = total_files,
+        bytes = total_bytes,
+        diagnostics = diagnostics.len(),
+        "inspected sources into canonical workspace"
+    );
     let inspection = Inspection::new(policy.semantic_hash()?, snapshots, canonical, diagnostics)?;
 
     #[cfg(feature = "sqlite")]

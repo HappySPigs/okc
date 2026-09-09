@@ -41,7 +41,7 @@ tags와 본문 표현을 사용해 OKC가 Vault 사이의 의미 관계와 충�
     cd demo
     ../target/release/okc
 
-이미 이 저장소에 빌드된 0.3.0 debug binary를 사용하려면 다음처럼 실행합니다.
+debug 빌드(`cargo build --locked -p okc`)를 이미 실행했다면 debug binary로도 실행할 수 있습니다. (새로 clone한 저장소에는 아직 `target/`이 없으므로 위 빌드를 먼저 해야 합니다.)
 
     cd demo
     ../target/debug/okc
@@ -60,5 +60,7 @@ provider와 model에 따라 시간과 호출 비용이 생길 수 있습니다. 
 ## 데이터 검사 결과
 
 작성 후 Vault별 wikilink graph를 검사했습니다. 세 Vault 모두 깨진 링크와 고립
-노트가 없고, 각 graph가 하나의 연결 component를 이룹니다. OKC 0.3.0의 inspect도
-세 snapshot과 Markdown document 112개를 정상적으로 읽었습니다.
+노트가 없고, 각 graph가 하나의 연결 component를 이룹니다. OKC 0.3.0의 source
+수집(ingestion) 단계도 세 snapshot과 Markdown document 112개를 정상적으로
+읽어들입니다. (CLI에는 별도의 `inspect` 명령이 없습니다 — 수집은 `integrate`
+흐름의 일부로 실행됩니다.)
