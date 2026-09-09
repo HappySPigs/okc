@@ -10,6 +10,37 @@ The hooks daemon now connects through authenticated CBOR `/api/sync`; repeated u
 
 ---
 
+## The problem
+
+**Who.** A curator (a team's knowledge/ops lead) responsible for merging several departments' or individuals' Obsidian vaults into one shared, trustworthy base — plus the contributors who feed it and the AI agents (via okc-mcp) that read it.
+
+**When it hurts.** Every time knowledge has to be *combined across people*: onboarding a new hire into an existing body of notes, a quarterly knowledge-integration cycle, folding in each new contributor batch, or standing up a single source of truth from scattered personal vaults.
+
+**How often.** On every integration cycle — not a one-time migration. Sources keep changing, so the merge, the review, and the approvals recur each round.
+
+**What goes wrong today** — merging by hand, or reaching for Obsidian Sync / a shared wiki / a RAG ingest:
+
+- **Provenance is lost** — you can't tell which team's note a merged sentence came from.
+- **Contradictions are hidden** — conflicting policies or dates get flattened into one smooth sentence.
+- **Approvals drift** — content changes after a human approved it, but the approval record stays green.
+- **Versions blur** — the latest publication and stale local knowledge silently mix.
+
+okc-web treats this as a **compilation problem** (not a search or chatbot feature) and structurally blocks all four. For the narrative version, see [`showcase/WHY-OKC.md`](../showcase/WHY-OKC.md).
+
+## How it's different
+
+Not a folder-merger, a live-sync, or a RAG ingest. Each difference below is **enforced in code**, not just claimed:
+
+| vs. | Their model | okc's structural difference | Where it lives |
+|---|---|---|---|
+| Obsidian Sync / Publish | Mirror or replicate one vault as-is | Many vaults **compiled** into one curated base with per-file provenance | okc-core compile + `app/serving` provenance |
+| Notion / Confluence | Manual edits smoothed into prose; conflicts overwritten | Contradictions **preserved**, never winner-selected; surfaced with evidence | `app/review` DecisionGate (no winner-select) |
+| LlamaIndex / Mem0 / RAG ingest | Embed chunks, drop provenance; answers unverifiable | Provider-free **deterministic** compile + `verify()`/`explain()`; provenance retained; retrieval is a separate tier (okc-mcp) | okc-core `compile`/`verify` via the `okc` binding, `app/serving` |
+| git-merge / conflict resolver | Line-level merge, pick a side | Semantic clusters + **un-waivable** Major/Critical critic that **refuses compile** until resolved | `app/review` + `APPROVAL_REQUIRED` compile gate |
+| Any auth-less engine | Trust the caller | RBAC enforced **before any engine call**; `curator_id` is an unverified label, authorization owned by okc-web | `app/auth` middleware (pre-core 403) |
+
+---
+
 ## Architecture
 
 ```
