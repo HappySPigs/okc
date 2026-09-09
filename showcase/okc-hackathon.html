@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OKC — AI가 합친 지식을 검증 가능한 결과로 만드는 컴파일러</title>
+<style>
+  :root{
+    --bg:#0b1120; --stage:#0f172a; --card:#16233b; --card2:#1a2942;
+    --border:#26364f; --ink:#e8eefb; --muted:#9fb0cd; --faint:#6b7ea1;
+    --indigo:#818cf8; --indigo-d:#6366f1; --teal:#2dd4bf; --amber:#fbbf24; --green:#4ade80;
+    --mono:"D2Coding","Cascadia Code","Consolas",ui-monospace,"SFMono-Regular",monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Pretendard","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;font-family:var(--sans);}
+  html,body{height:100%;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 12% -10%, #16224088 0%, transparent 60%),
+      radial-gradient(1000px 520px at 112% 118%, #1e293b66 0%, transparent 55%),
+      var(--bg);
+    color:var(--ink); overflow:hidden;
+    display:flex; align-items:center; justify-content:center; min-height:100vh;
+  }
+  .deck{
+    position:relative; width:100vw; height:56.25vw;
+    max-height:100vh; max-width:177.78vh;
+    background:linear-gradient(160deg,var(--stage) 0%,#0b1424 100%);
+    overflow:hidden; container-type:size;
+    box-shadow:0 24px 80px rgba(0,0,0,.55);
+  }
+  .slide{
+    position:absolute; inset:0; padding:5.6cqh 6.5cqw 7cqh;
+    display:none; flex-direction:column;
+    opacity:0; transform:translateY(1.2cqh);
+    transition:opacity .42s ease, transform .42s ease;
+  }
+  .slide.active{display:flex; opacity:1; transform:none;}
+  .slide.scroll{overflow-y:auto;}
+
+  .kicker{display:inline-flex; align-items:center; gap:.6cqw; font-size:1.45cqh;
+    font-weight:700; letter-spacing:.18em; text-transform:uppercase; color:var(--indigo); margin-bottom:1.6cqh;}
+  .kicker::before{content:""; width:2.4cqw; height:.3cqh; background:linear-gradient(90deg,var(--indigo),transparent); border-radius:2px;}
+  h1{font-size:6cqh; line-height:1.08; font-weight:800; letter-spacing:-.01em;}
+  h2{font-size:4.3cqh; line-height:1.12; font-weight:800; letter-spacing:-.01em; margin-bottom:.6cqh;}
+  .lead{font-size:2.1cqh; color:var(--muted); line-height:1.5; max-width:88%; margin-top:1.2cqh;}
+  .grow{flex:1; min-height:0;}
+  em.hl{font-style:normal; color:var(--ink); background:linear-gradient(180deg,transparent 62%,#6366f14d 0); padding:0 .2em; border-radius:3px;}
+  .accent{color:var(--indigo);} .teal{color:var(--teal);} .mono{font-family:var(--mono);}
+
+  /* 표지 */
+  .cover{justify-content:center;}
+  .cover .brand{display:flex; align-items:center; gap:1.4cqw; margin-bottom:2.2cqh;}
+  .logo{width:6cqh; height:6cqh; border-radius:1.3cqh; background:linear-gradient(150deg,var(--indigo-d),#3730a3);
+    display:grid; place-items:center; font-weight:900; font-size:2.8cqh; color:#fff; box-shadow:0 6px 24px #4338ca66;}
+  .cover h1{font-size:6.4cqh;}
+  .cover .sub{font-size:2.5cqh; color:var(--muted); margin-top:1.8cqh; font-weight:600; max-width:78%; line-height:1.45;}
+  .pill{margin-top:2.6cqh; display:inline-flex; gap:1cqw; flex-wrap:wrap;}
+  .pill span{font-size:1.5cqh; color:var(--muted); border:1px solid var(--border); background:#0e1a2e; padding:.9cqh 1.4cqw; border-radius:999px;}
+  .pill span b{color:var(--indigo);}
+
+  /* 레이아웃 */
+  .split{display:grid; grid-template-columns:1.02fr .98fr; gap:3.4cqw; align-items:center; flex:1; min-height:0;}
+  .figure{display:flex; flex-direction:column; align-items:center;}
+  .figure img{width:100%; max-height:60cqh; object-fit:contain; border:1px solid var(--border); border-radius:1.2cqh; background:#0b1424;}
+  .fullfig{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:0;}
+  .fullfig img{max-width:82%; max-height:66cqh; object-fit:contain; border:1px solid var(--border); border-radius:1.4cqh; background:#0b1424;}
+  .cap{font-size:1.35cqh; color:var(--faint); margin-top:1cqh; text-align:center; line-height:1.4;}
+  .banner img{width:100%; max-height:26cqh; object-fit:contain; border:1px solid var(--border); border-radius:1.2cqh; background:#0b1424; margin-bottom:1.4cqh;}
+
+  /* 카드/그리드 */
+  .grid{display:grid; gap:1.6cqh 1.8cqw;}
+  .g2{grid-template-columns:1fr 1fr;} .g3{grid-template-columns:repeat(3,1fr);}
+  .card{background:linear-gradient(160deg,var(--card),var(--card2)); border:1px solid var(--border);
+    border-radius:1.5cqh; padding:2cqh 1.8cqw; display:flex; flex-direction:column; gap:.8cqh;}
+  .card .ic{font-size:2.8cqh; line-height:1;}
+  .card h3{font-size:2.2cqh; font-weight:800; display:flex; align-items:center; gap:.8cqw; flex-wrap:wrap;}
+  .card p{font-size:1.7cqh; color:var(--muted); line-height:1.5;}
+  .badge{font-size:1.25cqh; font-weight:700; letter-spacing:.03em; padding:.35cqh 1cqw; border-radius:999px; border:1px solid; white-space:nowrap;}
+  .b-rust{color:#fca17d; border-color:#fca17d55; background:#fca17d14;}
+  .b-node{color:var(--green); border-color:#4ade8055; background:#4ade8014;}
+  .b-py{color:var(--indigo); border-color:#818cf855; background:#818cf814;}
+  .num-big{font-size:3.2cqh; font-weight:900; color:var(--indigo);}
+
+  /* 리스트 */
+  ul.clean{list-style:none; display:flex; flex-direction:column; gap:1.15cqh; margin-top:.6cqh;}
+  ul.clean li{font-size:1.9cqh; color:var(--muted); line-height:1.45; padding-left:2.4cqw; position:relative;}
+  ul.clean li::before{content:""; position:absolute; left:0; top:.75cqh; width:1cqw; height:1cqw; border-radius:50%; background:var(--indigo);}
+  ul.clean li b{color:var(--ink); font-weight:700;}
+  ol.risks{list-style:none; counter-reset:r; display:flex; flex-direction:column; gap:1.3cqh;}
+  ol.risks li{counter-increment:r; font-size:2cqh; color:var(--muted); line-height:1.45; padding-left:4cqw; position:relative;}
+  ol.risks li::before{content:counter(r); position:absolute; left:0; top:0; width:2.6cqw; height:2.6cqh; border-radius:.7cqh;
+    background:#0e1a2e; border:1px solid var(--indigo); color:var(--indigo); font-weight:800; font-size:1.6cqh; display:grid; place-items:center;}
+  ol.risks li b{color:var(--ink); font-weight:800;}
+
+  /* 표 */
+  table.t{width:100%; border-collapse:collapse; font-size:1.75cqh;}
+  table.t th,table.t td{border:1px solid var(--border); padding:1.15cqh 1.3cqw; text-align:left; vertical-align:top; line-height:1.4;}
+  table.t th{background:#0e1a2e; color:var(--indigo); font-weight:700; font-size:1.55cqh; letter-spacing:.02em;}
+  table.t td{color:var(--muted);}
+  table.t td b,table.t td .ink{color:var(--ink); font-weight:700;}
+  table.t.num td:last-child{text-align:right; font-family:var(--mono); color:var(--green); font-weight:700; white-space:nowrap;}
+  table.t.split-col td:first-child{color:var(--faint);}
+  table.t.split-col td:last-child{color:var(--ink);}
+
+  /* 코드 / 콜아웃 */
+  pre.code{font-family:var(--mono); font-size:1.55cqh; line-height:1.75; background:#0a1220;
+    border:1px solid var(--border); border-radius:1.2cqh; padding:1.8cqh 1.8cqw; color:#cfe0ff; white-space:pre; overflow:auto;}
+  pre.code .c{color:var(--faint);} pre.code .k{color:var(--teal);}
+  .callout{background:linear-gradient(160deg,#15233c,#101d33); border:1px solid var(--indigo);
+    border-left:.5cqw solid var(--indigo); border-radius:1.2cqh; padding:1.7cqh 1.9cqw; font-size:1.95cqh; line-height:1.5; margin-top:1.4cqh;}
+  .callout b{color:var(--indigo);}
+  .note{display:flex; gap:1.2cqw; padding:1.4cqh 1.7cqw; border-radius:1.1cqh; background:#0e1a2e80;
+    border:1px solid var(--border); border-left:.45cqw solid var(--amber);}
+  .note .nt{font-size:1.85cqh; font-weight:800; flex:none; min-width:15cqw;}
+  .note .nd{font-size:1.6cqh; color:var(--muted); line-height:1.5;}
+  .notes{display:flex; flex-direction:column; gap:1.15cqh;}
+
+  /* 갤러리 */
+  .gallery{display:grid; grid-template-columns:1fr 1fr; gap:1.6cqh 1.8cqw; flex:1; min-height:0;}
+  .gallery figure{display:flex; flex-direction:column;}
+  .gallery img{width:100%; max-height:24cqh; object-fit:contain; border:1px solid var(--border); border-radius:1cqh; background:#0b1424;}
+  .gallery figcaption{font-size:1.4cqh; color:var(--muted); margin-top:.7cqh; line-height:1.4;}
+  .gallery figcaption b{color:var(--ink);}
+
+  /* 마무리 */
+  .closing{justify-content:center; text-align:center; align-items:center;}
+  .closing h2{font-size:5cqh;}
+  .links{display:flex; flex-wrap:wrap; gap:1.1cqh 1.3cqw; justify-content:center; margin-top:2.4cqh;}
+  .links a{font-family:var(--mono); font-size:1.65cqh; text-decoration:none; color:var(--ink);
+    border:1px solid var(--border); background:#0e1a2e; border-radius:999px; padding:1cqh 1.8cqw; transition:border-color .2s,color .2s;}
+  .links a:hover{border-color:var(--indigo); color:var(--indigo);}
+
+  /* 크롬 */
+  .progress{position:absolute; top:0; left:0; height:.5cqh; background:linear-gradient(90deg,var(--indigo),var(--teal)); width:0; transition:width .4s ease; z-index:20;}
+  .chrome{position:absolute; left:0; right:0; bottom:0; height:5cqh; display:flex; align-items:center; justify-content:space-between;
+    padding:0 6.5cqw; z-index:15; background:linear-gradient(0deg,#0b112099,transparent);}
+  .brandmini{font-family:var(--mono); font-size:1.4cqh; color:var(--faint); letter-spacing:.05em;}
+  .dots{display:flex; gap:.75cqw; align-items:center; flex-wrap:wrap; max-width:55cqw; justify-content:center;}
+  .dot{width:1.05cqh; height:1.05cqh; border-radius:50%; background:#2a3a56; border:0; cursor:pointer; padding:0; transition:transform .2s,background .2s;}
+  .dot:hover{transform:scale(1.3);} .dot.on{background:var(--indigo); box-shadow:0 0 0 .35cqh #6366f133;}
+  .nav{display:flex; gap:.8cqw; align-items:center;}
+  .nav button{width:3.6cqh; height:3.6cqh; border-radius:.8cqh; border:1px solid var(--border); background:#0e1a2e; color:var(--ink);
+    font-size:1.9cqh; cursor:pointer; display:grid; place-items:center; transition:border-color .2s,background .2s;}
+  .nav button:hover{border-color:var(--indigo); background:#152238;}
+  .counter{font-family:var(--mono); font-size:1.4cqh; color:var(--muted); min-width:5cqw; text-align:center;}
+  .hint{position:absolute; top:2cqh; right:6.5cqw; font-size:1.25cqh; color:var(--faint); z-index:15; font-family:var(--mono);}
+
+  @media print{
+    @page{size:1280px 720px; margin:0;}
+    body{overflow:visible; display:block; background:#0f172a;}
+    .deck{width:1280px; height:auto; max-width:none; max-height:none; box-shadow:none; container-type:normal;}
+    .slide{position:relative; display:flex!important; opacity:1!important; transform:none!important;
+      width:1280px; height:720px; page-break-after:always; padding:54px 84px 66px; overflow:hidden;}
+    .chrome,.progress,.hint{display:none!important;}
+    .kicker{font-size:12px; margin-bottom:14px;} h1{font-size:48px;} .cover h1{font-size:52px;} h2{font-size:36px;}
+    .lead{font-size:18px;} .card p,ul.clean li,ol.risks li,table.t,pre.code,.note .nd,.gallery figcaption{font-size:15px;}
+    .figure img,.fullfig img,.banner img,.gallery img{max-height:none;}
+  }
+</style>
+</head>
+<body>
+<div class="deck" id="deck">
+  <div class="progress" id="progress"></div>
+  <div class="hint">← → · Space · F=전체화면</div>
+
+  <!-- 1. 표지 -->
+  <section class="slide cover active">
+    <div class="split">
+      <div>
+        <div class="brand">
+          <div class="logo">O</div>
+          <div class="kicker" style="margin:0">Obsidian Knowledge Compilation · Hackathon</div>
+        </div>
+        <h1 style="font-size:5.3cqh">OKC —<br>AI가 합친 지식을<br><em class="hl">검증 가능한 결과</em>로 만드는 컴파일러</h1>
+        <div class="sub" style="max-width:100%">여러 팀의 Obsidian Vault를 <b class="accent">AI 제안 → 코드 검증 → 사람 승인</b>을 거쳐,
+          결정론적이고 출처를 추적할 수 있으며 다시 검증 가능한 하나의 지식 베이스로 컴파일합니다.</div>
+        <div class="pill">
+          <span><b>4</b> 모듈</span>
+          <span><b>3</b> 핵심 계약</span>
+          <span><b>6</b> CI workflow</span>
+          <span><b>1</b> four-module bridge</span>
+        </div>
+      </div>
+      <div class="figure">
+        <img src="./assets/00-okc-hero.png" alt="여러 독립 Vault가 검증 과정을 거쳐 하나의 추적 가능한 지식 베이스로 컴파일되는 OKC 개념 이미지">
+        <div class="cap">각자의 Vault는 그대로, 승인된 지식만 하나의 검증 가능한 revision으로.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. 신뢰 질문 -->
+  <section class="slide">
+    <div class="kicker">The problem</div>
+    <h2>AI가 합친 지식, 어떻게 믿을 수 있을까요?</h2>
+    <div class="lead">일반적인 AI 요약은 읽기 좋지만 중요한 질문이 남습니다.</div>
+    <div class="grid g2" style="margin-top:2cqh">
+      <div class="card"><div class="ic">🔎</div><h3>어떤 소스가 쓰였나</h3><p>합성된 문장이 어느 팀·어느 노트에서 왔는지 되짚기 어렵다.</p></div>
+      <div class="card"><div class="ic">⚖️</div><h3>모순이 사라지지 않았나</h3><p>서로 다른 정책·출시일이 매끄러운 한 문장으로 뭉개진다.</p></div>
+      <div class="card"><div class="ic">✍️</div><h3>승인 뒤 바뀌지 않았나</h3><p>사람이 승인한 다음 내용이 수정돼도 승인은 그대로 남는다.</p></div>
+      <div class="card"><div class="ic">📌</div><h3>지금 읽는 게 그 결과인가</h3><p>현재 파일이 바로 그 승인 산출물인지 다시 확인하기 어렵다.</p></div>
+    </div>
+    <div class="callout">OKC는 이 문제를 검색이나 챗봇 기능이 아니라 <b>컴파일 문제</b>로 다룹니다.</div>
+  </section>
+
+  <!-- 3. 지식 순환 (comic) -->
+  <section class="slide">
+    <div class="kicker">Knowledge loop</div>
+    <h2>한 번 해결한 문제를 다음 작업의 출발점으로</h2>
+    <div class="split">
+      <div class="figure">
+        <img src="./assets/09-why-okc-comic-v2.png" alt="개인 Vault 기록 → 부서 아카이브 → 코딩 에이전트 재사용 → 환류를 보여주는 6컷 만화">
+        <div class="cap">6컷으로 보는 지식 순환</div>
+      </div>
+      <div>
+        <ul class="clean">
+          <li>Obsidian <b>MCP</b>가 코딩 중 나온 결정·명령·해결법을 개인 Vault에 남깁니다.</li>
+          <li>OKC는 여러 구성원의 Vault를 <b>출처·승인 기록이 남는 부서 공동 아카이브</b>로 만듭니다.</li>
+          <li>코딩 에이전트가 <b>발행된 부서 지식</b>을 새 구현에서 다시 활용합니다.</li>
+          <li>AI는 taxonomy·synthesis·critic을 <b>제안</b>, 코드는 근거·해시·비평 심각도를 <b>검증</b>, 큐레이터가 <b>승인</b>합니다.</li>
+          <li>승인된 계획만 provider 없이 결정론적으로 <b class="teal">compile · verify · explain</b> 되고, 발행 revision은 고정됩니다.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. 4가지 위험 -->
+  <section class="slide">
+    <div class="kicker">Why it's hard</div>
+    <h2>Vault를 합치는 순간, 지식보다 판단이 먼저 섞입니다</h2>
+    <div class="lead">각 팀이 로컬 Obsidian을 잘 써도, 조직 단위로 통합하려는 순간 네 가지 위험이 생깁니다.</div>
+    <ol class="risks" style="margin-top:2cqh">
+      <li><b>출처 소실</b> — 합성된 문장이 어느 팀의 어떤 노트에서 왔는지 알기 어렵습니다.</li>
+      <li><b>모순 은폐</b> — 서로 다른 출시일·정책이 자연스러운 한 문장으로 뭉개질 수 있습니다.</li>
+      <li><b>승인 드리프트</b> — 승인 후 제안이 수정돼도 과거 승인이 그대로 남을 수 있습니다.</li>
+      <li><b>버전 혼동</b> — 최신 발행본과 오래된 로컬 지식이 조용히 섞일 수 있습니다.</li>
+    </ol>
+    <div class="callout" style="margin-top:2cqh">팀이 원하는 건 단순한 “노트 병합”이 아니라 <b>검증 가능한 조직 기억</b>입니다.</div>
+  </section>
+
+  <!-- 5. 단순 병합 → 통제 표 -->
+  <section class="slide">
+    <div class="kicker">Controls</div>
+    <h2>단순 병합의 위험 → OKC가 적용하는 통제</h2>
+    <table class="t split-col" style="margin-top:1.6cqh">
+      <thead><tr><th style="width:46%">단순 병합에서 생기는 문제</th><th>OKC가 적용하는 통제</th></tr></thead>
+      <tbody>
+        <tr><td>입력이 계속 바뀜</td><td>source revision을 수집한 뒤 <b>freeze</b></td></tr>
+        <tr><td>AI 결과가 곧 최종 결과가 됨</td><td><b>proposal</b>로만 받고 로컬 검증 수행</td></tr>
+        <tr><td>중요한 비평도 사람이 무시할 수 있음</td><td><b>Major/Critical finding은 compile 차단</b></td></tr>
+        <tr><td>승인 후 내용이 바뀔 수 있음</td><td>승인을 <b>대상 hash에 바인딩</b></td></tr>
+        <tr><td>결과 파일의 무결성을 다시 확인하기 어려움</td><td>embedded plan에서 결과를 다시 유도해 <b>byte 비교</b></td></tr>
+        <tr><td>과거와 현재 지식이 섞임</td><td><b>revision-pinned read · history · restore</b></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 6. 핵심 아이디어 (pipeline) -->
+  <section class="slide">
+    <div class="kicker">Core idea</div>
+    <h2>AI는 제안하고, 코드는 검증하며, 사람만 승인합니다</h2>
+    <div class="split">
+      <div class="figure">
+        <img src="./assets/01-trust-pipeline.png" alt="AI 제안 · 코드 검증 · 사람 승인 · 결정론적 산출물로 이어지는 OKC 신뢰 파이프라인">
+        <div class="cap">Major/Critical finding이 하나라도 남으면 승인이 아니라 재생성 경로로 돌아갑니다.</div>
+      </div>
+      <div class="grid" style="gap:1.3cqh">
+        <div class="card"><h3>① AI는 가능성을 제안</h3><p>분류·합성·독립 critic을 제안. 소스 텍스트는 명령이 아니라 <b>적대적 evidence</b>로 취급하고, 응답은 로컬 파싱·검증 후 입력·해시에 묶습니다.</p></div>
+        <div class="card"><h3>② 코드는 통과 조건 검사</h3><p>모든 문서 1회 처리, block/metadata마다 정확히 하나의 disposition, evidence 해시 일치, <b>Major/Critical 잔존 시 compile 불가</b>.</p></div>
+        <div class="card"><h3>③ 사람 승인은 대상에 묶임</h3><p>승인은 taxonomy·proposal·critic·revision hash에 연결. 수정하면 기존 승인 무효, <b>Major/Critical은 waive 불가</b>.</p></div>
+        <div class="card"><h3>④ 최종 경로는 provider-free</h3><p>compile·verify·explain은 LLM 호출 없이 실행. 모델·API가 사라져도 <b>내부 일관성</b>을 다시 확인.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7. okc-core 병합 6단계 -->
+  <section class="slide">
+    <div class="kicker">okc-core · merge logic</div>
+    <h2>okc-core는 어떻게 병합하는가</h2>
+    <div class="split">
+      <div class="figure">
+        <img src="./assets/10-core-merge-logic.png" alt="입력 봉인, 후보 생성, taxonomy 완전 분할, evidence closure, critic·승인, byte 검증으로 이어지는 병합 로직">
+        <div class="cap">유사도는 검토 후보만 좁히고, 완전성·근거·critic·해시 결합 승인이 실제 컴파일 권한을 결정합니다.</div>
+      </div>
+      <div>
+        <ul class="clean">
+          <li><b>① 봉인</b> — 움직이는 원본을 정규화·정렬해 <b>내용 기반 ID/해시</b>로 고정.</li>
+          <li><b>② 후보 축소</b> — exact group + MinHash/LSH(0.85), 공개 실행은 cosine top-8(0.55). <b>자동 삭제·진위 판단은 하지 않음</b>.</li>
+          <li><b>③ 완전 분할</b> — taxonomy는 전체 문서의 partition(빠짐·중복·빈 cluster는 hard-fail).</li>
+          <li><b>④ 100% disposition</b> — 모든 조각은 Integrated/PreservedVerbatim/Omission 중 하나, evidence closure 필수.</li>
+          <li><b>⑤ critic+승인 결합</b> — blocking 0건 + hash-bound 승인을 하나의 revision hash로.</li>
+          <li><b>⑥ byte 재유도</b> — 승인 계획에서 산출물을 다시 만들어 실제 byte와 비교.</li>
+        </ul>
+        <div class="callout">병합 권한 = <b>완전 분할 + 100% disposition + evidence closure + blocking critic 0건 + hash-bound 승인</b>. 0.85 / 0.55는 자동 병합이 아니라 후보 축소 기준.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8. 해시 봉인 -->
+  <section class="slide scroll">
+    <div class="kicker">Determinism</div>
+    <h2>결정론적 해시로 봉인하고, 무엇이든 바뀌면 stale</h2>
+    <div class="lead">δ는 hash domain, lp(x)는 길이 prefix, C(x)는 canonical JSON입니다.</div>
+    <pre class="code" style="margin-top:1.4cqh"><span class="c"># 내용 기반 identity</span>
+H_δ(x)              = SHA-256( UTF8(δ) || x )
+BlockHash(b)        = H_δ_block( UTF8(normalized_text(b)) )
+CorpusHash          = H_δ_corpus( C(documents sorted by DocumentId) )
+
+<span class="c"># taxonomy는 전체 문서의 완전 분할</span>
+<span class="k">∀ d ∈ Docs :  Σ 1[d ∈ Ci] = 1</span>      <span class="c"># union(Ci)=Docs, Ci∩Cj=∅</span>
+
+<span class="c"># 승인을 하나의 revision / plan hash로 결합</span>
+ClusterRevisionHash = H( C({ taxonomy, proposal, critic, omissions, waivers }) )
+IntegrationPlanId   = "integration_" || hex(H( C({ corpus, policy, taxonomy,
+                        approval, cluster_revisions, provider_recordings }) ))</pre>
+    <div class="callout">제안·critic·omission·waiver 중 하나라도 바뀌면 <b>revision hash와 plan ID가 달라집니다</b> — 과거 승인만으로 수정된 결과를 통과시킬 수 없는 이유.</div>
+  </section>
+
+  <!-- 9. 에코시스템 4모듈 -->
+  <section class="slide">
+    <div class="kicker">Ecosystem</div>
+    <h2>네 모듈이 하나의 지식 순환을 만듭니다</h2>
+    <div class="split">
+      <div class="figure">
+        <img src="./assets/02-okc-ecosystem.png" alt="OKC 네 모듈과 세 계약, 기여자·큐레이터·LLM provider·AI client가 연결된 에코시스템">
+        <div class="cap">실선 = 발행 흐름(revision→frozen→plan→vault→pinned), 점선 = LLM proposal-only·MCP 로컬 저작.</div>
+      </div>
+      <div class="grid" style="gap:1.3cqh">
+        <div class="card"><h3><span class="mono accent">okc-hooks</span> <span class="badge b-rust">Rust</span></h3><p><b>동기화 계층.</b> 변경 감지 + 재개 가능한 업로드. 같은 자격의 후속 업로드는 <b>같은 소스의 새 revision</b>, stale commit은 최신을 못 되돌림.</p></div>
+        <div class="card"><h3><span class="mono accent">okc-web</span> <span class="badge b-py">FastAPI+React</span></h3><p><b>큐레이션 계층.</b> revision 수집·freeze·review·발행. 인증·review gate·history·restore·read access의 control plane.</p></div>
+        <div class="card"><h3><span class="mono accent">okc-core</span> <span class="badge b-rust">Rust</span></h3><p><b>컴파일 엔진.</b> 불변 snapshot·검증·결정론 compile. 발행 전 스스로 verify, plan에서 파일·provenance·manifest를 재유도해 byte 비교.</p></div>
+        <div class="card"><h3><span class="mono accent">okc-mcp</span> <span class="badge b-node">Node/TS</span></h3><p><b>에이전트 인터페이스.</b> 로컬 노트 명시 저작 + revision-pinned 지식 읽기. web 오류 시 <b>오래된 로컬로 조용히 전환하지 않음</b>.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10. 3개 계약 -->
+  <section class="slide">
+    <div class="kicker">Contracts</div>
+    <h2>핵심 데이터 경로는 세 계약에 집중됩니다</h2>
+    <table class="t" style="margin-top:1.8cqh">
+      <thead><tr><th style="width:26%">계약</th><th style="width:22%">연결</th><th>전달하는 것</th></tr></thead>
+      <tbody>
+        <tr><td class="mono ink">/api/sync</td><td>hooks → web</td><td>canonical <b>CBOR</b>, 재개 가능한 source revision</td></tr>
+        <tr><td class="mono ink">okc Python binding</td><td>web ↔ core</td><td>sealed corpus, review 결정, compiled artifact</td></tr>
+        <tr><td class="mono ink">/api/serving</td><td>web → mcp</td><td>pinned revision, files, <b>verify · explain</b></td></tr>
+      </tbody>
+    </table>
+    <div class="callout" style="margin-top:2.2cqh">네 모듈은 느슨하게 결합되지만, 이 세 계약이 <b>출처·승인·검증</b>을 경계 너머로 그대로 실어 나릅니다.</div>
+  </section>
+
+  <!-- 11. 사용자 경험의 순간들 -->
+  <section class="slide">
+    <div class="kicker">Simple UX</div>
+    <h2>엄격한 내부, 단순한 사용자 경험</h2>
+    <table class="t" style="margin-top:1.4cqh">
+      <thead><tr><th style="width:22%">순간</th><th style="width:36%">사용자가 하는 일</th><th>OKC가 뒤에서 하는 일</th></tr></thead>
+      <tbody>
+        <tr><td><b>처음 연결할 때</b></td><td>설정을 채우고 upload 고지 확인 후 <b>standing consent</b> 1회 부여</td><td>setup이 MCP 등록·watcher auto-start 준비, 동의 전 업로드는 차단</td></tr>
+        <tr><td><b>문제 해결 직후</b></td><td>“이번 세션을 관련 노트에 기록해줘”</td><td>okc-mcp가 관련 노트·section·폴더를 찾아 변경안 미리보기</td></tr>
+        <tr><td><b>Obsidian 저장 후</b></td><td>평소처럼 다음 작업 계속</td><td>okc-hooks가 변경 감지 → 새 source revision 전송</td></tr>
+        <tr><td><b>네트워크가 끊길 때</b></td><td>일시적 오류라면 별도 작업 없음</td><td>server offset부터 재개, 새 event 없이 스스로 재시도</td></tr>
+        <tr><td><b>다음 세션</b></td><td>“우리 팀은 전에 어떻게 해결했지?”</td><td>고정된 부서 archive에서 과거 결정·명령·런북을 읽음</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 12. okc-mcp 상세 -->
+  <section class="slide">
+    <div class="kicker">okc-mcp</div>
+    <h2>경로를 고민하지 않고, 먼저 확인하고, 안전하게 기록</h2>
+    <div class="banner"><img src="./assets/11-mcp-hooks-friendly.png" alt="코딩 에이전트에게 세션 기록을 요청하고 Obsidian에 저장하면 okc-mcp·okc-hooks가 안전한 기록과 재개 동기화를 처리하는 흐름"></div>
+    <div class="grid g2" style="gap:1.2cqh">
+      <div class="card"><h3>한 문장으로 세션 기록</h3><p>사용자가 세션을 선택하고 요청하면 기록. 자동 감시·종료 시 몰래 수집 없음, <b>매번 user-selected 선언</b> 필요.</p></div>
+      <div class="card"><h3>경로 선택을 에이전트가 보조</h3><p>prepare가 관련 노트·heading·폴더 관례·이전 capture 위치를 찾아, 사용자가 경로/생성 여부를 정할 필요 없음.</p></div>
+      <div class="card"><h3>저장 전 미리보기 + 기존 존중</h3><p>모든 write는 <b>dry-run 기본</b>. 관련 주제는 기존 section 보강, 무관한 본문·YAML은 보존.</p></div>
+      <div class="card"><h3>충돌·중복 방지 · 읽기/쓰기 분리</h3><p>expected SHA-256 확인 + Vault 밖 backup + atomic write + read-back hash. 쓰기는 <b>로컬만</b>, 읽기는 발행 revision 고정.</p></div>
+    </div>
+  </section>
+
+  <!-- 13. okc-hooks 상세 -->
+  <section class="slide">
+    <div class="kicker">okc-hooks</div>
+    <h2>설치 후에는 Obsidian에서 평소처럼 저장만</h2>
+    <div class="grid g2" style="margin-top:1.4cqh; gap:1.2cqh">
+      <div class="card"><h3>최초 1회 동의</h3><p>upload 대상·공개 범위 고지 확인 후 standing consent를 줘야 동기화 시작. 언제든 철회, 의심스러우면 차단.</p></div>
+      <div class="card"><h3>놓친 변경까지 복구</h3><p>실시간 event + 시작 scan + 주기 reconciliation scan. OS watcher가 놓쳐도 다음 scan이 재확인.</p></div>
+      <div class="card"><h3>저장 폭주 정리 · 필요한 blob만</h3><p>연속 save를 debounce, path·SHA-256·size manifest를 negotiate해 <b>없는 blob·미완 구간만</b> chunk 전송.</p></div>
+      <div class="card"><h3>중단 지점부터 재개</h3><p>authoritative resume offset을 따르고, transient failure는 backoff 후 새 event 없이 재시도.</p></div>
+      <div class="card"><h3>잘못된 대상 방지</h3><p>state를 Vault path·HTTPS endpoint·token fingerprint에 바인딩. 대상이 바뀌면 명시적으로 중단.</p></div>
+      <div class="card"><h3>필요할 때만 직접 제어</h3><p>status·pause·resume·sync-now·history·reload·stop. setup은 재실행 안전, uninstall은 <b>Vault 미변경</b>.</p></div>
+    </div>
+  </section>
+
+  <!-- 14. 실제 동작 화면 -->
+  <section class="slide">
+    <div class="kicker">Live run · evidence</div>
+    <h2>실제 동작 화면</h2>
+    <div class="lead">세 부서 샘플을 실제 <span class="mono">okc-web</span>·native <span class="mono">okc-core</span> 경로로 ingest·freeze·approve·compile·publish·verify한 로컬 실행. 콘텐츠는 deterministic synthetic provider — <b>workflow·계약의 실행 증거</b>이지 live-model 문장 품질 평가가 아닙니다.</div>
+    <div class="gallery" style="margin-top:1.2cqh">
+      <figure><img src="./assets/04-sources-freeze.png" alt="세 팀 source revision 등록·고정 화면"><figcaption><b>입력 고정</b> — Product·Engineering·Research revision 등록 후 freeze. 이후 입력 변경은 downstream 승인을 무효화.</figcaption></figure>
+      <figure><img src="./assets/05-compiled-vault.png" alt="8개 파일과 verify PASS를 보여주는 Compiled Vault 화면"><figcaption><b>읽기 전용 컴파일</b> — knowledge/·legacy/·.okc/ 구조, 8개 파일, <span class="teal">verify PASS</span>, no-clobber 발행.</figcaption></figure>
+      <figure><img src="./assets/06-provenance-verify.png" alt="선택한 compiled note와 source owner 라벨, Verified 상태 화면"><figcaption><b>발행 + 출처</b> — owner 라벨은 비검증 장식, <span class="teal">Verified</span>는 승인 계획과 산출물의 내부 일관성.</figcaption></figure>
+      <figure><img src="./assets/03-overview.png" alt="source 3개·frozen·blocking 0·verify PASS를 보여주는 Overview"><figcaption><b>한 화면 상태</b> — source 수·freeze 상태·blocking finding·verify 결과·최근 승인 기록.</figcaption></figure>
+    </div>
+  </section>
+
+  <!-- 15. 인상적인 세 장면 -->
+  <section class="slide">
+    <div class="kicker">Engineering highlights</div>
+    <h2>기술적으로 인상적인 세 장면</h2>
+    <div class="grid g3" style="margin-top:1.8cqh">
+      <div class="card"><div class="ic">🔁</div><h3>발행 전 자가 검증</h3><p>승인 계획을 staging에 만든 뒤 <b>스스로 verify</b>, 통과해야 no-replace publish. verify는 manifest를 믿지 않고 embedded plan에서 파일·provenance·checksum을 <b>재유도해 byte 비교</b> — 직접 수정 시 read도 <span class="mono">VERIFICATION_FAILED</span>.</p></div>
+      <div class="card"><div class="ic">⚖️</div><h3>모순을 지우지 않는 모델</h3><p>curator decision에 “승자 선택”이 없음. 타입·SQLite constraint는 <b>approve/regenerate</b>만 허용, omission·minor waiver는 사유 포함 승인에서만. 충돌 주장은 <b>각 evidence와 함께 보존</b>.</p></div>
+      <div class="card"><div class="ic">📌</div><h3>revision pinning</h3><p>Revision A를 읽던 client는 B 발행 후에도 A를 명시 요청해 <b>같은 byte</b>를 읽음. 없는 revision을 현재로 조용히 바꾸지 않으며 <b>history·restore</b> 제공.</p></div>
+    </div>
+  </section>
+
+  <!-- 16. 엔지니어링 증거 -->
+  <section class="slide">
+    <div class="kicker">Proof</div>
+    <h2>해커톤 MVP를 넘어선 엔지니어링 증거</h2>
+    <div class="split">
+      <div>
+        <table class="t num">
+          <thead><tr><th>영역</th><th style="text-align:right">최신 로컬 기록</th></tr></thead>
+          <tbody>
+            <tr><td>Core Rust</td><td>130 passed</td></tr>
+            <tr><td>Core Python binding</td><td>12 passed</td></tr>
+            <tr><td>Core Node binding</td><td>13 passed</td></tr>
+            <tr><td>Hooks</td><td>250 passed</td></tr>
+            <tr><td>MCP</td><td>103 passed</td></tr>
+            <tr><td>Web backend</td><td>114 passed</td></tr>
+            <tr><td>Web frontend</td><td>8 passed</td></tr>
+            <tr><td><b>Four-module bridge</b></td><td>1 passed</td></tr>
+          </tbody>
+        </table>
+        <div class="cap" style="text-align:left; margin-top:1cqh">각 숫자는 서로 다른 모듈의 최신 로컬 결과 — 하나의 합산 스위트가 아닙니다.</div>
+      </div>
+      <div>
+        <div class="figure"><img src="./assets/08-engineering-proof.png" alt="각 모듈 테스트 통과 수치와 four-module bridge PASS" style="max-height:34cqh"></div>
+        <ul class="clean" style="margin-top:1.4cqh">
+          <li><b>Four-module bridge</b> — 실제 MCP subprocess · Rust CBOR encoder · FastAPI · native core를 한 경로로 연결(LLM은 synthetic).</li>
+          <li><b>6개 path-scoped CI</b> workflow(core·hooks·mcp·web backend/frontend).</li>
+          <li>핵심 상태·업로드·저작에 <b>property-based test</b>, native 경계에 Rust·Python·Node <b>golden test</b>.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 17. 현재 범위 -->
+  <section class="slide">
+    <div class="kicker">Honest scope</div>
+    <h2>현재 범위도 명확하게 공개합니다</h2>
+    <div class="notes" style="margin-top:1.6cqh">
+      <div class="note"><div class="nt">development-stage</div><div class="nd">okc-web은 single-organization·single-process 해커톤 MVP. 현재 컴파일 산출물은 Markdown 중심.</div></div>
+      <div class="note"><div class="nt">후속 과제</div><div class="nd">live third-party provider 품질 검증, 전체 native OS service 설치 검증, 성능·배포·패키지 release gate.</div></div>
+      <div class="note"><div class="nt">MinHash × cosine</div><div class="nd">두 후보 경로를 HNSW와 함께 합치는 기능은 아직 release blocker로 남아 있습니다.</div></div>
+    </div>
+    <div class="callout" style="margin-top:2cqh">이 경계를 숨기지 않는 이유는 간단합니다 — OKC가 다루는 핵심 가치가 바로 <b>검증 가능한 주장</b>이기 때문입니다.</div>
+  </section>
+
+  <!-- 18. 마무리 -->
+  <section class="slide closing">
+    <div class="kicker" style="justify-content:center">Try it</div>
+    <h2>AI 시대의 지식에는 답만큼 <em class="hl">증거</em>가 필요합니다</h2>
+    <div class="lead" style="max-width:80%; margin:1.4cqh auto 0; text-align:center">
+      OKC는 그럴듯한 요약을 넘어, <b>누가 무엇을 제안했고 · 어떤 근거가 승인됐으며 · 지금 읽는 byte가 그 승인 결과와 일치하는지</b>
+      다시 물을 수 있는 조직 지식을 만듭니다.</div>
+    <pre class="code" style="margin:2cqh auto 0; display:inline-block; text-align:left">cp okc-install.config.example.json okc-install.config.json
+./install.sh   <span class="c"># hooks + MCP 원커맨드 설치</span></pre>
+    <div class="links">
+      <a href="https://github.com/HappySPigs/okc">GitHub · HappySPigs/okc</a>
+      <a href="https://github.com/HappySPigs/okc#readme">Repository README</a>
+      <a href="./okc-hackathon-post.md">해커톤 포스트</a>
+    </div>
+  </section>
+
+  <!-- 크롬 -->
+  <div class="chrome">
+    <div class="brandmini">OKC · Obsidian Knowledge Compilation</div>
+    <div class="dots" id="dots"></div>
+    <div class="nav">
+      <button id="prev" aria-label="이전">‹</button>
+      <span class="counter" id="counter">1 / 18</span>
+      <button id="next" aria-label="다음">›</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var total = slides.length, i = 0;
+  var progress = document.getElementById('progress');
+  var counter = document.getElementById('counter');
+  var dotsWrap = document.getElementById('dots');
+  var deck = document.getElementById('deck');
+
+  slides.forEach(function(_, idx){
+    var b = document.createElement('button');
+    b.className = 'dot' + (idx===0?' on':'');
+    b.setAttribute('aria-label', (idx+1)+'번 슬라이드');
+    b.addEventListener('click', function(){ go(idx); });
+    dotsWrap.appendChild(b);
+  });
+  var dots = Array.prototype.slice.call(dotsWrap.children);
+
+  function render(){
+    slides.forEach(function(s, idx){ s.classList.toggle('active', idx===i); });
+    dots.forEach(function(d, idx){ d.classList.toggle('on', idx===i); });
+    progress.style.width = (i/(total-1)*100) + '%';
+    counter.textContent = (i+1) + ' / ' + total;
+    if (location.hash !== '#'+(i+1)) history.replaceState(null,'','#'+(i+1));
+    slides[i].scrollTop = 0;
+  }
+  function go(n){ i = Math.max(0, Math.min(total-1, n)); render(); }
+  function next(){ go(i+1); }
+  function prev(){ go(i-1); }
+
+  document.getElementById('next').addEventListener('click', next);
+  document.getElementById('prev').addEventListener('click', prev);
+
+  document.addEventListener('keydown', function(e){
+    switch(e.key){
+      case 'ArrowRight': case 'PageDown': case ' ': next(); e.preventDefault(); break;
+      case 'ArrowLeft': case 'PageUp': prev(); e.preventDefault(); break;
+      case 'Home': go(0); break;
+      case 'End': go(total-1); break;
+      case 'f': case 'F':
+        if (!document.fullscreenElement){ deck.requestFullscreen && deck.requestFullscreen(); }
+        else { document.exitFullscreen && document.exitFullscreen(); }
+        break;
+      default: if (/^[1-9]$/.test(e.key)) go(parseInt(e.key,10)-1);
+    }
+  });
+
+  var sx=0, sy=0;
+  deck.addEventListener('touchstart', function(e){ sx=e.touches[0].clientX; sy=e.touches[0].clientY; }, {passive:true});
+  deck.addEventListener('touchend', function(e){
+    var dx=e.changedTouches[0].clientX-sx, dy=e.changedTouches[0].clientY-sy;
+    if (Math.abs(dx)>50 && Math.abs(dx)>Math.abs(dy)){ dx<0 ? next() : prev(); }
+  }, {passive:true});
+
+  var start = parseInt((location.hash||'').replace('#',''),10);
+  if (start>=1 && start<=total) i = start-1;
+  render();
+})();
+</script>
+</body>
+</html>

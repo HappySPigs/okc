@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OKC, 왜 필요한가요? — 문답으로 보는 소개</title>
+<style>
+  :root{
+    --bg:#0b1120; --panel:#0f1a2e; --card:#16233b; --card2:#1a2942;
+    --border:#26364f; --ink:#e8eefb; --muted:#a6b6d3; --faint:#6b7ea1;
+    --indigo:#818cf8; --indigo-d:#6366f1; --teal:#2dd4bf; --amber:#fbbf24; --green:#4ade80; --rose:#fb7185;
+    --mono:"D2Coding","Cascadia Code","Consolas",ui-monospace,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Pretendard","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;
+    --wrap:880px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    font-family:var(--sans); color:var(--ink); line-height:1.6;
+    background:
+      radial-gradient(1100px 560px at 8% -6%, #16224066 0%, transparent 60%),
+      radial-gradient(900px 520px at 110% 8%, #1e293b55 0%, transparent 55%),
+      var(--bg);
+    -webkit-font-smoothing:antialiased;
+  }
+  .progress{position:fixed; top:0; left:0; height:4px; width:0; z-index:100;
+    background:linear-gradient(90deg,var(--indigo),var(--teal));}
+  .wrap{max-width:var(--wrap); margin:0 auto; padding:0 24px;}
+
+  /* 상단바 */
+  header.top{position:sticky; top:0; z-index:50; backdrop-filter:blur(10px);
+    background:#0b1120cc; border-bottom:1px solid var(--border);}
+  header.top .wrap{display:flex; align-items:center; gap:14px; height:60px;}
+  .logo{width:34px; height:34px; border-radius:9px; background:linear-gradient(150deg,var(--indigo-d),#3730a3);
+    display:grid; place-items:center; font-weight:900; color:#fff; font-size:18px; box-shadow:0 4px 16px #4338ca55;}
+  .brand{font-weight:800; letter-spacing:.01em;}
+  .brand small{display:block; font-weight:500; color:var(--faint); font-size:12px; letter-spacing:.02em;}
+  .top .toc{margin-left:auto; display:flex; gap:8px; flex-wrap:wrap;}
+  .top .toc a{font-size:12.5px; color:var(--muted); text-decoration:none; border:1px solid var(--border);
+    background:#0e1a2e; padding:5px 11px; border-radius:999px; transition:.2s;}
+  .top .toc a:hover{border-color:var(--indigo); color:var(--indigo);}
+
+  /* 히어로 */
+  .hero{padding:72px 0 44px; text-align:center;}
+  .hero .kick{display:inline-block; font-size:12.5px; font-weight:700; letter-spacing:.18em; text-transform:uppercase;
+    color:var(--indigo); border:1px solid #6366f14d; background:#6366f114; padding:6px 14px; border-radius:999px; margin-bottom:22px;}
+  .hero h1{font-size:clamp(30px,5.2vw,50px); line-height:1.12; font-weight:800; letter-spacing:-.01em;}
+  .hero h1 em{font-style:normal; background:linear-gradient(180deg,transparent 60%,#6366f14d 0); padding:0 .12em;}
+  .hero .sum{max-width:660px; margin:22px auto 0; font-size:clamp(16px,2.1vw,19px); color:var(--muted);}
+  .hero .sum b{color:var(--ink);}
+
+  /* 섹션 공통 */
+  section.qa{padding:30px 0; border-top:1px solid #1c2a42;}
+  .qhead{display:flex; align-items:flex-start; gap:16px; margin-bottom:16px;}
+  .qmark{flex:none; width:40px; height:40px; border-radius:11px; display:grid; place-items:center;
+    font-weight:900; font-size:20px; color:#0b1120; background:linear-gradient(150deg,var(--indigo),#a5b4fc);
+    box-shadow:0 4px 18px #6366f13d;}
+  .qhead h2{font-size:clamp(21px,3vw,27px); line-height:1.25; font-weight:800; letter-spacing:-.01em; padding-top:5px;}
+  .qhead h2 .emo{margin-right:8px;}
+  .abody{padding-left:56px;}
+  .abody p{font-size:16.5px; color:var(--muted); margin:0 0 10px;}
+  .abody p b, .abody li b{color:var(--ink); font-weight:700;}
+  .abody strong.k{color:var(--indigo); font-weight:800;}
+  code{font-family:var(--mono); font-size:.92em; background:#0e1a2e; border:1px solid var(--border);
+    padding:1px 7px; border-radius:6px; color:#cfe0ff;}
+  em.i{font-style:italic; color:var(--ink);}
+
+  ul.list{list-style:none; display:flex; flex-direction:column; gap:11px; margin:6px 0 4px;}
+  ul.list li{position:relative; padding-left:24px; font-size:16.5px; color:var(--muted);}
+  ul.list li::before{content:""; position:absolute; left:2px; top:11px; width:8px; height:8px; border-radius:50%;
+    background:var(--indigo);}
+
+  /* 훅 밴드 */
+  .hook{background:linear-gradient(160deg,#15233c,#101d33); border:1px solid #33415e;
+    border-radius:18px; padding:26px 28px; margin:8px 0;}
+  .hook .lead{font-size:15px; color:var(--faint); letter-spacing:.03em; margin-bottom:16px; font-weight:600;}
+  ul.hooks{list-style:none; display:flex; flex-direction:column; gap:14px;}
+  ul.hooks li{position:relative; padding-left:34px; font-size:17px; color:var(--muted); line-height:1.55;}
+  ul.hooks li::before{content:"?"; position:absolute; left:0; top:-1px; width:23px; height:23px; border-radius:50%;
+    background:#6366f11f; border:1px solid var(--indigo); color:var(--indigo); font-weight:800; font-size:14px;
+    display:grid; place-items:center;}
+  ul.hooks li em{font-style:italic; color:var(--ink);}
+  ul.hooks li b{color:var(--ink);}
+
+  /* 콜아웃 */
+  .callout{border-left:4px solid var(--indigo); background:#101d33; border-radius:0 12px 12px 0;
+    padding:16px 20px; margin:16px 0 2px; font-size:16.5px; color:var(--ink); line-height:1.55;}
+  .callout.teal{border-left-color:var(--teal);}
+  .callout b{color:var(--indigo);}
+  .callout.teal b{color:var(--teal);}
+
+  /* 위험 카드 */
+  .risks{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:4px 0 6px;}
+  .risk{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px 18px;}
+  .risk h3{font-size:16px; font-weight:800; color:var(--rose); margin-bottom:5px;}
+  .risk p{font-size:14.5px; color:var(--muted); margin:0;}
+
+  /* 표 */
+  table{width:100%; border-collapse:collapse; font-size:15.5px; margin:6px 0 4px;}
+  th,td{border:1px solid var(--border); padding:12px 14px; text-align:left; vertical-align:top;}
+  th{background:#0e1a2e; color:var(--indigo); font-weight:700; font-size:14px; letter-spacing:.02em;}
+  td{color:var(--muted);}
+  td b,td .ink{color:var(--ink); font-weight:700;}
+  td code{white-space:nowrap;}
+
+  /* 흐름 */
+  pre.flow{font-family:var(--mono); font-size:14px; line-height:1.9; background:#0a1220;
+    border:1px solid var(--border); border-radius:12px; padding:18px 20px; color:#cfe0ff; overflow:auto; white-space:pre;}
+
+  /* 좋아지는 점 */
+  .perks{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:4px 0;}
+  .perk{background:linear-gradient(160deg,var(--card),var(--card2)); border:1px solid var(--border);
+    border-radius:14px; padding:15px 18px; font-size:15.5px; color:var(--muted); line-height:1.5;}
+  .perk b{color:var(--ink);}
+
+  /* 정직 고지 */
+  .honest{background:#1a1707; border:1px solid #4a3d10; border-left:4px solid var(--amber);
+    border-radius:0 12px 12px 0; padding:18px 22px;}
+  .honest p{color:#e8ddb5; font-size:16px;}
+  .honest p b{color:#fde68a;}
+
+  /* 링크/푸터 */
+  .links{display:flex; flex-direction:column; gap:10px;}
+  .links a{color:var(--indigo); text-decoration:none; font-size:16px;}
+  .links a:hover{text-decoration:underline;}
+  footer{text-align:center; padding:44px 0 70px; border-top:1px solid #1c2a42; margin-top:24px;}
+  footer .big{font-size:clamp(18px,3vw,25px); font-weight:800; color:var(--ink);}
+  footer .big em{font-style:normal; color:var(--teal);}
+  footer .meta{margin-top:14px; font-size:13px; color:var(--faint); font-family:var(--mono);}
+
+  .toTop{position:fixed; right:22px; bottom:22px; width:44px; height:44px; border-radius:50%; z-index:60;
+    border:1px solid var(--border); background:#16233bee; color:var(--ink); font-size:20px; cursor:pointer;
+    opacity:0; pointer-events:none; transition:opacity .3s, border-color .2s; box-shadow:0 6px 20px #0007;}
+  .toTop.show{opacity:1; pointer-events:auto;}
+  .toTop:hover{border-color:var(--indigo);}
+
+  @media (max-width:640px){
+    .risks,.perks{grid-template-columns:1fr;}
+    .abody{padding-left:0;}
+    .top .toc{display:none;}
+  }
+  @media print{
+    body{background:#fff; color:#111;}
+    .progress,.top,.toTop{display:none!important;}
+    section.qa{break-inside:avoid;}
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+
+<header class="top">
+  <div class="wrap">
+    <div class="logo">O</div>
+    <div class="brand">OKC<small>Obsidian Knowledge Compilation</small></div>
+    <nav class="toc">
+      <a href="#hook">공감</a>
+      <a href="#what">뭔가요</a>
+      <a href="#why">왜</a>
+      <a href="#session">세션</a>
+      <a href="#who">누구</a>
+      <a href="#scope">범위</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <!-- 히어로 -->
+  <section class="hero">
+    <div class="wrap">
+      <span class="kick">문답으로 보는 소개</span>
+      <h1>OKC, <em>왜 필요한가요?</em></h1>
+      <p class="sum">여러 사람이 각자 쌓은 지식을, <b>누가 무엇을 근거로 승인했는지 되물을 수 있는</b>
+        하나의 검증 가능한 지식 베이스로 만들어 주는 도구입니다.</p>
+    </div>
+  </section>
+
+  <!-- 훅 -->
+  <section class="qa" id="hook">
+    <div class="wrap">
+      <div class="qhead">
+        <div class="qmark">🙋</div>
+        <h2>혹시, 이런 적 없으셨나요?</h2>
+      </div>
+      <div class="abody">
+        <div class="hook">
+          <div class="lead">HAVE YOU EVER…</div>
+          <ul class="hooks">
+            <li>Obsidian으로 작업하다 어떤 문제를 <b>멋지게 해결한 세션</b>이 있었는데, 몇 주 뒤 똑같은 상황에서 <em>“그때 어떻게 했더라…”</em> 하며 처음부터 다시 헤맨 적</li>
+            <li>분명 <b>정리는 해뒀는데</b>, 정작 필요할 때 그 노트를 못 찾은 적</li>
+            <li><b>옆 팀·동료가 이미 풀어 둔 세션</b>을, 그런 게 있는 줄 몰라서 똑같이 다시 푼 적</li>
+            <li>남이 정리해 준 지식을 보며 <em>“그럴듯한데… 이거 진짜 근거가 맞나?”</em> 싶어 <b>못 믿은</b> 적</li>
+          </ul>
+        </div>
+        <div class="callout">하나라도 뜨끔했다면, OKC는 바로 그 순간들을 위해 만들었습니다.
+          <b>잘 풀린 세션은 다시 꺼내 쓰고, 남들이 남긴 세션도 믿고 가져다 쓰게</b> 하는 것 — 그게 출발점이었습니다.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 뭔가요 -->
+  <section class="qa" id="what">
+    <div class="wrap">
+      <div class="qhead">
+        <div class="qmark">Q</div>
+        <h2><span class="emo">🧩</span>OKC가 뭔가요?</h2>
+      </div>
+      <div class="abody">
+        <p>흩어진 <a href="https://obsidian.md" style="color:var(--teal)">Obsidian</a> 노트 모음(Vault)을
+          <b>하나의 신뢰할 수 있는 지식 베이스로 “컴파일”</b>하는 시스템입니다. 소스 코드를 빌드하듯이 —</p>
+        <div class="callout teal">여러 팀의 노트를 모아 → <b>AI가 정리안을 제안</b>하고 → <b>코드가 검증</b>하고 →
+          <b>사람이 승인</b>해야 → 하나의 결과물이 나옵니다.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 왜 -->
+  <section class="qa" id="why">
+    <div class="wrap">
+      <div class="qhead">
+        <div class="qmark">Q</div>
+        <h2><span class="emo">❓</span>왜 필요한가요? <span style="color:var(--faint);font-size:.7em;font-weight:600">(핵심)</span></h2>
+      </div>
+      <div class="abody">
+        <p>각자 노트를 아무리 잘 써도, <b>조직 단위로 합치려는 순간</b> 네 가지 문제가 생기기 때문입니다.</p>
+        <div class="risks">
+          <div class="risk"><h3>출처 소실</h3><p>합쳐진 문장이 어느 팀 어느 노트에서 왔는지 알 수 없습니다.</p></div>
+          <div class="risk"><h3>모순 은폐</h3><p>서로 다른 정책·날짜가 매끄러운 한 문장으로 뭉개집니다.</p></div>
+          <div class="risk"><h3>승인 드리프트</h3><p>승인한 뒤 내용이 바뀌어도 승인 기록은 그대로 남습니다.</p></div>
+          <div class="risk"><h3>버전 혼동</h3><p>최신 발행본과 낡은 로컬 지식이 조용히 섞입니다.</p></div>
+        </div>
+        <p style="margin-top:12px">OKC는 이걸 검색·챗봇 기능이 아니라 <strong class="k">“컴파일 문제”</strong>로 풀어서, 위 네 가지를 구조적으로 막습니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 세션 재사용 -->
+  <section class="qa" id="session">
+    <div class="wrap">
+      <div class="qhead">
+        <div class="qmark">💡</div>
+        <h2>“그때 그 세션, 다시 쓰고 싶어요”</h2>
+      </div>
+      <div class="abody">
+        <p>사람들이 가장 자주 공감하는 이유가 바로 이겁니다.</p>
+        <ul class="list">
+          <li><b>내 세션 재사용</b> — 코딩 중 나온 결정·명령·해결법을 <code>okc-mcp</code>에게 <em class="i">“이번 세션을 관련 노트에 기록해줘”</em> 한마디로 남겨 두면, 다음 작업에서 그대로 다시 꺼내 씁니다.</li>
+          <li><b>남의 세션 활용</b> — 내 것뿐 아니라 <b>동료·다른 팀이 남긴 세션·런북</b>도 부서 공동 아카이브에서 <em class="i">“우리 팀은 전에 이거 어떻게 했지?”</em> 라고 물어 재사용합니다.</li>
+          <li><b>믿고 쓰는 재사용</b> — 가져다 쓰는 지식이 <b>출처가 추적되고 사람이 승인한</b> 검증된 내용이라, “이거 맞나?” 다시 의심할 필요가 없습니다.</li>
+        </ul>
+        <div class="callout">한 번 잘 해결한 문제를 <b>다음 작업(그리고 다음 사람)의 출발점</b>으로 만드는 것 — 이 지식 순환이 OKC의 심장입니다.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- AI 요약 -->
+  <section class="qa">
+    <div class="wrap">
+      <div class="qhead">
+        <div class="qmark">Q</div>
+        <h2><span class="emo">🤖</span>그냥 AI로 요약하면 안 되나요?</h2>
+      </div>
+      <div class="abody">
+        <p>AI 요약은 읽기엔 좋지만 <b>믿을 근거가 없습니다.</b> OKC에서 AI는 최종 답이 아니라 <em class="i">제안</em>만 합니다.</p>
+        <table>
+          <thead><tr><th style="width:22%">누가</th><th>무엇을</th></tr></thead>
+          <tbody>
+            <tr><td><b>AI</b></td><td>분류·합성·비평을 <b>제안</b> (소스는 명령이 아니라 검증 대상 근거로 취급)</td></tr>
+            <tr><td><b>코드</b></td><td>근거·해시·누락·비평 심각도를 <b>검증</b> — Major/Critical 지적이 남으면 컴파일 자체가 막힘</td></tr>
+            <tr><td><b>사람</b></td><td>명시적으로 <b>승인</b> — 승인은 대상 해시에 묶여, 내용이 바뀌면 승인도 무효</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- 결정론 -->
+  <section class="qa">
+    <div class="wrap">
+      <div class="qhead">
+        <div class="qmark">Q</div>
+        <h2><span class="emo">🔁</span>매번 결과가 달라지지 않나요?</h2>
+      </div>
+      <div class="abody">
+        <p>승인 이후의 <code>compile · verify · explain</code>은 <b>LLM 없이(provider-free) 결정론적으로</b> 동작합니다.
+          같은 입력이면 같은 결과(byte 단위로 동일)가 나오고, 모델이 바뀌거나 외부 API가 사라져도 결과의 내부 정합성을 다시 검증할 수 있습니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- revision pinning -->
+  <section class="qa">
+    <div class="wrap">
+      <div class="qhead">
+        <div class="qmark">Q</div>
+        <h2><span class="emo">📌</span>“지금 읽는 게 그 승인 결과가 맞나?”</h2>
+      </div>
+      <div class="abody">
+        <p>발행된 지식은 <b>버전이 고정(revision pinning)</b>됩니다. 새 버전이 나와도 예전 버전을 그대로 다시 읽을 수 있고,
+          파일을 몰래 수정하면 <code>verify</code>가 실패로 잡아냅니다. 히스토리·복원도 지원합니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 누구한테 -->
+  <section class="qa" id="who">
+    <div class="wrap">
+      <div class="qhead">
+        <div class="qmark">Q</div>
+        <h2><span class="emo">👥</span>누구한테 필요한가요?</h2>
+      </div>
+      <div class="abody">
+        <table>
+          <thead><tr><th>이런 분</th><th>이렇게 씁니다</th><th style="width:16%">모듈</th></tr></thead>
+          <tbody>
+            <tr><td><b>노트를 쓰는 팀원</b></td><td>평소처럼 Obsidian에 쓰면 변경분이 자동 수집됨</td><td><code>okc-hooks</code></td></tr>
+            <tr><td><b>지식을 관리하는 운영자</b></td><td>수집 → 동결 → 검토 → 승인 → 발행을 콘솔에서 운영</td><td><code>okc-web</code></td></tr>
+            <tr><td><b>엔진을 쓰는 개발자</b></td><td>CLI·라이브러리로 직접 compile·verify·explain</td><td><code>okc-core</code></td></tr>
+            <tr><td><b>AI 코딩 에이전트</b></td><td>검증된 지식을 읽고, 세션 지식을 노트에 되기록</td><td><code>okc-mcp</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- 흐름 -->
+  <section class="qa">
+    <div class="wrap">
+      <div class="qhead">
+        <div class="qmark">Q</div>
+        <h2><span class="emo">🛠️</span>실제로 어떻게 돌아가나요? <span style="color:var(--faint);font-size:.7em;font-weight:600">(한 줄)</span></h2>
+      </div>
+      <div class="abody">
+        <pre class="flow">노트 작성 → okc-hooks 자동 업로드 → okc-web에서 큐레이터 검토·승인
+        → okc-core가 결정론적으로 컴파일 → okc-mcp로 사람·AI가 검증된 지식 읽기</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- 효과 -->
+  <section class="qa">
+    <div class="wrap">
+      <div class="qhead">
+        <div class="qmark">✅</div>
+        <h2>뭐가 좋아지나요?</h2>
+      </div>
+      <div class="abody">
+        <div class="perks">
+          <div class="perk">흩어진 지식이 <b>하나의 검증 가능한 아카이브</b>로 모입니다.</div>
+          <div class="perk">모든 항목의 <b>출처를 되짚고</b>, 모순을 지우지 않고 <b>보존</b>합니다.</div>
+          <div class="perk">결과가 <b>재현 가능</b>하고, 발행본이 <b>조용히 바뀌지 않습니다.</b></div>
+          <div class="perk">팀원은 <b>워크플로를 안 바꿔도</b> 되고, AI 에이전트는 <b>믿을 수 있는 지식</b>을 그대로 씁니다.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 범위 -->
+  <section class="qa" id="scope">
+    <div class="wrap">
+      <div class="qhead">
+        <div class="qmark">⚠️</div>
+        <h2>지금 바로 쓸 수 있나요? <span style="color:var(--faint);font-size:.7em;font-weight:600">(정직하게)</span></h2>
+      </div>
+      <div class="abody">
+        <div class="honest">
+          <p>개발 단계 프로젝트입니다. <code>okc-web</code>은 단일 조직·단일 프로세스 해커톤 MVP, <code>okc-mcp</code>은 로컬 알파이며,
+            현재 산출물은 Markdown 중심입니다. 의미 기반 검색·랭킹, 네이티브 서명, 배포/릴리스 게이트 등은 아직 범위 밖입니다.</p>
+          <p style="margin:10px 0 0">이런 경계를 숨기지 않는 이유는 간단합니다 — OKC가 파는 가치 자체가 바로 <b>“검증 가능한 주장”</b>이기 때문입니다.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 더 -->
+  <section class="qa">
+    <div class="wrap">
+      <div class="qhead">
+        <div class="qmark">📚</div>
+        <h2>더 알아보려면</h2>
+      </div>
+      <div class="abody">
+        <div class="links">
+          <a href="OVERVIEW.md">전체 안내 (왜·어떻게·효과) — OVERVIEW.md</a>
+          <a href="showcase/okc-hackathon-post.md">상세 소개 글 — showcase/okc-hackathon-post.md</a>
+          <a href="okc-core/README.md">모듈별 정본 — okc-core · okc-hooks · okc-web · okc-mcp README</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="big">AI 시대의 지식에는 답만큼 <em>“증거”</em>가 필요합니다.</div>
+    <div class="meta">OKC · Obsidian Knowledge Compilation</div>
+  </div>
+</footer>
+
+<button class="toTop" id="toTop" aria-label="맨 위로">↑</button>
+
+<script>
+(function(){
+  var progress = document.getElementById('progress');
+  var toTop = document.getElementById('toTop');
+  function onScroll(){
+    var h = document.documentElement;
+    var max = h.scrollHeight - h.clientHeight;
+    var p = max > 0 ? (h.scrollTop || document.body.scrollTop) / max : 0;
+    progress.style.width = (p*100) + '%';
+    toTop.classList.toggle('show', (h.scrollTop||document.body.scrollTop) > 600);
+  }
+  document.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+  toTop.addEventListener('click', function(){ window.scrollTo({top:0, behavior:'smooth'}); });
+})();
+</script>
+</body>
+</html>

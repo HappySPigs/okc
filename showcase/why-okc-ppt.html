@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OKC, 왜 필요한가요? — 문답 프레젠테이션</title>
+<style>
+  :root{
+    --bg:#0b1120; --stage:#0f172a; --card:#16233b; --card2:#1a2942;
+    --border:#26364f; --ink:#e8eefb; --muted:#9fb0cd; --faint:#6b7ea1;
+    --indigo:#818cf8; --indigo-d:#6366f1; --teal:#2dd4bf; --amber:#fbbf24; --green:#4ade80; --rose:#fb7185;
+    --mono:"D2Coding","Cascadia Code","Consolas",ui-monospace,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Pretendard","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;font-family:var(--sans);}
+  html,body{height:100%;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 12% -10%, #16224088 0%, transparent 60%),
+      radial-gradient(1000px 520px at 112% 118%, #1e293b66 0%, transparent 55%),
+      var(--bg);
+    color:var(--ink); overflow:hidden;
+    display:flex; align-items:center; justify-content:center; min-height:100vh;
+  }
+  .deck{
+    position:relative; width:100vw; height:56.25vw;
+    max-height:100vh; max-width:177.78vh;
+    background:linear-gradient(160deg,var(--stage) 0%,#0b1424 100%);
+    overflow:hidden; container-type:size;
+    box-shadow:0 24px 80px rgba(0,0,0,.55);
+  }
+  .slide{
+    position:absolute; inset:0; padding:6cqh 7cqw 7.5cqh;
+    display:none; flex-direction:column;
+    opacity:0; transform:translateY(1.2cqh);
+    transition:opacity .42s ease, transform .42s ease;
+  }
+  .slide.active{display:flex; opacity:1; transform:none;}
+
+  .kicker{display:inline-flex; align-items:center; gap:.6cqw; font-size:1.5cqh;
+    font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--indigo); margin-bottom:1.8cqh;}
+  .kicker::before{content:""; width:2.4cqw; height:.3cqh; background:linear-gradient(90deg,var(--indigo),transparent); border-radius:2px;}
+  h1{font-size:6cqh; line-height:1.1; font-weight:800; letter-spacing:-.01em;}
+  h2{font-size:4.4cqh; line-height:1.14; font-weight:800; letter-spacing:-.01em; display:flex; align-items:center; gap:1.4cqw;}
+  h2 .emo{font-size:.95em;}
+  h2 .q{flex:none; width:6cqh; height:6cqh; border-radius:1.4cqh; display:grid; place-items:center;
+    font-size:3cqh; font-weight:900; color:#0b1120; background:linear-gradient(150deg,var(--indigo),#a5b4fc); box-shadow:0 6px 22px #6366f13d;}
+  h2 small{color:var(--faint); font-size:.5em; font-weight:600;}
+  .lead{font-size:2.15cqh; color:var(--muted); line-height:1.5; margin-top:1.6cqh; max-width:90%;}
+  .body{flex:1; min-height:0; display:flex; flex-direction:column; justify-content:center; margin-top:1cqh;}
+  .accent{color:var(--indigo);} .teal{color:var(--teal);}
+  em.hl{font-style:normal; background:linear-gradient(180deg,transparent 60%,#6366f14d 0); padding:0 .12em; border-radius:3px;}
+  em.i{font-style:italic; color:var(--ink);}
+  code{font-family:var(--mono); font-size:.9em; background:#0e1a2e; border:1px solid var(--border); padding:.1cqh .7cqw; border-radius:.6cqh; color:#cfe0ff;}
+
+  /* 표지 */
+  .cover{justify-content:center;}
+  .cover .brand{display:flex; align-items:center; gap:1.4cqw; margin-bottom:2.4cqh;}
+  .logo{width:6cqh; height:6cqh; border-radius:1.3cqh; background:linear-gradient(150deg,var(--indigo-d),#3730a3);
+    display:grid; place-items:center; font-weight:900; font-size:2.8cqh; color:#fff; box-shadow:0 6px 24px #4338ca66;}
+  .cover h1{font-size:7cqh;}
+  .cover .sub{font-size:2.5cqh; color:var(--muted); margin-top:2.2cqh; max-width:82%; line-height:1.5;}
+  .cover .sub b{color:var(--ink);}
+
+  /* 훅 리스트 */
+  ul.hooks{list-style:none; display:flex; flex-direction:column; gap:2cqh; margin-top:.5cqh;}
+  ul.hooks li{position:relative; padding-left:5.5cqw; font-size:2.5cqh; color:var(--muted); line-height:1.45;}
+  ul.hooks li::before{content:"?"; position:absolute; left:0; top:0; width:3.6cqw; height:3.6cqh; border-radius:50%;
+    background:#6366f11f; border:1px solid var(--indigo); color:var(--indigo); font-weight:800; font-size:2cqh; display:grid; place-items:center;}
+  ul.hooks li b{color:var(--ink);} ul.hooks li em{font-style:italic; color:var(--ink);}
+
+  ul.list{list-style:none; display:flex; flex-direction:column; gap:1.8cqh; margin-top:.5cqh;}
+  ul.list li{position:relative; padding-left:3.4cqw; font-size:2.35cqh; color:var(--muted); line-height:1.45;}
+  ul.list li::before{content:""; position:absolute; left:.4cqw; top:1.1cqh; width:1.2cqw; height:1.2cqw; border-radius:50%; background:var(--indigo);}
+  ul.list li b{color:var(--ink);} ul.list li em{font-style:italic; color:var(--ink);}
+
+  /* 콜아웃 */
+  .callout{background:linear-gradient(160deg,#15233c,#101d33); border:1px solid var(--indigo);
+    border-left:.5cqw solid var(--indigo); border-radius:1.2cqh; padding:1.9cqh 2.2cqw; font-size:2.2cqh; line-height:1.5; margin-top:2.2cqh;}
+  .callout.teal{border-color:var(--teal); border-left-color:var(--teal);}
+  .callout b{color:var(--indigo);} .callout.teal b{color:var(--teal);}
+
+  /* 위험 카드 */
+  .risks{display:grid; grid-template-columns:1fr 1fr; gap:2cqh 2.2cqw;}
+  .risk{background:var(--card); border:1px solid var(--border); border-radius:1.5cqh; padding:2.2cqh 2.4cqw;}
+  .risk h3{font-size:2.4cqh; font-weight:800; color:var(--rose); margin-bottom:.8cqh;}
+  .risk p{font-size:1.95cqh; color:var(--muted); line-height:1.45;}
+
+  /* 카드 그리드 (믿을 수 있는 이유 / 효과) */
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:2.2cqh 2.4cqw;}
+  .card{background:linear-gradient(160deg,var(--card),var(--card2)); border:1px solid var(--border);
+    border-radius:1.6cqh; padding:2.4cqh 2.4cqw; display:flex; flex-direction:column; gap:1cqh;}
+  .card .ic{font-size:3cqh; line-height:1;}
+  .card h3{font-size:2.5cqh; font-weight:800;}
+  .card p{font-size:2cqh; color:var(--muted); line-height:1.5;}
+  .card p b{color:var(--ink);} .card p code{font-size:.85em;}
+
+  /* 표 */
+  table.t{width:100%; border-collapse:collapse; font-size:2.15cqh;}
+  table.t th,table.t td{border:1px solid var(--border); padding:1.5cqh 1.6cqw; text-align:left; vertical-align:top; line-height:1.4;}
+  table.t th{background:#0e1a2e; color:var(--indigo); font-weight:700; font-size:1.9cqh; letter-spacing:.02em;}
+  table.t td{color:var(--muted);}
+  table.t td b{color:var(--ink); font-weight:700;} table.t td code{white-space:nowrap; font-size:.82em;}
+
+  /* 흐름 */
+  pre.flow{font-family:var(--mono); font-size:2cqh; line-height:2; background:#0a1220;
+    border:1px solid var(--border); border-radius:1.4cqh; padding:2.6cqh 2.4cqw; color:#cfe0ff; white-space:pre; overflow:auto;}
+
+  /* 정직 밴드 */
+  .honest{background:#1a1707; border:1px solid #4a3d10; border-left:.5cqw solid var(--amber);
+    border-radius:1.2cqh; padding:2.4cqh 2.6cqw;}
+  .honest p{color:#e8ddb5; font-size:2.15cqh; line-height:1.55;}
+  .honest p b{color:#fde68a;}
+
+  /* 마무리 */
+  .closing{justify-content:center; text-align:center; align-items:center;}
+  .closing h2{display:block; font-size:5.4cqh; line-height:1.2;}
+  .closing h2 em{font-style:normal; color:var(--teal);}
+  .closing .sub{font-size:2.2cqh; color:var(--muted); margin-top:2cqh; max-width:78%; line-height:1.5;}
+  .links{display:flex; flex-wrap:wrap; gap:1.2cqh 1.4cqw; justify-content:center; margin-top:2.8cqh;}
+  .links a{font-family:var(--mono); font-size:1.7cqh; text-decoration:none; color:var(--ink);
+    border:1px solid var(--border); background:#0e1a2e; border-radius:999px; padding:1.1cqh 1.9cqw; transition:.2s;}
+  .links a:hover{border-color:var(--indigo); color:var(--indigo);}
+
+  /* 크롬 */
+  .progress{position:absolute; top:0; left:0; height:.5cqh; background:linear-gradient(90deg,var(--indigo),var(--teal)); width:0; transition:width .4s ease; z-index:20;}
+  .chrome{position:absolute; left:0; right:0; bottom:0; height:5cqh; display:flex; align-items:center; justify-content:space-between;
+    padding:0 7cqw; z-index:15; background:linear-gradient(0deg,#0b112099,transparent);}
+  .brandmini{font-family:var(--mono); font-size:1.4cqh; color:var(--faint); letter-spacing:.05em;}
+  .dots{display:flex; gap:.8cqw; align-items:center; flex-wrap:wrap; max-width:55cqw; justify-content:center;}
+  .dot{width:1.1cqh; height:1.1cqh; border-radius:50%; background:#2a3a56; border:0; cursor:pointer; padding:0; transition:.2s;}
+  .dot:hover{transform:scale(1.3);} .dot.on{background:var(--indigo); box-shadow:0 0 0 .35cqh #6366f133;}
+  .nav{display:flex; gap:.8cqw; align-items:center;}
+  .nav button{width:3.6cqh; height:3.6cqh; border-radius:.8cqh; border:1px solid var(--border); background:#0e1a2e; color:var(--ink);
+    font-size:1.9cqh; cursor:pointer; display:grid; place-items:center; transition:.2s;}
+  .nav button:hover{border-color:var(--indigo); background:#152238;}
+  .counter{font-family:var(--mono); font-size:1.4cqh; color:var(--muted); min-width:5cqw; text-align:center;}
+  .hint{position:absolute; top:2.2cqh; right:7cqw; font-size:1.25cqh; color:var(--faint); z-index:15; font-family:var(--mono);}
+
+  @media print{
+    @page{size:1280px 720px; margin:0;}
+    body{overflow:visible; display:block; background:#0f172a;}
+    .deck{width:1280px; height:auto; max-width:none; max-height:none; box-shadow:none; container-type:normal;}
+    .slide{position:relative; display:flex!important; opacity:1!important; transform:none!important;
+      width:1280px; height:720px; page-break-after:always; padding:58px 90px 70px; overflow:hidden;}
+    .chrome,.progress,.hint{display:none!important;}
+    h1{font-size:52px;} .cover h1{font-size:60px;} h2{font-size:38px;} h2 .q{width:52px;height:52px;font-size:26px;}
+    .lead,.risk p,.card p,table.t,ul.hooks li,ul.list li,.callout,pre.flow,.honest p{font-size:17px!important;}
+    ul.hooks li{padding-left:44px;} ul.hooks li::before{width:28px;height:28px;}
+  }
+</style>
+</head>
+<body>
+<div class="deck" id="deck">
+  <div class="progress" id="progress"></div>
+  <div class="hint">← → · Space · F=전체화면</div>
+
+  <!-- 1. 표지 -->
+  <section class="slide cover active">
+    <div class="brand">
+      <div class="logo">O</div>
+      <div class="kicker" style="margin:0">문답으로 보는 소개 · Obsidian Knowledge Compilation</div>
+    </div>
+    <h1>OKC,<br><em class="hl">왜 필요한가요?</em></h1>
+    <div class="sub">여러 사람이 각자 쌓은 지식을, <b>누가 무엇을 근거로 승인했는지 되물을 수 있는</b>
+      하나의 검증 가능한 지식 베이스로 만들어 주는 도구입니다.</div>
+  </section>
+
+  <!-- 2. 훅 -->
+  <section class="slide">
+    <div class="kicker">Have you ever…</div>
+    <h2><span class="emo">🙋</span>혹시, 이런 적 없으셨나요?</h2>
+    <div class="body">
+      <ul class="hooks">
+        <li>Obsidian으로 작업하다 어떤 문제를 <b>멋지게 해결한 세션</b>이 있었는데, 몇 주 뒤 똑같은 상황에서 <em>“그때 어떻게 했더라…”</em> 하며 처음부터 다시 헤맨 적</li>
+        <li>분명 <b>정리는 해뒀는데</b>, 정작 필요할 때 그 노트를 못 찾은 적</li>
+        <li><b>옆 팀·동료가 이미 풀어 둔 세션</b>을, 그런 게 있는 줄 몰라서 똑같이 다시 푼 적</li>
+        <li>남이 정리해 준 지식을 보며 <em>“그럴듯한데… 이거 진짜 근거가 맞나?”</em> 싶어 <b>못 믿은</b> 적</li>
+      </ul>
+      <div class="callout">하나라도 뜨끔했다면, OKC는 바로 그 순간들을 위해 만들었습니다. <b>잘 풀린 세션은 다시 꺼내 쓰고, 남들이 남긴 세션도 믿고 가져다 쓰게</b> 하는 것 — 그게 출발점이었습니다.</div>
+    </div>
+  </section>
+
+  <!-- 3. 뭔가요 -->
+  <section class="slide">
+    <div class="kicker">What is it</div>
+    <h2><span class="q">Q</span><span class="emo">🧩</span>OKC가 뭔가요?</h2>
+    <div class="body">
+      <div class="lead" style="max-width:100%">흩어진 <span class="teal">Obsidian</span> 노트 모음(Vault)을 <b style="color:var(--ink)">하나의 신뢰할 수 있는 지식 베이스로 “컴파일”</b>하는 시스템입니다. 소스 코드를 빌드하듯이 —</div>
+      <div class="callout teal" style="font-size:2.6cqh">여러 팀의 노트를 모아 → <b>AI가 정리안을 제안</b>하고 → <b>코드가 검증</b>하고 → <b>사람이 승인</b>해야 → 하나의 결과물이 나옵니다.</div>
+    </div>
+  </section>
+
+  <!-- 4. 왜 -->
+  <section class="slide">
+    <div class="kicker">The problem</div>
+    <h2><span class="q">Q</span><span class="emo">❓</span>왜 필요한가요? <small>(핵심)</small></h2>
+    <div class="body">
+      <div class="lead" style="margin-top:0; margin-bottom:2cqh; max-width:100%">각자 노트를 아무리 잘 써도, <b style="color:var(--ink)">조직 단위로 합치려는 순간</b> 네 가지 문제가 생깁니다.</div>
+      <div class="risks">
+        <div class="risk"><h3>출처 소실</h3><p>합쳐진 문장이 어느 팀 어느 노트에서 왔는지 알 수 없습니다.</p></div>
+        <div class="risk"><h3>모순 은폐</h3><p>서로 다른 정책·날짜가 매끄러운 한 문장으로 뭉개집니다.</p></div>
+        <div class="risk"><h3>승인 드리프트</h3><p>승인한 뒤 내용이 바뀌어도 승인 기록은 그대로 남습니다.</p></div>
+        <div class="risk"><h3>버전 혼동</h3><p>최신 발행본과 낡은 로컬 지식이 조용히 섞입니다.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. 세션 재사용 -->
+  <section class="slide">
+    <div class="kicker">The core reason</div>
+    <h2><span class="emo">💡</span>“그때 그 세션, 다시 쓰고 싶어요”</h2>
+    <div class="body">
+      <ul class="list">
+        <li><b>내 세션 재사용</b> — 코딩 중 나온 결정·명령·해결법을 <code>okc-mcp</code>에게 <em>“이번 세션을 관련 노트에 기록해줘”</em> 한마디로 남겨 두면, 다음 작업에서 그대로 다시 꺼내 씁니다.</li>
+        <li><b>남의 세션 활용</b> — 내 것뿐 아니라 <b>동료·다른 팀이 남긴 세션·런북</b>도 부서 공동 아카이브에서 <em>“우리 팀은 전에 이거 어떻게 했지?”</em> 라고 물어 재사용합니다.</li>
+        <li><b>믿고 쓰는 재사용</b> — 가져다 쓰는 지식이 <b>출처가 추적되고 사람이 승인한</b> 검증된 내용이라 다시 의심할 필요가 없습니다.</li>
+      </ul>
+      <div class="callout">한 번 잘 해결한 문제를 <b>다음 작업(그리고 다음 사람)의 출발점</b>으로 — 이 지식 순환이 OKC의 심장입니다.</div>
+    </div>
+  </section>
+
+  <!-- 6. AI 요약 -->
+  <section class="slide">
+    <div class="kicker">Not just a summary</div>
+    <h2><span class="q">Q</span><span class="emo">🤖</span>그냥 AI로 요약하면 안 되나요?</h2>
+    <div class="body">
+      <div class="lead" style="margin-top:0; margin-bottom:1.8cqh; max-width:100%">AI 요약은 읽기엔 좋지만 <b style="color:var(--ink)">믿을 근거가 없습니다.</b> OKC에서 AI는 최종 답이 아니라 <em class="i">제안</em>만 합니다.</div>
+      <table class="t">
+        <thead><tr><th style="width:20%">누가</th><th>무엇을</th></tr></thead>
+        <tbody>
+          <tr><td><b>AI</b></td><td>분류·합성·비평을 <b>제안</b> — 소스는 명령이 아니라 검증 대상 근거로 취급</td></tr>
+          <tr><td><b>코드</b></td><td>근거·해시·누락·비평 심각도를 <b>검증</b> — Major/Critical 지적이 남으면 컴파일 자체가 막힘</td></tr>
+          <tr><td><b>사람</b></td><td>명시적으로 <b>승인</b> — 승인은 대상 해시에 묶여, 내용이 바뀌면 승인도 무효</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 7. 믿을 수 있는 이유 -->
+  <section class="slide">
+    <div class="kicker">Why you can trust it</div>
+    <h2><span class="q">Q</span>그래서 결과를 믿을 수 있나요?</h2>
+    <div class="body">
+      <div class="grid2">
+        <div class="card"><div class="ic">🔁</div><h3>매번 같은 결과</h3><p>승인 이후의 <code>compile·verify·explain</code>은 <b>LLM 없이(provider-free) 결정론적으로</b> 동작합니다. 같은 입력이면 byte 단위로 같은 결과가 나오고, 모델·API가 사라져도 내부 정합성을 다시 검증합니다.</p></div>
+        <div class="card"><div class="ic">📌</div><h3>버전이 고정됩니다</h3><p>발행된 지식은 <b>revision pinning</b>으로 고정됩니다. 새 버전이 나와도 예전 버전을 그대로 다시 읽을 수 있고, 파일을 몰래 수정하면 <code>verify</code>가 실패로 잡아냅니다. 히스토리·복원도 지원합니다.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8. 누구한테 -->
+  <section class="slide">
+    <div class="kicker">Who is it for</div>
+    <h2><span class="q">Q</span><span class="emo">👥</span>누구한테 필요한가요?</h2>
+    <div class="body">
+      <table class="t">
+        <thead><tr><th style="width:26%">이런 분</th><th>이렇게 씁니다</th><th style="width:18%">모듈</th></tr></thead>
+        <tbody>
+          <tr><td><b>노트를 쓰는 팀원</b></td><td>평소처럼 Obsidian에 쓰면 변경분이 자동 수집됨</td><td><code>okc-hooks</code></td></tr>
+          <tr><td><b>지식을 관리하는 운영자</b></td><td>수집 → 동결 → 검토 → 승인 → 발행을 콘솔에서 운영</td><td><code>okc-web</code></td></tr>
+          <tr><td><b>엔진을 쓰는 개발자</b></td><td>CLI·라이브러리로 직접 compile·verify·explain</td><td><code>okc-core</code></td></tr>
+          <tr><td><b>AI 코딩 에이전트</b></td><td>검증된 지식을 읽고, 세션 지식을 노트에 되기록</td><td><code>okc-mcp</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 9. 흐름 -->
+  <section class="slide">
+    <div class="kicker">How it flows</div>
+    <h2><span class="q">Q</span><span class="emo">🛠️</span>실제로 어떻게 돌아가나요? <small>(한 줄)</small></h2>
+    <div class="body">
+      <pre class="flow">노트 작성 → okc-hooks 자동 업로드 → okc-web에서 큐레이터 검토·승인
+        → okc-core가 결정론적으로 컴파일 → okc-mcp로 사람·AI가 검증된 지식 읽기</pre>
+    </div>
+  </section>
+
+  <!-- 10. 효과 -->
+  <section class="slide">
+    <div class="kicker">Benefits</div>
+    <h2><span class="emo">✅</span>뭐가 좋아지나요?</h2>
+    <div class="body">
+      <div class="grid2">
+        <div class="card"><p>흩어진 지식이 <b>하나의 검증 가능한 아카이브</b>로 모입니다.</p></div>
+        <div class="card"><p>모든 항목의 <b>출처를 되짚고</b>, 모순을 지우지 않고 <b>보존</b>합니다.</p></div>
+        <div class="card"><p>결과가 <b>재현 가능</b>하고, 발행본이 <b>조용히 바뀌지 않습니다.</b></p></div>
+        <div class="card"><p>팀원은 <b>워크플로를 안 바꿔도</b> 되고, AI 에이전트는 <b>믿을 수 있는 지식</b>을 그대로 씁니다.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11. 범위 -->
+  <section class="slide">
+    <div class="kicker">Honest scope</div>
+    <h2><span class="emo">⚠️</span>지금 바로 쓸 수 있나요? <small>(정직하게)</small></h2>
+    <div class="body">
+      <div class="honest">
+        <p>개발 단계 프로젝트입니다. <code>okc-web</code>은 단일 조직·단일 프로세스 해커톤 MVP, <code>okc-mcp</code>은 로컬 알파이며, 현재 산출물은 Markdown 중심입니다. 의미 기반 검색·랭킹, 네이티브 서명, 배포/릴리스 게이트 등은 아직 범위 밖입니다.</p>
+        <p style="margin-top:1.4cqh">이런 경계를 숨기지 않는 이유는 간단합니다 — OKC가 파는 가치 자체가 바로 <b>“검증 가능한 주장”</b>이기 때문입니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12. 마무리 -->
+  <section class="slide closing">
+    <div class="kicker" style="justify-content:center">Take-away</div>
+    <h2>AI 시대의 지식에는 답만큼 <em>“증거”</em>가 필요합니다</h2>
+    <div class="sub">OKC는 그럴듯한 요약을 넘어, 누가 무엇을 제안했고 · 어떤 근거가 승인됐으며 · 지금 읽는 내용이 그 승인 결과와 일치하는지 다시 물을 수 있는 조직 지식을 만듭니다.</div>
+    <div class="links">
+      <a href="OVERVIEW.md">OVERVIEW.md · 전체 안내</a>
+      <a href="showcase/okc-hackathon-post.md">상세 소개 글</a>
+      <a href="https://github.com/HappySPigs/okc">GitHub · HappySPigs/okc</a>
+    </div>
+  </section>
+
+  <!-- 크롬 -->
+  <div class="chrome">
+    <div class="brandmini">OKC · 왜 필요한가요?</div>
+    <div class="dots" id="dots"></div>
+    <div class="nav">
+      <button id="prev" aria-label="이전">‹</button>
+      <span class="counter" id="counter">1 / 12</span>
+      <button id="next" aria-label="다음">›</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var total = slides.length, i = 0;
+  var progress = document.getElementById('progress');
+  var counter = document.getElementById('counter');
+  var dotsWrap = document.getElementById('dots');
+  var deck = document.getElementById('deck');
+
+  slides.forEach(function(_, idx){
+    var b = document.createElement('button');
+    b.className = 'dot' + (idx===0?' on':'');
+    b.setAttribute('aria-label', (idx+1)+'번 슬라이드');
+    b.addEventListener('click', function(){ go(idx); });
+    dotsWrap.appendChild(b);
+  });
+  var dots = Array.prototype.slice.call(dotsWrap.children);
+
+  function render(){
+    slides.forEach(function(s, idx){ s.classList.toggle('active', idx===i); });
+    dots.forEach(function(d, idx){ d.classList.toggle('on', idx===i); });
+    progress.style.width = (i/(total-1)*100) + '%';
+    counter.textContent = (i+1) + ' / ' + total;
+    if (location.hash !== '#'+(i+1)) history.replaceState(null,'','#'+(i+1));
+  }
+  function go(n){ i = Math.max(0, Math.min(total-1, n)); render(); }
+  function next(){ go(i+1); }
+  function prev(){ go(i-1); }
+
+  document.getElementById('next').addEventListener('click', next);
+  document.getElementById('prev').addEventListener('click', prev);
+
+  document.addEventListener('keydown', function(e){
+    switch(e.key){
+      case 'ArrowRight': case 'PageDown': case ' ': next(); e.preventDefault(); break;
+      case 'ArrowLeft': case 'PageUp': prev(); e.preventDefault(); break;
+      case 'Home': go(0); break;
+      case 'End': go(total-1); break;
+      case 'f': case 'F':
+        if (!document.fullscreenElement){ deck.requestFullscreen && deck.requestFullscreen(); }
+        else { document.exitFullscreen && document.exitFullscreen(); }
+        break;
+      default: if (/^[1-9]$/.test(e.key)) go(parseInt(e.key,10)-1);
+    }
+  });
+
+  var sx=0, sy=0;
+  deck.addEventListener('touchstart', function(e){ sx=e.touches[0].clientX; sy=e.touches[0].clientY; }, {passive:true});
+  deck.addEventListener('touchend', function(e){
+    var dx=e.changedTouches[0].clientX-sx, dy=e.changedTouches[0].clientY-sy;
+    if (Math.abs(dx)>50 && Math.abs(dx)>Math.abs(dy)){ dx<0 ? next() : prev(); }
+  }, {passive:true});
+
+  var start = parseInt((location.hash||'').replace('#',''),10);
+  if (start>=1 && start<=total) i = start-1;
+  render();
+})();
+</script>
+</body>
+</html>
