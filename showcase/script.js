@@ -120,7 +120,7 @@ function setActiveSlide(index, options = {}) {
 
 function goToSlide(index, options = {}) {
   const nextIndex = Math.max(0, Math.min(slides.length - 1, index));
-  const behavior = options.instant || reducedMotion.matches ? "auto" : "smooth";
+  const behavior = options.instant || reducedMotion.matches ? "instant" : "smooth";
 
   setActiveSlide(nextIndex);
   slides[nextIndex].scrollIntoView({ behavior, block: "start" });

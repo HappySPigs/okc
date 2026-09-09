@@ -27,6 +27,7 @@
 html {
   background: var(--ink);
   color-scheme: dark;
+  overflow-x: clip;
   scroll-behavior: smooth;
   scroll-snap-type: y mandatory;
   scrollbar-color: rgba(116, 131, 255, 0.7) var(--ink);
@@ -251,7 +252,7 @@ kbd {
   display: grid;
   place-items: center;
   padding: 0;
-  border: 1px solid rgba(166, 178, 204, 0.18);
+  border: 1px solid rgba(166, 178, 204, 0.32);
   border-radius: 50%;
   background: rgba(16, 27, 47, 0.72);
   cursor: pointer;
@@ -329,10 +330,10 @@ kbd {
   z-index: 145;
   display: flex;
   align-items: center;
-  border: 1px solid rgba(166, 178, 204, 0.18);
+  border: 1px solid rgba(166, 178, 204, 0.32);
   border-radius: 99px;
-  background: rgba(7, 16, 31, 0.78);
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.24);
+  background: rgba(7, 16, 31, 0.92);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.28), inset 0 1px rgba(255, 255, 255, 0.04);
   -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
 }
@@ -1746,6 +1747,7 @@ kbd {
   .slide {
     height: auto;
     min-height: 100svh;
+    flex-direction: column;
     align-items: flex-start;
     padding: calc(var(--header-height) + 54px) 48px 90px;
     overflow: visible;
@@ -1924,6 +1926,7 @@ kbd {
   .closing-summary { font-size: 15px; }
   .closing-actions { align-items: flex-start; flex-direction: column; }
   .closing-mark { width: min(78vw, 360px); }
+  .closing-orbit { right: 0; }
   .closing-footer { right: 22px; bottom: 20px; left: 22px; }
   .closing-footer > span:nth-child(2) { display: none; }
 

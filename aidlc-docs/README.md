@@ -30,6 +30,8 @@ For a cross-module initiative, keep the coordination plan and shared acceptance 
 
 ## Registered modules
 
+For a consolidated status-and-navigation view across all modules, see the [module dashboard](module-dashboard.md).
+
 | Module | Module AI-DLC docs | Agent instructions | Status |
 |---|---|---|---|
 | `okc-core` | [`okc-core/aidlc-docs/`](../okc-core/aidlc-docs/) | [`okc-core/AGENTS.md`](../okc-core/AGENTS.md), [`okc-core/CLAUDE.md`](../okc-core/CLAUDE.md) | Existing |
