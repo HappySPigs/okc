@@ -12,7 +12,7 @@ import { CopyButton } from "@/components/ui/copy-button";
 
 // E5-4 okc-mcp consumption contract (base). Location + format only — no chat/query UI.
 const OUT_OF_SCOPE =
-  "okc-mcp는 미구현입니다. 청킹·임베딩·vector index·쿼리는 out-of-scope이며, 코어 임베딩은 일시적이라 컴파일 산출물을 재임베딩해야 합니다.";
+  "RAG 검색(청킹·임베딩·vector index·쿼리)과 MCP 도구 표면은 okc-mcp의 책임으로 okc-web 범위 밖입니다. okc-web은 read-only Markdown만 서빙하며, 코어 임베딩은 일시적이라 소비자는 lexical 검색을 쓰거나 산출물을 재임베딩해 semantic 검색을 구성합니다.";
 const LAYOUT = ["knowledge/", "legacy/", ".okc/"];
 const ENDPOINTS = [
   { method: "GET", path: "/files" }, { method: "GET", path: "/file?path=" },
@@ -26,8 +26,8 @@ export function Contract() {
 
   return (
     <div>
-      <PageHeader title="okc-mcp 연동 계약" badge={<Badge tone="warn"><PlugZap className="size-3" /> 이연(Deferred)</Badge>}
-        description="okc-mcp가 소비할 위치·형식 계약. 완성물이 아니라 정직한 계약입니다." />
+      <PageHeader title="okc-mcp 연동 계약" badge={<Badge tone="neutral"><PlugZap className="size-3" /> read-only 계약</Badge>}
+        description="okc-mcp가 소비할 위치·형식·read-only 엔드포인트 계약입니다. RAG 검색은 okc-mcp 담당으로 okc-web 범위 밖입니다." />
 
       {contract.loading && <Skeleton className="h-32 w-full" />}
 
@@ -73,7 +73,7 @@ export function Contract() {
         </CardContent>
       </Card>
 
-      <Callout tone="warn" className="mt-5" icon={<Info className="size-4" />} title="okc-mcp UNIMPLEMENTED">
+      <Callout tone="warn" className="mt-5" icon={<Info className="size-4" />} title="RAG 검색은 범위 밖 — okc-mcp 담당">
         {contract.data?.out_of_scope ?? OUT_OF_SCOPE}
       </Callout>
     </div>
