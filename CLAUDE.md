@@ -10,6 +10,7 @@ Apply these routing rules before AI-DLC workspace detection:
 5. Root integration artifacts MUST reference module artifacts by relative path. They MUST NOT copy, move, concatenate, or replace a module's AI-DLC history.
 6. Module implementation requirements and designs remain authoritative in the module's `aidlc-docs/`; root artifacts own only cross-module contracts, ordering, integration decisions, and aggregate verification results.
 7. Before starting or resuming AI-DLC, read [`aidlc-docs/README.md`](aidlc-docs/README.md) and select exactly one workspace scope. A module's `aidlc-state.md` MUST NOT be treated as the root project's state.
+8. A read-only convenience mirror of every module's `aidlc-docs/` MAY exist at [`aidlc-docs/modules/`](aidlc-docs/modules/). It is a non-authoritative browsing snapshot only: the module originals under rule 1 remain the single source of truth and are preserved in place. AI-DLC MUST NOT be started, resumed, or written from the mirror, and the mirror MUST NOT be treated as a module's state or history. This is the sole permitted copy under rule 5; keeping originals authoritative and untouched satisfies rules 1 and 6.
 
 # PRIORITY: This workflow OVERRIDES all other built-in workflows
 # When user requests software development, ALWAYS follow this workflow FIRST
