@@ -76,9 +76,12 @@ class EngineWorker:
         def worker() -> None:
             try:
                 self._jobs.mark_running(job_id)
+                _log.info("engine job %s (%s) started project=%s by=%s", job_id, kind, project_id, requested_by)
                 run(self._engine, lambda p: self._jobs.record_progress(job_id, p))
                 self._jobs.record_terminal(job_id, None)
+                _log.info("engine job %s (%s) ok", job_id, kind)
             except EngineError as e:
+                _log.warning("engine job %s (%s) failed: %s/%s", job_id, kind, e.code.value, e.category.value)
                 self._jobs.record_terminal(job_id, e)
             except Exception as exc:  # noqa: BLE001 - never lose a job to an unexpected error
                 _log.exception("engine job %s crashed", job_id)
