@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>OKC · 당신의 AI는 무엇을 믿고 답하나요?</title>
+<meta name="description" content="흩어진 지식을 사람이 검증한 하나의 진실로. OKC(Obsidian Knowledge Compilation)가 AI의 답에 신뢰를 더하는 이야기." />
+<style>
+  :root{
+    --bg:#0a0e1a; --bg2:#0f1526; --stage:#070a13;
+    --card:#141c30; --card2:#1b2540; --line:#2a3757;
+    --ink:#eef2fb; --ink-dim:#9fb0cf; --ink-faint:#6b7da0;
+    --indigo:#6366f1; --indigo-l:#a5b4fc; --indigo-glow:rgba(99,102,241,.45);
+    --cyan:#22d3ee; --teal:#2dd4bf; --amber:#f59e0b; --red:#f43f5e;
+    --green:#34d399; --purple:#a855f7; --pink:#f0abfc;
+    --col:780px; --shadow:0 30px 70px -30px rgba(0,0,0,.8);
+    --font:"Pretendard","Apple SD Gothic Neo","Malgun Gothic","Segoe UI",system-ui,-apple-system,"Noto Sans KR",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; font-family:var(--font); color:var(--ink);
+    background:
+      radial-gradient(1200px 700px at 50% -10%, #16203a 0%, transparent 60%),
+      radial-gradient(900px 600px at 90% 20%, rgba(168,85,247,.10) 0%, transparent 55%),
+      radial-gradient(700px 500px at 5% 60%, rgba(34,211,238,.08) 0%, transparent 55%),
+      linear-gradient(180deg, var(--bg) 0%, var(--stage) 100%);
+    background-attachment:fixed; -webkit-font-smoothing:antialiased; line-height:1.5; overflow-x:hidden;
+  }
+
+  /* ---- animations ---- */
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+  @keyframes bob2{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+  @keyframes twinkle{0%,100%{opacity:.25;transform:scale(.75) rotate(0)}50%{opacity:1;transform:scale(1.1) rotate(20deg)}}
+  @keyframes wave{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(16deg)}}
+  @keyframes floaty{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-14px) rotate(3deg)}}
+  .bob{animation:bob 3.2s ease-in-out infinite} .bob2{animation:bob2 4s ease-in-out infinite}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important}}
+
+  /* ---- top bar + progress ---- */
+  .topbar{position:fixed; inset:0 0 auto 0; z-index:50; display:flex; align-items:center; gap:12px;
+    padding:12px 20px; background:linear-gradient(180deg,rgba(7,10,19,.92),rgba(7,10,19,.55) 70%,transparent);
+    backdrop-filter:blur(6px)}
+  .brand{display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:.06em}
+  .brand .dot{width:26px;height:26px;border-radius:8px;
+    background:conic-gradient(from 220deg,var(--indigo),var(--cyan),var(--purple),var(--indigo));
+    box-shadow:0 0 22px var(--indigo-glow); position:relative}
+  .brand .dot::after{content:"";position:absolute; inset:6px; border-radius:4px; background:#0a0e1a}
+  .brand small{font-weight:600; color:var(--ink-dim); letter-spacing:.14em; font-size:11px}
+  .topbar .spacer{flex:1}
+  .topbar .cta{font-size:12.5px; color:var(--ink-dim); border:1px solid var(--line); padding:6px 12px; border-radius:999px}
+  .progress{position:fixed; top:0; left:0; height:3px; z-index:60;
+    background:linear-gradient(90deg,var(--cyan),var(--indigo),var(--purple));
+    box-shadow:0 0 14px var(--indigo-glow); width:0%}
+
+  /* ---- layout ---- */
+  .stage{max-width:var(--col); margin:0 auto; padding:0 20px 120px; position:relative}
+  section{scroll-margin-top:80px; position:relative}
+  .reveal{opacity:0; transform:translateY(34px) scale(.99); filter:blur(2px);
+    transition:opacity .7s ease, transform .7s cubic-bezier(.2,.7,.2,1), filter .7s ease}
+  .reveal.in{opacity:1; transform:none; filter:none}
+
+  /* ---- sparkles / deco ---- */
+  .spk{position:absolute; width:22px; height:22px; pointer-events:none; z-index:2; animation:twinkle 2.6s ease-in-out infinite}
+  .deco{position:absolute; pointer-events:none; opacity:.9; z-index:1}
+
+  /* ---- hero ---- */
+  .hero{min-height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center;
+    text-align:center; padding-top:80px; position:relative}
+  .eyebrow{font-size:12px; letter-spacing:.34em; color:var(--indigo-l); font-weight:700; text-transform:uppercase; margin-bottom:20px}
+  .hero h1{font-size:clamp(38px,7.4vw,76px); line-height:1.05; margin:0; font-weight:900; letter-spacing:-.02em}
+  .hero h1 .g{background:linear-gradient(100deg,var(--cyan),var(--indigo-l) 45%,var(--purple));
+    -webkit-background-clip:text; background-clip:text; color:transparent}
+  .hero p.sub{margin:22px auto 0; max-width:560px; font-size:clamp(15px,2.4vw,19px); color:var(--ink-dim)}
+  .hero p.sub b{color:var(--ink)}
+  .hero .mascot{margin:30px 0 6px; position:relative}
+  .badges{margin-top:24px; display:flex; gap:9px; flex-wrap:wrap; justify-content:center}
+  .chip{font-size:12.5px; color:var(--ink-dim); border:1px solid var(--line); background:rgba(255,255,255,.02);
+    padding:7px 13px; border-radius:999px; white-space:nowrap}
+  .chip b{color:var(--ink)}
+  .scrollhint{margin-top:40px; color:var(--ink-dim); font-size:13px; letter-spacing:.1em; display:flex; flex-direction:column; align-items:center; gap:8px}
+  .scrollhint .m{width:24px;height:38px;border:2px solid var(--line); border-radius:14px; position:relative}
+  .scrollhint .m::after{content:"";position:absolute; left:50%; top:7px; width:4px;height:8px; margin-left:-2px;
+    background:var(--indigo-l); border-radius:3px; animation:mouse 1.5s infinite}
+  @keyframes mouse{0%{opacity:0;transform:translateY(0)}30%{opacity:1}100%{opacity:0;transform:translateY(12px)}}
+  .heroglow{position:absolute; width:520px;height:520px; border-radius:50%; z-index:-1;
+    background:radial-gradient(circle,var(--indigo-glow),transparent 62%); filter:blur(20px); top:18%; animation:floaty 9s ease-in-out infinite}
+
+  /* ---- act headers ---- */
+  .act{display:flex; align-items:center; gap:14px; margin:104px 0 24px}
+  .act .n{font-size:13px; font-weight:800; letter-spacing:.16em; color:#0a0e1a; background:var(--indigo-l); padding:6px 12px; border-radius:10px; white-space:nowrap}
+  .act .n.warn{background:var(--amber)} .act .n.ok{background:var(--green)}
+  .act h2{font-size:clamp(22px,4.4vw,36px); margin:0; font-weight:850; letter-spacing:-.01em}
+  .act .rule{flex:1; height:2px; border-radius:2px; background:linear-gradient(90deg,var(--line),transparent)}
+
+  /* ---- panels ---- */
+  .panel{background:linear-gradient(180deg,var(--card),var(--bg2)); border:1px solid var(--line); border-radius:26px;
+    padding:28px 30px 30px; margin:20px 0; box-shadow:var(--shadow); position:relative; overflow:hidden}
+  .panel::before{content:""; position:absolute; inset:0; pointer-events:none;
+    background:radial-gradient(600px 220px at 15% 0%, rgba(99,102,241,.09), transparent 70%)}
+  .panel .cut{font-size:12px; letter-spacing:.12em; color:var(--indigo-l); font-weight:700; margin-bottom:6px}
+  .panel h3{margin:.05em 0 .35em; font-size:clamp(20px,3.2vw,28px); line-height:1.22; font-weight:850}
+  .panel p{margin:.3em 0; color:var(--ink-dim); font-size:15px}
+  .panel p strong{color:var(--ink)}
+  .scene{display:flex; gap:24px; align-items:center; flex-wrap:wrap}
+  .scene .art{flex:0 0 auto; position:relative}
+  .scene .txt{flex:1; min-width:230px}
+
+  .tag{display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600; padding:6px 11px; border-radius:999px; margin:6px 6px 0 0}
+  .tag.bad{background:rgba(244,63,94,.14); color:#fda4b4; border:1px solid rgba(244,63,94,.4)}
+  .tag.warn{background:rgba(245,158,11,.14); color:#fcd689; border:1px solid rgba(245,158,11,.4)}
+  .tag.ok{background:rgba(52,211,153,.14); color:#86efc9; border:1px solid rgba(52,211,153,.4)}
+  .tag.neutral{background:rgba(148,163,184,.12); color:var(--ink-dim); border:1px solid var(--line)}
+
+  /* speech bubbles */
+  .bubble{position:relative; background:#f5f7ff; color:#0f1526; border-radius:18px; padding:12px 16px;
+    font-size:15.5px; font-weight:700; max-width:400px; box-shadow:0 8px 24px rgba(0,0,0,.35)}
+  .bubble.left::after{content:""; position:absolute; left:-9px; top:18px; border:9px solid transparent; border-right-color:#f5f7ff; border-left:0}
+  .bubble.right::after{content:""; position:absolute; right:-9px; top:18px; border:9px solid transparent; border-left-color:#f5f7ff; border-right:0}
+  .bubble small{display:block; font-weight:600; opacity:.65; font-size:11.5px; margin-top:4px}
+  .bubble.ai{background:linear-gradient(180deg,#243357,#1a2440); color:var(--ink); border:1px solid var(--indigo)}
+  .bubble.ai.left::after{border-right-color:#243357} .bubble.ai.right::after{border-left-color:#243357}
+
+  /* callout */
+  .callout{border-radius:24px; padding:30px 30px; margin:24px 0; text-align:center; position:relative; overflow:hidden;
+    border:1px solid rgba(244,63,94,.35); background:radial-gradient(600px 240px at 50% 0%, rgba(244,63,94,.14), transparent 70%), var(--card)}
+  .callout.win{border-color:rgba(52,211,153,.4); background:radial-gradient(600px 240px at 50% 0%, rgba(52,211,153,.16), transparent 70%), var(--card)}
+  .callout .q{font-size:clamp(20px,3.6vw,30px); font-weight:850; line-height:1.35; letter-spacing:-.01em}
+  .callout .q .hl{color:#fda4b4} .callout.win .q .hl{color:#86efc9}
+  .callout p{color:var(--ink-dim); margin-top:10px; font-size:14.5px}
+
+  /* trio vaults */
+  .trio{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:10px}
+  .vault{background:var(--card2); border:1px solid var(--line); border-radius:18px; padding:16px 12px; text-align:center}
+  .vault .tt{font-weight:750; font-size:13.5px; margin:8px 0 6px}
+  .vault .proc{font-size:12.5px; font-weight:800; padding:5px 10px; border-radius:9px; display:inline-block}
+  .vault .proc.a{background:rgba(34,211,238,.15); color:#7fe6f7}
+  .vault .proc.b{background:rgba(168,85,247,.16); color:#d8b4fe}
+  .vault .proc.c{background:rgba(245,158,11,.15); color:#fcd689}
+  @media(max-width:620px){.trio{grid-template-columns:1fr}}
+
+  /* engine */
+  .engine{display:grid; grid-template-columns:1fr auto 1fr; gap:16px; align-items:center; margin-top:8px}
+  .engine .box{background:var(--card2); border:1px solid var(--line); border-radius:18px; padding:15px}
+  .engine .box h4{margin:0 0 8px; font-size:12px; letter-spacing:.1em; color:var(--ink-dim); font-weight:700}
+  .engine .arrow{font-size:30px; text-align:center; animation:bob2 2.4s ease-in-out infinite}
+  .miniline{display:flex; align-items:center; gap:8px; font-size:13.5px; color:var(--ink-dim); margin:6px 0}
+  .miniline .k{width:9px;height:9px;border-radius:3px;flex:0 0 auto}
+  @media(max-width:620px){.engine{grid-template-columns:1fr}.engine .arrow{transform:rotate(90deg)}}
+
+  /* step chips */
+  .stepchips{display:flex; flex-wrap:wrap; gap:10px; margin-top:12px}
+  .schip{display:flex; align-items:center; gap:9px; background:var(--card2); border:1px solid var(--line);
+    border-radius:14px; padding:11px 14px; font-size:14px; font-weight:650}
+  .schip .e{font-size:18px}
+
+  /* browser mock */
+  .browser{border:1px solid var(--line); border-radius:18px; overflow:hidden; background:#0d1424; box-shadow:var(--shadow); margin-top:6px}
+  .browser .bar{display:flex; align-items:center; gap:8px; padding:11px 14px; background:#111a30; border-bottom:1px solid var(--line)}
+  .browser .bar i{width:11px;height:11px;border-radius:50%; display:inline-block}
+  .browser .bar .url{flex:1; margin-left:8px; font-size:12px; color:var(--ink-faint); background:#0b1120; border:1px solid var(--line); border-radius:8px; padding:5px 10px}
+  .browser .body{padding:16px}
+  .rev-card{border:1px solid var(--line); border-radius:14px; padding:14px; background:var(--card2)}
+  .rev-card .rh{display:flex; align-items:center; justify-content:space-between; gap:10px}
+  .rev-card .rh .t{font-weight:750}
+  .critic{margin-top:10px; border-left:3px solid var(--amber); background:rgba(245,158,11,.08); padding:9px 12px; border-radius:0 10px 10px 0; font-size:13px; color:#fcd689}
+  .btns{display:flex; gap:10px; margin-top:14px; flex-wrap:wrap}
+  .btn{border:0; border-radius:11px; padding:10px 16px; font-weight:750; font-size:13.5px; cursor:default; font-family:inherit}
+  .btn.pub{background:linear-gradient(180deg,#34d399,#10b981); color:#04231a}
+  .btn.rej{background:transparent; color:#fda4b4; border:1px solid rgba(244,63,94,.5)}
+  .btn.lock{background:#0b1120; color:var(--ink-faint); border:1px dashed var(--line)}
+
+  /* answer card */
+  .answer{border:1px solid var(--indigo); border-radius:18px; overflow:hidden; box-shadow:var(--shadow); margin-top:6px}
+  .answer .ah{display:flex; align-items:center; gap:10px; padding:12px 16px; background:linear-gradient(90deg,#1d2748,#141c30); border-bottom:1px solid var(--line); font-weight:750}
+  .answer .ab{padding:14px 18px; color:var(--ink); font-size:15px}
+  .answer .ab ol{margin:8px 0 0; padding-left:20px; color:var(--ink-dim)} .answer .ab ol li{margin:4px 0}
+  .prov-foot{display:flex; align-items:center; gap:9px; flex-wrap:wrap; padding:12px 18px; background:rgba(52,211,153,.08); border-top:1px solid rgba(52,211,153,.3); font-size:12.5px; color:#86efc9}
+  .prov-foot .v{display:inline-flex; align-items:center; gap:5px; font-weight:750}
+
+  /* value cards */
+  .values{display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:12px}
+  .val{background:linear-gradient(180deg,var(--card),var(--bg2)); border:1px solid var(--line); border-radius:20px; padding:22px; box-shadow:var(--shadow); text-align:center}
+  .val .ic{width:56px;height:56px;border-radius:16px; display:grid; place-items:center; font-size:26px; margin:0 auto 14px; background:rgba(99,102,241,.14); border:1px solid var(--line)}
+  .val h4{margin:0 0 6px; font-size:16.5px; font-weight:800}
+  .val p{margin:0; color:var(--ink-dim); font-size:13.5px}
+  @media(max-width:720px){.values{grid-template-columns:1fr}}
+
+  /* flow */
+  .flow{display:flex; flex-wrap:wrap; gap:9px; align-items:stretch; margin-top:14px; justify-content:center}
+  .node{flex:1 1 130px; min-width:120px; background:var(--card2); border:1px solid var(--line); border-radius:16px; padding:13px; text-align:center}
+  .node .em{font-size:24px} .node .nm{font-weight:800; font-size:13.5px; margin-top:3px}
+  .node .role{font-size:11px; color:var(--ink-dim); margin-top:4px; line-height:1.35}
+  .node.acc{border-color:var(--indigo)}
+  .flow .to{align-self:center; color:var(--indigo-l); font-size:18px; font-weight:800}
+  @media(max-width:720px){.flow .to{transform:rotate(90deg)}}
+
+  /* footer */
+  footer{margin-top:110px; border-top:1px solid var(--line); padding-top:38px; text-align:center; position:relative}
+  footer .modules{display:flex; flex-wrap:wrap; gap:9px; justify-content:center; margin:18px 0}
+  footer .mod{font-size:12.5px; color:var(--ink-dim); border:1px solid var(--line); border-radius:999px; padding:7px 14px}
+  footer .mod b{color:var(--ink)}
+  footer .tagline{font-size:clamp(18px,3vw,26px); font-weight:850; margin:12px 0; letter-spacing:-.01em}
+  footer .tagline .g{background:linear-gradient(100deg,var(--cyan),var(--indigo-l),var(--purple)); -webkit-background-clip:text; background-clip:text; color:transparent}
+  footer small{color:var(--ink-faint); font-size:12px}
+
+  svg.char{display:block}
+
+  @media print{
+    body{background:#fff; color:#111}
+    .topbar,.progress,.scrollhint,.heroglow,.spk{display:none!important}
+    .reveal{opacity:1!important; transform:none!important; filter:none!important}
+    .panel,.callout,.val,.browser,.answer{break-inside:avoid; box-shadow:none}
+    .hero{min-height:auto; padding:40px 0}
+  }
+</style>
+</head>
+<body>
+
+<div class="progress" id="bar"></div>
+<div class="topbar">
+  <div class="brand"><span class="dot"></span> OKC <small>OBSIDIAN&nbsp;KNOWLEDGE&nbsp;COMPILATION</small></div>
+  <div class="spacer"></div>
+  <div class="cta">흩어진 지식 → 검증된 하나의 진실</div>
+</div>
+
+<!-- ===== reusable cute sprites via <symbol> ===== -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <!-- knowledge crystal sprite -->
+  <symbol id="gem" viewBox="0 0 60 70">
+    <path d="M30 4 L54 20 L46 58 L30 66 L14 58 L6 20 Z" fill="#a855f7"/>
+    <path d="M30 4 L30 66 L14 58 L6 20 Z" fill="#7e22ce" opacity=".65"/>
+    <ellipse cx="19" cy="41" rx="4" ry="2.6" fill="#f0abfc" opacity=".6"/>
+    <ellipse cx="41" cy="41" rx="4" ry="2.6" fill="#f0abfc" opacity=".6"/>
+    <circle cx="24" cy="34" r="3" fill="#1f1147"/><circle cx="38" cy="34" r="3" fill="#1f1147"/>
+    <path d="M27 43 Q30 46 33 43" stroke="#1f1147" stroke-width="2" fill="none" stroke-linecap="round"/>
+  </symbol>
+  <!-- 4-point sparkle -->
+  <symbol id="star" viewBox="0 0 24 24">
+    <path d="M12 0 C13 8 16 11 24 12 C16 13 13 16 12 24 C11 16 8 13 0 12 C8 11 11 8 12 0Z" fill="#fde68a"/>
+  </symbol>
+</svg>
+
+<div class="stage">
+
+  <!-- ================= HERO ================= -->
+  <header class="hero">
+    <div class="heroglow"></div>
+    <svg class="spk" style="top:22%;left:16%"><use href="#star"/></svg>
+    <svg class="spk" style="top:30%;right:18%; animation-delay:.8s"><use href="#star"/></svg>
+    <svg class="spk" style="bottom:26%;left:26%; animation-delay:1.4s"><use href="#star"/></svg>
+
+    <div class="eyebrow reveal in">믿을 수 있는 AI 이야기</div>
+    <h1 class="reveal in">당신의 AI는<br><span class="g">무엇을 믿고</span> 답하나요?</h1>
+    <p class="sub reveal in">흩어진 지식을, <b>사람이 검증한 하나의 진실</b>로.</p>
+
+    <div class="mascot reveal in">
+      <!-- Codi mascot waving -->
+      <svg class="char bob" width="150" height="168" viewBox="0 0 140 168" aria-label="AI 마스코트 코디">
+        <ellipse cx="70" cy="158" rx="30" ry="6" fill="#000" opacity=".25"/>
+        <line x1="70" y1="30" x2="70" y2="44" stroke="#a5b4fc" stroke-width="5" stroke-linecap="round"/>
+        <use href="#star" x="60" y="12" width="20" height="20"/>
+        <rect x="26" y="42" width="88" height="72" rx="27" fill="#818cf8"/>
+        <rect x="38" y="56" width="64" height="44" rx="16" fill="#0b1020"/>
+        <circle cx="58" cy="78" r="8" fill="#34d399"/><circle cx="61" cy="75" r="2.6" fill="#eafff6"/>
+        <circle cx="82" cy="78" r="8" fill="#34d399"/><circle cx="85" cy="75" r="2.6" fill="#eafff6"/>
+        <ellipse cx="44" cy="93" rx="6" ry="4" fill="#f0abfc" opacity=".55"/>
+        <ellipse cx="96" cy="93" rx="6" ry="4" fill="#f0abfc" opacity=".55"/>
+        <rect x="44" y="116" width="52" height="34" rx="15" fill="#6366f1"/>
+        <circle cx="30" cy="126" r="9" fill="#818cf8" style="transform-origin:30px 126px; animation:wave 1.6s ease-in-out infinite"/>
+        <circle cx="110" cy="130" r="9" fill="#818cf8"/>
+      </svg>
+    </div>
+
+    <div class="badges reveal in">
+      <span class="chip">✍️ <b>Obsidian</b></span>
+      <span class="chip">⚙️ <b>정제</b></span>
+      <span class="chip">🧑‍⚖️ <b>검증</b></span>
+      <span class="chip">🔎 <b>출처</b></span>
+    </div>
+    <div class="scrollhint reveal in"><div class="m"></div>스크롤하여 보기</div>
+  </header>
+
+  <!-- ================= ACT 1 ================= -->
+  <section>
+    <div class="act reveal"><span class="n warn">ACT 1</span><h2>위기 · 자신 있게 틀리는 AI</h2><span class="rule"></span></div>
+
+    <!-- P1 -->
+    <div class="panel reveal">
+      <div class="cut">밤 11시 · 신입 개발자 '지우'의 첫 배포</div>
+      <div class="scene">
+        <div class="art">
+          <svg class="char bob2" width="140" height="160" viewBox="0 0 140 160" aria-label="지우">
+            <ellipse cx="70" cy="152" rx="34" ry="7" fill="#000" opacity=".25"/>
+            <path d="M42 152 Q40 108 70 104 Q100 108 98 152 Z" fill="#38bdf8"/>
+            <rect x="58" y="108" width="24" height="18" rx="7" fill="#0ea5e9"/>
+            <circle cx="70" cy="60" r="42" fill="#fbd7b5"/>
+            <path d="M28 58 Q30 20 70 18 Q110 20 112 58 Q100 40 70 40 Q40 40 28 58Z" fill="#5b4636"/>
+            <ellipse cx="48" cy="70" rx="8" ry="5" fill="#fb7185" opacity=".4"/>
+            <ellipse cx="92" cy="70" rx="8" ry="5" fill="#fb7185" opacity=".4"/>
+            <circle cx="55" cy="60" r="6" fill="#2b2b33"/><circle cx="57" cy="58" r="2" fill="#fff"/>
+            <circle cx="85" cy="60" r="6" fill="#2b2b33"/><circle cx="87" cy="58" r="2" fill="#fff"/>
+            <path d="M62 78 Q70 82 78 78" stroke="#b06a4f" stroke-width="3" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="txt">
+          <div class="bubble left">결제 서비스 <b>배포 절차</b> 알려줘!<small>— 문서 찾을 시간이 없어…</small></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- P2 -->
+    <div class="panel reveal">
+      <div class="cut">AI 코디의 대답</div>
+      <div class="scene">
+        <div class="txt">
+          <div class="bubble ai left">이렇게 하면 돼요! 😎<small>— 근데… 근거가 없다</small></div>
+          <div style="margin-top:10px">
+            <span class="tag bad">출처 없음</span>
+            <span class="tag bad">6개월 전 폐기</span>
+            <span class="tag warn">그럴듯함 100%</span>
+          </div>
+        </div>
+        <div class="art">
+          <!-- proud-but-wrong Codi (cute, sweat drop) -->
+          <svg class="char bob" width="140" height="160" viewBox="0 0 140 168" aria-label="자신만만한 코디">
+            <ellipse cx="70" cy="158" rx="30" ry="6" fill="#000" opacity=".25"/>
+            <line x1="70" y1="30" x2="70" y2="44" stroke="#a5b4fc" stroke-width="5" stroke-linecap="round"/>
+            <use href="#star" x="60" y="12" width="20" height="20"/>
+            <rect x="26" y="42" width="88" height="72" rx="27" fill="#818cf8"/>
+            <rect x="38" y="56" width="64" height="44" rx="16" fill="#0b1020"/>
+            <!-- ^_^ confident eyes -->
+            <path d="M50 80 Q58 72 66 80" stroke="#fbbf24" stroke-width="4" fill="none" stroke-linecap="round"/>
+            <path d="M74 80 Q82 72 90 80" stroke="#fbbf24" stroke-width="4" fill="none" stroke-linecap="round"/>
+            <ellipse cx="44" cy="93" rx="6" ry="4" fill="#f0abfc" opacity=".55"/>
+            <ellipse cx="96" cy="93" rx="6" ry="4" fill="#f0abfc" opacity=".55"/>
+            <path d="M104 60 q7 10 0 16 q-7 -6 0 -16Z" fill="#38bdf8" opacity=".85"/>
+            <rect x="44" y="116" width="52" height="34" rx="15" fill="#6366f1"/>
+            <circle cx="30" cy="128" r="9" fill="#818cf8"/><circle cx="110" cy="128" r="9" fill="#818cf8"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- P3 -->
+    <div class="panel reveal">
+      <div class="scene">
+        <div class="art">
+          <svg class="char" width="150" height="120" viewBox="0 0 150 120" aria-label="배포 실패">
+            <rect x="30" y="18" width="90" height="72" rx="14" fill="#141c30" stroke="#f43f5e" stroke-width="2"/>
+            <path d="M58 40 l34 30 M92 40 l-34 30" stroke="#f43f5e" stroke-width="6" stroke-linecap="round"/>
+            <rect x="42" y="96" width="66" height="8" rx="4" fill="#1b2540"/>
+            <circle cx="112" cy="24" r="6" fill="#f43f5e"><animate attributeName="opacity" values="1;.2;1" dur="1s" repeatCount="indefinite"/></circle>
+            <text x="20" y="30" font-size="20">💥</text>
+          </svg>
+        </div>
+        <div class="txt">
+          <h3>배포 실패 → 롤백.</h3>
+          <div class="bubble left" style="margin-top:6px">시킨 대로 했는데…?<small>— 새벽 2시, 온콜이 울린다</small></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- P4 -->
+    <div class="panel reveal">
+      <div class="cut">진짜 원인</div>
+      <h3>같은 질문, <span style="color:#fda4b4">세 팀, 세 개의 답.</span></h3>
+      <div class="trio">
+        <div class="vault">
+          <svg width="52" height="60" viewBox="0 0 60 70" class="bob2"><use href="#gem" fill="#22d3ee"/></svg>
+          <div class="tt">백엔드팀</div><span class="proc a">절차 A</span>
+        </div>
+        <div class="vault">
+          <svg width="52" height="60" viewBox="0 0 60 70" class="bob2" style="animation-delay:.5s"><use href="#gem"/></svg>
+          <div class="tt">보안팀</div><span class="proc b">절차 B</span>
+        </div>
+        <div class="vault">
+          <svg width="52" height="60" viewBox="0 0 60 70" class="bob2" style="animation-delay:1s"><use href="#gem" fill="#f59e0b"/></svg>
+          <div class="tt">인프라팀</div><span class="proc c">절차 C ★최신</span>
+        </div>
+      </div>
+      <p style="margin-top:14px; text-align:center">무엇이 최신인지 <strong>아무도 모른다.</strong></p>
+    </div>
+
+    <!-- P5 -->
+    <div class="callout reveal">
+      <svg class="spk" style="top:12px;left:18px"><use href="#star"/></svg>
+      <div class="q">"AI가 틀린 게 아니다.<br><span class="hl">믿을 근거가 흩어져 있었을 뿐이다."</span></div>
+    </div>
+  </section>
+
+  <!-- ================= ACT 2 ================= -->
+  <section>
+    <div class="act reveal"><span class="n">ACT 2</span><h2>정제 · 흩어진 지식을 하나로</h2><span class="rule"></span></div>
+
+    <!-- P6 -->
+    <div class="panel reveal">
+      <div class="cut">해결의 시작</div>
+      <div class="scene">
+        <div class="art" style="display:flex; gap:6px">
+          <svg width="42" height="50" viewBox="0 0 60 70" class="bob2"><use href="#gem" fill="#22d3ee"/></svg>
+          <svg width="42" height="50" viewBox="0 0 60 70" class="bob2" style="animation-delay:.4s"><use href="#gem"/></svg>
+          <svg width="42" height="50" viewBox="0 0 60 70" class="bob2" style="animation-delay:.8s"><use href="#gem" fill="#f59e0b"/></svg>
+        </div>
+        <div class="txt">
+          <h3>습관은 그대로. 🎈</h3>
+          <p>각자 Obsidian에 <strong>평소처럼</strong> 기록. 새 툴도, 새 회의도 없다.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- P7 -->
+    <div class="panel reveal">
+      <div class="scene">
+        <div class="art">
+          <svg class="char" width="130" height="130" viewBox="0 0 130 130" aria-label="okc-hooks">
+            <circle cx="65" cy="65" r="44" fill="#141c30" stroke="#2dd4bf" stroke-width="2"/>
+            <g style="transform-origin:65px 65px; animation:spin 6s linear infinite">
+              <g stroke="#2dd4bf" stroke-width="3.5" fill="none" stroke-linecap="round">
+                <path d="M65 30 A35 35 0 1 1 36 50"/><path d="M34 43 l3 9 l9 -3"/>
+              </g>
+            </g>
+            <circle cx="65" cy="65" r="8" fill="#2dd4bf"/>
+            <ellipse cx="54" cy="63" rx="4" ry="2.4" fill="#0b1020"/>
+            <ellipse cx="76" cy="63" rx="4" ry="2.4" fill="#0b1020"/>
+          </svg>
+        </div>
+        <div class="txt">
+          <div class="cut">okc-hooks · 조용한 감시자</div>
+          <h3>자동으로 모아요.</h3>
+          <p>노트가 바뀌면 <strong>안전하게</strong> 업로드. 아무도 신경 쓸 필요 없다.</p>
+        </div>
+      </div>
+    </div>
+    <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
+    <!-- P8 -->
+    <div class="panel reveal">
+      <div class="cut">okc-core · 컴파일 엔진 (결정론적)</div>
+      <h3>흩어진 볼트를 <span style="color:var(--indigo-l)">하나로</span>.</h3>
+      <div class="engine">
+        <div class="box">
+          <h4>흩어진 원본</h4>
+          <div class="miniline"><span class="k" style="background:#22d3ee"></span>백엔드 · A</div>
+          <div class="miniline"><span class="k" style="background:#a855f7"></span>보안 · B</div>
+          <div class="miniline"><span class="k" style="background:#f59e0b"></span>인프라 · C</div>
+        </div>
+        <div class="arrow">⚙️</div>
+        <div class="box">
+          <h4>정제된 지식</h4>
+          <div class="miniline"><span class="k" style="background:#34d399"></span>중복 정리</div>
+          <div class="miniline"><span class="k" style="background:#f59e0b"></span><b style="color:#fcd689">모순 감지</b></div>
+          <div class="miniline"><span class="k" style="background:#818cf8"></span>출처 보존</div>
+        </div>
+      </div>
+      <div class="critic" style="margin-top:14px">⚠ 비평가: "배포 절차가 3개 팀에서 서로 다릅니다."</div>
+      <p style="margin-top:10px">엔진은 정답을 <strong>정하지 않는다.</strong> 충돌을 <strong>드러내고</strong> 판단은 사람에게 넘긴다.</p>
+    </div>
+
+    <!-- P9 -->
+    <div class="panel reveal">
+      <div class="cut">okc-web · 큐레이터 콘솔</div>
+      <h3>사람이 최종 결정.</h3>
+      <div class="browser">
+        <div class="bar"><i style="background:#f43f5e"></i><i style="background:#f59e0b"></i><i style="background:#34d399"></i>
+          <span class="url">okc-web · 리뷰 · #payment-deploy</span></div>
+        <div class="body">
+          <div class="rev-card">
+            <div class="rh"><span class="t">📦 배포 절차</span><span class="tag warn" style="margin:0">검토 대기</span></div>
+            <div class="critic">⚠ 해결되지 않은 모순 · 최신 출처는 인프라팀(C)로 추정</div>
+            <div class="btns">
+              <button class="btn pub">✓ 발행</button>
+              <button class="btn rej">↺ 반려·재생성</button>
+              <button class="btn lock">🔒 중대 모순 = 무시 승인 불가</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="scene" style="margin-top:14px">
+        <div class="art">
+          <svg class="char bob2" width="120" height="150" viewBox="0 0 140 160" aria-label="큐레이터 한 리드">
+            <ellipse cx="70" cy="152" rx="32" ry="7" fill="#000" opacity=".25"/>
+            <path d="M44 152 Q42 110 70 106 Q98 110 96 152 Z" fill="#475569"/>
+            <circle cx="70" cy="60" r="42" fill="#e8b892"/>
+            <path d="M28 56 Q32 18 70 16 Q108 18 112 56 Q104 38 70 38 Q36 38 28 56Z" fill="#2b2b33"/>
+            <ellipse cx="48" cy="70" rx="8" ry="5" fill="#fb7185" opacity=".4"/>
+            <ellipse cx="92" cy="70" rx="8" ry="5" fill="#fb7185" opacity=".4"/>
+            <rect x="42" y="56" width="18" height="6" rx="3" fill="#111827"/><rect x="80" y="56" width="18" height="6" rx="3" fill="#111827"/>
+            <circle cx="55" cy="60" r="5.5" fill="#2b2b33"/><circle cx="57" cy="58" r="2" fill="#fff"/>
+            <circle cx="85" cy="60" r="5.5" fill="#2b2b33"/><circle cx="87" cy="58" r="2" fill="#fff"/>
+            <path d="M62 78 Q70 82 78 78" stroke="#9a5f47" stroke-width="3" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="txt">
+          <div class="bubble left">이게 최신! <b>승인</b> ✓ 나머진 반려.<small>— 한 리드, 큐레이터</small></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- P10 -->
+    <div class="panel reveal">
+      <h3>검증된 지식만 <span style="color:#86efc9">발행.</span></h3>
+      <div class="stepchips">
+        <div class="schip"><span class="e">✅</span> 사람 승인</div>
+        <div class="schip"><span class="e">📌</span> 버전 고정</div>
+        <div class="schip"><span class="e">🔒</span> 검증 가능</div>
+        <div class="schip"><span class="e">🔎</span> 출처 추적</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= ACT 3 ================= -->
+  <section>
+    <div class="act reveal"><span class="n ok">ACT 3</span><h2>신뢰 · 믿을 수 있는 답</h2><span class="rule"></span></div>
+
+    <!-- P11 -->
+    <div class="panel reveal">
+      <div class="cut">며칠 뒤 · 같은 질문</div>
+      <div class="scene">
+        <div class="art">
+          <svg class="char bob2" width="130" height="150" viewBox="0 0 140 160" aria-label="다른 신입">
+            <ellipse cx="70" cy="152" rx="32" ry="7" fill="#000" opacity=".25"/>
+            <path d="M44 152 Q42 110 70 106 Q98 110 96 152 Z" fill="#2dd4bf"/>
+            <circle cx="70" cy="60" r="42" fill="#f0c9a0"/>
+            <path d="M30 54 Q36 18 70 16 Q104 18 110 54 Q94 34 70 34 Q46 34 30 54Z" fill="#1f2a37"/>
+            <ellipse cx="48" cy="70" rx="8" ry="5" fill="#fb7185" opacity=".4"/>
+            <ellipse cx="92" cy="70" rx="8" ry="5" fill="#fb7185" opacity=".4"/>
+            <circle cx="55" cy="60" r="6" fill="#2b2b33"/><circle cx="57" cy="58" r="2" fill="#fff"/>
+            <circle cx="85" cy="60" r="6" fill="#2b2b33"/><circle cx="87" cy="58" r="2" fill="#fff"/>
+            <path d="M62 78 Q70 82 78 78" stroke="#b06a4f" stroke-width="3" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="txt">
+          <div class="bubble left">결제 서비스 <b>배포 절차</b> 알려줘!<small>— 질문은 같다. 하지만 이번엔…</small></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- P12 -->
+    <div class="panel reveal">
+      <div class="cut">okc-mcp · AI가 '발행된 검증 지식'을 읽는다</div>
+      <h3>이번엔 <span style="color:#86efc9">출처와 함께.</span></h3>
+      <div class="answer">
+        <div class="ah">🤖 코디 · <span style="color:var(--indigo-l)">검증된 지식에 연결됨</span></div>
+        <div class="ab">최신 배포 절차입니다 (인프라팀 기준):
+          <ol><li>스테이징 배포 & 검증</li><li>승인된 마이그레이션</li><li>카나리 → 프로덕션</li></ol>
+        </div>
+        <div class="prov-foot">
+          <span class="v">🔎 인프라팀 볼트</span> · <span class="v">🧑‍⚖️ 큐레이터 승인</span> · <span class="v" style="color:#34d399">✓ 검증됨</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- P13 -->
+    <div class="panel reveal">
+      <div class="scene">
+        <div class="art">
+          <svg class="char bob" width="150" height="120" viewBox="0 0 150 120" aria-label="배포 성공">
+            <rect x="30" y="18" width="90" height="72" rx="14" fill="#141c30" stroke="#34d399" stroke-width="2"/>
+            <path d="M56 54 l14 14 l26 -28" stroke="#34d399" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <rect x="42" y="96" width="66" height="8" rx="4" fill="#1b2540"/>
+            <use href="#star" x="8" y="10" width="18" height="18"/>
+            <use href="#star" x="126" y="60" width="16" height="16"/>
+          </svg>
+        </div>
+        <div class="txt">
+          <h3>배포 성공! 🎉</h3>
+          <div class="bubble left" style="margin-top:4px">이건 <b>믿을 수 있어!</b><small>— 출처도, 승인한 사람도 있으니까</small></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- P14 -->
+    <div class="callout win reveal">
+      <svg class="spk" style="top:12px;right:18px"><use href="#star"/></svg>
+      <div class="q">"AI의 답은,<br><span class="hl">사람이 검증한 지식만큼만</span> 믿을 수 있다."</div>
+      <p>OKC는 그 신뢰를 만든다.</p>
+    </div>
+  </section>
+
+  <!-- ================= WHY ================= -->
+  <section>
+    <div class="act reveal"><span class="n">WHY</span><h2>무엇이 달라지나</h2><span class="rule"></span></div>
+    <div class="values">
+      <div class="val reveal"><div class="ic">🧩</div><h4>하나의 진실</h4><p>중복·모순을 정리하고 드러낸다.</p></div>
+      <div class="val reveal"><div class="ic">🧑‍⚖️</div><h4>사람의 검증</h4><p>환각이 아니라, 승인된 지식.</p></div>
+      <div class="val reveal"><div class="ic">🔒</div><h4>재현 가능</h4><p>누가 언제 돌려도 같은 결과.</p></div>
+    </div>
+  </section>
+
+  <!-- ================= HOW ================= -->
+  <section>
+    <div class="act reveal"><span class="n">HOW</span><h2>한눈에 보는 흐름</h2><span class="rule"></span></div>
+    <div class="panel reveal">
+      <div class="flow">
+        <div class="node"><div class="em">✍️</div><div class="nm">Obsidian</div><div class="role">평소처럼 작성</div></div>
+        <div class="to">→</div>
+        <div class="node"><div class="em">🔄</div><div class="nm">okc-hooks</div><div class="role">자동 수집</div></div>
+        <div class="to">→</div>
+        <div class="node acc"><div class="em">⚙️</div><div class="nm">okc-core</div><div class="role">컴파일·모순감지</div></div>
+        <div class="to">→</div>
+        <div class="node acc"><div class="em">🧑‍⚖️</div><div class="nm">okc-web</div><div class="role">검토·발행</div></div>
+        <div class="to">→</div>
+        <div class="node"><div class="em">🔌</div><div class="nm">okc-mcp</div><div class="role">AI에 제공</div></div>
+        <div class="to">→</div>
+        <div class="node"><div class="em">🤖</div><div class="nm">AI Agent</div><div class="role">출처 있는 답</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= FOOTER ================= -->
+  <footer>
+    <svg width="60" height="70" viewBox="0 0 60 70" class="bob" style="margin-bottom:6px"><use href="#gem"/></svg>
+    <div class="tagline"><span class="g">OKC</span> — Obsidian Knowledge Compilation</div>
+    <p style="color:var(--ink-dim); max-width:520px; margin:0 auto; font-size:14px">흩어진 지식을 결정론적이고, 검증 가능하며, 출처를 추적할 수 있는 하나의 지식으로.</p>
+    <div class="modules">
+      <span class="mod"><b>okc-core</b> · 엔진</span>
+      <span class="mod"><b>okc-hooks</b> · 수집 데몬</span>
+      <span class="mod"><b>okc-web</b> · 큐레이터</span>
+      <span class="mod"><b>okc-mcp</b> · AI 제공</span>
+    </div>
+    <small>human-in-the-loop · provider-free & reproducible</small>
+  </footer>
+
+</div>
+
+<script>
+  var bar = document.getElementById('bar');
+  function onScroll(){
+    var h = document.documentElement;
+    var max = h.scrollHeight - h.clientHeight;
+    bar.style.width = (max > 0 ? (h.scrollTop / max) * 100 : 0) + '%';
+  }
+  document.addEventListener('scroll', onScroll, {passive:true}); onScroll();
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
+  }, {threshold:.16, rootMargin:'0px 0px -8% 0px'});
+  document.querySelectorAll('.reveal:not(.in)').forEach(function(el){ io.observe(el); });
+</script>
+</body>
+</html>
