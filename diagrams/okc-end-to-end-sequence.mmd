@@ -1,0 +1,72 @@
+---
+title: "OKC — End-to-End Flow: Author → Upload → Integrate → Serve → Read"
+config:
+  theme: base
+  themeVariables:
+    fontSize: "15px"
+    actorFontSize: "15px"
+    noteFontSize: "13px"
+    messageFontSize: "13px"
+---
+sequenceDiagram
+    autonumber
+    actor C as 👤 Contributor
+    participant MCP as okc-mcp<br/>(stdio MCP)
+    participant H as okc-hooks<br/>(vault daemon)
+    participant W as okc-web<br/>(FastAPI + SPA)
+    participant E as okc-core<br/>(okc-compiler)
+    actor CU as 👤 Curator
+    actor AI as 🤖 AI client
+
+    rect rgb(232, 244, 255)
+    Note over C,H: 1. Author — write notes in a local Obsidian vault
+    C->>MCP: authoring tools (create / edit source notes)
+    MCP-->>C: note written to local vault
+    Note right of C: or edit the vault directly in Obsidian
+    end
+
+    rect rgb(232, 255, 240)
+    Note over H,W: 2. Upload — okc-hooks watches and pushes revisions (auth token, resumable CBOR)
+    H->>H: watch file events + startup / periodic scan
+    H->>W: POST /api/sync/negotiate
+    W-->>H: missing blob list
+    loop each missing blob (resumable)
+        H->>W: PUT /api/sync/blob/{hash}/{offset}
+    end
+    H->>W: POST /api/sync/commit
+    W-->>H: source revision stored
+    end
+
+    rect rgb(255, 249, 230)
+    Note over CU,E: 3. Integrate — permission-gated human-in-the-loop pipeline
+    CU->>W: POST /api/projects (create project)
+    CU->>W: POST /api/projects/{id}/tokens (issue upload token)
+    CU->>W: POST /api/projects/{id}/freeze (freeze source set)
+    CU->>W: POST /api/projects/{id}/provider (select LLM provider)
+    CU->>W: POST /api/projects/{id}/preflight (gate check)
+    CU->>W: POST /api/projects/{id}/integrate
+    W-->>CU: 202 JobAccepted (async job)
+    W->>E: propose taxonomy + clusters (via provider)
+    Note over W,E: provider → disclosure → taxonomy → clusters → critic review
+    E-->>W: proposal + independent critic findings
+    CU->>W: GET /taxonomy then POST /taxonomy/approve
+    CU->>W: GET /clusters then POST /clusters/{cid}/approve (or /regenerate)
+    CU->>W: GET /review/gate (all approvals present?)
+    CU->>W: POST /api/projects/{id}/compile
+    W->>E: CorpusBuilder::build (provider-free, deterministic)
+    E-->>W: merged vault + provenance
+    end
+
+    rect rgb(244, 238, 255)
+    Note over W: 4. Serve — publish a fixed, verifiable revision
+    W->>W: publish version-pinned revision (history + restore)
+    end
+
+    rect rgb(255, 238, 245)
+    Note over AI,W: 5. Read — consume the verified corpus
+    AI->>MCP: query published knowledge
+    MCP->>W: GET /api/serving/{id}/... (read access)
+    W-->>MCP: version-pinned verified corpus
+    MCP-->>AI: published OKC knowledge
+    Note right of MCP: a web error never silently<br/>falls back to local knowledge
+    end
