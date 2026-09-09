@@ -1,0 +1,5 @@
+# Logical components and extension compliance
+
+WebVault/WebSnapshot provide fixed serving HTTP, identity validation, transient cache and safe typed failures. Existing Vault/authoring provide source protection. CLI doctor reports selected backend and connection status without secrets; MCP source envelopes carry revision and stale state. No distributed infrastructure component is added.
+
+RESILIENCY-01/10 compliant: read dependency impact documented, request timeout/cancellation/resource bounds, no silent fallback. 02/03/04/11/12/13/14/15 inherit module-local recovery, tarball rollback and behavior-test/error-runbook decisions; no deployment change. 05/06 use CLI diagnostics and typed errors; centralized monitoring N/A to local client. 07/08/09 cloud monitoring/regions/autoscaling N/A. Security extension disabled and skipped; product input/credential/path requirements enforced. PBT partial rules 02/03/07/08/09 compliant through structured fast-check generators, round-trips/invariants, enabled shrinking, fixed seeds, npm test integration and locked dependency. Other PBT rules advisory; no production chaos test is claimed.

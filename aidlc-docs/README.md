@@ -41,6 +41,10 @@ For a consolidated status-and-navigation view across all modules, see the [modul
 
 When another `okc-*` module is added, preserve its `aidlc-docs/` directory and add it to this registry. Do not rename generated AI-DLC paths during the merge.
 
+### Consolidated mirror
+
+For convenience, a **read-only** copy of every module's `aidlc-docs/` is gathered under [`modules/`](modules/) so the whole project's AI-DLC trail can be browsed from one tree. It is **not authoritative** — each `<module>/aidlc-docs/` above remains the single source of truth, and the originals are preserved in place. Edit modules in their own directory; never resume a module workflow from the mirror. See [`modules/README.md`](modules/README.md).
+
 ## Root workflow state
 
 The root state and audit track the 2026-09-09 cross-module review and completed implementation. See [aidlc-state.md](aidlc-state.md), [audit.md](audit.md), the [original gap review](inception/reverse-engineering/integration-gap-review.md), and the [final implementation/verification report](construction/build-and-test/build-and-test-summary.md). Module states remain independent.
