@@ -75,7 +75,9 @@ okc/
 ├── scripts/           # Cross-module integration & AI-DLC verification helpers
 │                      #   (okc-install-render.mjs, mcp-integration-client.mjs,
 │                      #    test_integration.py, verify-aidlc.mjs)
-└── .github/workflows/ # Per-module CI (core, hooks, mcp, web backend/frontend)
+├── demo/              # One-command local full-flow demo harness (run-demo.sh + video)
+├── showcase/          # Static showcase / "why OKC" site (deployed to GitHub Pages)
+└── .github/workflows/ # Per-module CI + showcase Pages deploy
 ```
 
 Each module keeps its own `aidlc-docs/`, agent instructions
@@ -162,12 +164,13 @@ the module registry and integration state.
 
 Each module has its own CI under [`.github/workflows/`](.github/workflows/):
 `core-ci`, `core-sdk-bindings`, `hooks-ci`, `mcp-ci`, `web-backend-ci`, and
-`web-frontend-ci`.
+`web-frontend-ci`; `showcase-pages` deploys the showcase site to GitHub Pages.
 
 ## License
 
 Licensing is per-module: `okc-core` is dual-licensed under
 [MIT](okc-core/LICENSE-MIT) or [Apache-2.0](okc-core/LICENSE-APACHE), and
-`okc-mcp` ships its own [LICENSE](okc-mcp/LICENSE). `okc-hooks` and `okc-web` do
-not yet declare a license, and there is no repository-wide license file — treat
-those modules as all-rights-reserved until one is added.
+`okc-mcp` ships its own [LICENSE](okc-mcp/LICENSE). `okc-hooks` declares
+`MIT OR Apache-2.0` in its `Cargo.toml` but ships no license text file yet.
+`okc-web` does not declare a license, and there is no repository-wide license
+file — treat `okc-web` as all-rights-reserved until one is added.
