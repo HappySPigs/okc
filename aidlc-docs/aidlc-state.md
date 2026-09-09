@@ -57,6 +57,7 @@ All installed extension rule files have opt-in prompts. No always-on extension w
 - [x] Construction U2 (okc-mcp) — `setup`/`unregister` + `agents` config implemented in okc-mcp/; functional design at okc-mcp/aidlc-docs/construction/local-install/. Verified: `npm run check` green, 101/101 tests.
 - [x] Build & Test (root aggregate) — [local-install-build-and-test-summary.md](construction/build-and-test/local-install-build-and-test-summary.md). Both module gates green. Live OS-service registration / live agent `mcp add` / live okc-web token NOT executed (tests use injectable fakes). No commits made.
 - Status: CONSTRUCTION COMPLETE for this initiative (design + implement + verify). Operations/deployment not requested.
+- [x] Follow-up (user request 2026-09-09): one-command root installer added — `install.sh` (macOS/Linux), `install.ps1` (Windows), `uninstall.sh`, `okc-install.config.example.json`, and `scripts/okc-install-render.mjs`. Fills a single combined config → builds both modules → runs each `setup`. Verified: bash syntax OK; renderer emits valid per-module JSON at 0600 with correct `/api/sync` join; generated mcp config passes real schema via read-only `doctor` (ok:true). Side-effecting registration/service install intentionally not run during verification.
 
 ### Extension Configuration (Current Initiative)
 | Extension | Enabled | Decided At |
@@ -67,3 +68,34 @@ All installed extension rule files have opt-in prompts. No always-on extension w
 
 - Autopilot directive: take recommended options, deprioritize scope-expanding choices, proceed without per-gate blocking. Concise checkpoints surfaced instead of hard approval gates.
 - Security applicable rules for this initiative: SECURITY-03, 05, 06, 09, 10, 12, 13, 15 (+ SECURITY-11 credential separation-of-concerns). N/A: SECURITY-01 (no data store; token at 0600, full secure-store deferred), 02, 04, 07, 08, 14.
+
+---
+
+## Current Initiative (started 2026-09-09 KST): Full-Flow Local Demo (hooks → web → mcp, all-local Ollama)
+
+- Scope: repository-root umbrella coordination (okc-web + okc-hooks + okc-mcp + okc-core) + new root-owned `demo/` tooling. Routing rule 4 → root workspace, artifacts in `/aidlc-docs/`. Prior two root initiatives remain COMPLETE and preserved.
+- Type: Brownfield feature (demo/integration harness over already-built modules).
+- Request (summary): a one-command, reproducible local demo riding the entire pipeline — 5 personal vaults uploaded, a live MCP edit to "my" vault, hooks auto-upload, web shows it changed (stale), admin re-merges + disposes of critic findings — Playwright-driven, web authenticated on this laptop.
+- Autopilot directive (user, 2026-09-09): "권장안으로 선택하고 대부분 진행하되 구현/설계 범위가 너무 커지는 방향은 피해. autopilot으로 자동으로 진행." → recommended options, avoid scope expansion, no hard per-gate blocking, concise checkpoints.
+
+### Key decisions
+- LLM brain = all-local Ollama `qwen2.5:14b` (organizer/synthesis/critic) + `nomic-embed-text` (embedding). Verified: Apple M5 / 32 GB / Metal. No Bedrock/shim.
+- MCP edit = scripted stdio `apply_session_capture(dryRun:false)` (+ real `claude mcp add`).
+- "conflict/changed" = product's real behavior (project-level `stale` banner; ClusterReview preserved-contradictions + minor-waive/regenerate). Dummy vaults carry deliberate contradictions.
+- Delivery = fully automated + reproducible; Playwright drives the admin web flow with per-beat screenshots.
+- Scope guards: no new web UI, no per-file diff view, okc-web limited to an optional `role` on the existing provider-bind endpoint, no CI/packaging/OS-autostart for demo processes.
+
+### Stage Progress (Current Initiative)
+- [x] Workspace Detection — root/umbrella scope; brownfield; new initiative. Targeted current-state investigation (hooks daemon, mcp tools, web review/serving) instead of full Reverse Engineering.
+- [x] Requirements Analysis — [demo-full-flow-requirements.md](inception/requirements/demo-full-flow-requirements.md).
+- [x] Workflow Planning — [demo-full-flow-execution-plan.md](inception/plans/demo-full-flow-execution-plan.md). Skips: Reverse Engineering, User Stories, Application Design, NFR/Infra Design. Executes: Units (light), Functional Design (light, where needed), Code Generation, Build & Test.
+- [x] Units Generation (light) — [demo-full-flow-unit-of-work.md](inception/plans/demo-full-flow-unit-of-work.md): U1 dummy vaults; U2 provider stack + okc-web role routing; U3 env bring-up + TLS; U4 wiring + seed; U5 Playwright + runbook.
+- [ ] Construction — in progress (autopilot).
+- [ ] Build & Test — pending.
+
+### Extension Configuration (Current Initiative)
+| Extension | Enabled | Decided At |
+|---|---|---|
+| Security Baseline | Yes (applicable rules only — token/secret hygiene, TLS, no secrets in logs/commits/state) | Requirements Analysis |
+| Resiliency Baseline | No | Requirements Analysis |
+| Property-Based Testing | No (thin integration tooling + Playwright e2e; okc-web tweak uses existing pytest style) | Requirements Analysis |

@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="980" viewBox="0 0 1800 980" role="img" aria-labelledby="title desc">
+  <title id="title">okc-mcp와 okc-hooks의 사용자 친화적 흐름</title>
+  <desc id="desc">사용자는 코딩 에이전트에게 세션 기록을 요청하고 Obsidian에 평소처럼 저장한다. MCP는 관련 노트 탐색, 미리보기, 해시 검사, 백업과 안전한 쓰기를 처리하고 hooks는 변경 감지, 스캔, 재시도와 재개 업로드를 처리한다. 다음 세션에는 발행된 부서 지식을 다시 사용한다.</desc>
+  <defs>
+    <linearGradient id="uxBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F8F7F2"/>
+      <stop offset="1" stop-color="#EEF3FA"/>
+    </linearGradient>
+    <linearGradient id="mcpUx" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5C58E8"/>
+      <stop offset="1" stop-color="#4140B7"/>
+    </linearGradient>
+    <linearGradient id="hooksUx" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#23A892"/>
+      <stop offset="1" stop-color="#14796E"/>
+    </linearGradient>
+    <filter id="uxShadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="13" stdDeviation="18" flood-color="#24304A" flood-opacity="0.13"/>
+    </filter>
+    <marker id="uxArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#596CD8"/>
+    </marker>
+    <style>
+      .sans { font-family: Inter, Pretendard, "Noto Sans KR", -apple-system, BlinkMacSystemFont, sans-serif; }
+      .mono { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; }
+      .eyebrow { fill: #596AA9; font-size: 18px; font-weight: 780; letter-spacing: 3px; }
+      .mainTitle { fill: #111827; font-size: 48px; font-weight: 790; letter-spacing: -1.6px; }
+      .subtitle { fill: #626D82; font-size: 21px; }
+      .laneTitle { fill: #FFFFFF; font-size: 31px; font-weight: 780; }
+      .laneSub { fill: #E6E9FF; font-size: 17px; }
+      .userLabel { fill: #4F5B72; font-size: 14px; font-weight: 800; letter-spacing: 1.5px; }
+      .quote { fill: #161C29; font-size: 22px; font-weight: 730; }
+      .stepTitle { fill: #1B2333; font-size: 18px; font-weight: 730; }
+      .stepSub { fill: #6B768B; font-size: 14px; }
+      .benefit { fill: #FFFFFF; font-size: 19px; font-weight: 720; }
+      .footer { fill: #1B2435; font-size: 18px; font-weight: 690; }
+    </style>
+  </defs>
+
+  <rect width="1800" height="980" fill="url(#uxBg)"/>
+  <circle cx="1670" cy="80" r="260" fill="#5C58E8" opacity="0.055"/>
+  <circle cx="95" cy="930" r="250" fill="#23A892" opacity="0.06"/>
+  <text x="72" y="72" class="sans eyebrow">FRICTIONLESS ON THE SURFACE · STRICT UNDERNEATH</text>
+  <text x="72" y="134" class="sans mainTitle">설정 후에는 두 문장만 기억하면 됩니다</text>
+  <text x="72" y="176" class="sans subtitle">기록은 코딩 대화 안에서, 동기화는 백그라운드에서, 재사용은 다음 작업에서 이루어집니다.</text>
+
+  <g filter="url(#uxShadow)">
+    <rect x="70" y="228" width="800" height="482" rx="30" fill="#FFFFFF" stroke="#D9DEEA"/>
+    <rect x="70" y="228" width="800" height="112" rx="30" fill="url(#mcpUx)"/>
+    <rect x="70" y="310" width="800" height="30" fill="url(#mcpUx)"/>
+    <text x="102" y="276" class="sans laneTitle">okc-mcp</text>
+    <text x="102" y="311" class="sans laneSub">코딩 세션 안에서 지식을 기록하고 다시 찾습니다</text>
+
+    <text x="102" y="384" class="sans userLabel">사용자가 하는 일</text>
+    <rect x="102" y="405" width="736" height="66" rx="20" fill="#F2F1FF" stroke="#C8C5FA"/>
+    <text x="470" y="446" class="sans quote" text-anchor="middle">“이번 세션을 관련 노트에 기록해줘”</text>
+
+    <text x="102" y="516" class="sans userLabel">뒤에서 자동으로 준비하는 안전장치</text>
+    <g>
+      <rect x="102" y="540" width="168" height="105" rx="18" fill="#F7F8FC" stroke="#DCE1ED"/>
+      <text x="186" y="577" class="sans stepTitle" text-anchor="middle">관련 위치 찾기</text>
+      <text x="186" y="607" class="sans stepSub" text-anchor="middle">노트 · section · 폴더</text>
+      <rect x="283" y="540" width="168" height="105" rx="18" fill="#F7F8FC" stroke="#DCE1ED"/>
+      <text x="367" y="577" class="sans stepTitle" text-anchor="middle">미리보기</text>
+      <text x="367" y="607" class="sans stepSub" text-anchor="middle">dry-run 기본값</text>
+      <rect x="464" y="540" width="168" height="105" rx="18" fill="#F7F8FC" stroke="#DCE1ED"/>
+      <text x="548" y="577" class="sans stepTitle" text-anchor="middle">충돌 방지</text>
+      <text x="548" y="607" class="sans stepSub" text-anchor="middle">expected SHA-256</text>
+      <rect x="645" y="540" width="193" height="105" rx="18" fill="#F7F8FC" stroke="#DCE1ED"/>
+      <text x="741" y="577" class="sans stepTitle" text-anchor="middle">안전한 저장</text>
+      <text x="741" y="607" class="sans stepSub" text-anchor="middle">backup · atomic write</text>
+    </g>
+    <rect x="102" y="666" width="736" height="28" rx="14" fill="#514ED6"/>
+    <text x="470" y="686" class="sans benefit" font-size="15" text-anchor="middle">경로와 create/update를 직접 고르지 않아도 되고, 같은 항목은 중복 대신 갱신됩니다</text>
+  </g>
+
+  <g filter="url(#uxShadow)">
+    <rect x="930" y="228" width="800" height="482" rx="30" fill="#FFFFFF" stroke="#D9DEEA"/>
+    <rect x="930" y="228" width="800" height="112" rx="30" fill="url(#hooksUx)"/>
+    <rect x="930" y="310" width="800" height="30" fill="url(#hooksUx)"/>
+    <text x="962" y="276" class="sans laneTitle">okc-hooks</text>
+    <text x="962" y="311" class="sans laneSub" fill="#E0FFF9">저장된 변경을 source revision으로 자동 전달합니다</text>
+
+    <text x="962" y="384" class="sans userLabel">사용자가 하는 일</text>
+    <rect x="962" y="405" width="736" height="66" rx="20" fill="#EAF9F6" stroke="#A9DDD4"/>
+    <text x="1330" y="446" class="sans quote" text-anchor="middle">“Obsidian에서 평소처럼 저장”</text>
+
+    <text x="962" y="516" class="sans userLabel">백그라운드에서 이어지는 동기화</text>
+    <g>
+      <rect x="962" y="540" width="168" height="105" rx="18" fill="#F7F8FC" stroke="#DCE1ED"/>
+      <text x="1046" y="577" class="sans stepTitle" text-anchor="middle">놓치지 않기</text>
+      <text x="1046" y="607" class="sans stepSub" text-anchor="middle">event · 시작/주기 scan</text>
+      <rect x="1143" y="540" width="168" height="105" rx="18" fill="#F7F8FC" stroke="#DCE1ED"/>
+      <text x="1227" y="577" class="sans stepTitle" text-anchor="middle">변경만 찾기</text>
+      <text x="1227" y="607" class="sans stepSub" text-anchor="middle">debounce · content hash</text>
+      <rect x="1324" y="540" width="168" height="105" rx="18" fill="#F7F8FC" stroke="#DCE1ED"/>
+      <text x="1408" y="577" class="sans stepTitle" text-anchor="middle">중단부터 재개</text>
+      <text x="1408" y="607" class="sans stepSub" text-anchor="middle">server resume offset</text>
+      <rect x="1505" y="540" width="193" height="105" rx="18" fill="#F7F8FC" stroke="#DCE1ED"/>
+      <text x="1601" y="577" class="sans stepTitle" text-anchor="middle">스스로 재시도</text>
+      <text x="1601" y="607" class="sans stepSub" text-anchor="middle">새 file event 불필요</text>
+    </g>
+    <rect x="962" y="666" width="736" height="28" rx="14" fill="#178B7C"/>
+    <text x="1330" y="686" class="sans benefit" font-size="15" text-anchor="middle">status · pause · resume · sync-now로 필요할 때만 직접 개입합니다</text>
+  </g>
+
+  <path d="M 440 742 C 440 790, 1360 790, 1360 742" fill="none" stroke="#7181D8" stroke-width="3" marker-end="url(#uxArrow)"/>
+  <g filter="url(#uxShadow)">
+    <rect x="188" y="768" width="1424" height="135" rx="28" fill="#111A2C"/>
+    <text x="224" y="810" class="sans" fill="#94A4FF" font-size="14" font-weight="780" letter-spacing="2">NEXT SESSION</text>
+    <text x="224" y="853" class="sans" fill="#FFFFFF" font-size="24" font-weight="740">“우리 팀은 전에 어떻게 해결했지?”</text>
+    <path d="M 654 842 L 722 842" stroke="#8295FF" stroke-width="3" marker-end="url(#uxArrow)"/>
+    <rect x="744" y="810" width="169" height="62" rx="18" fill="#4947C6"/>
+    <text x="828" y="849" class="sans" fill="#FFFFFF" font-size="20" font-weight="760" text-anchor="middle">okc-mcp</text>
+    <path d="M 930 842 L 998 842" stroke="#8295FF" stroke-width="3" marker-end="url(#uxArrow)"/>
+    <rect x="1020" y="810" width="294" height="62" rx="18" fill="#153B38" stroke="#277F72"/>
+    <text x="1167" y="838" class="sans" fill="#D9FFF8" font-size="17" font-weight="730" text-anchor="middle">고정된 부서 아카이브</text>
+    <text x="1167" y="860" class="mono" fill="#8DCEC3" font-size="13" text-anchor="middle">revision · verify · explain</text>
+    <path d="M 1330 842 L 1398 842" stroke="#4AC6B1" stroke-width="3" marker-end="url(#uxArrow)"/>
+    <text x="1510" y="838" class="sans" fill="#FFFFFF" font-size="20" font-weight="750" text-anchor="middle">바로 이어서 개발</text>
+    <text x="1510" y="864" class="sans" fill="#AAB7CA" font-size="15" text-anchor="middle">과거 결정 · 명령 · 런북 재사용</text>
+  </g>
+
+  <text x="70" y="948" class="sans footer">최초 1회 설정과 upload 고지 확인·standing consent 후에는 평소대로 기록하고 저장합니다. 세션 캡처는 매번 사용자가 선택합니다.</text>
+</svg>

@@ -310,10 +310,13 @@ def build_client(specs: list[dto.ProviderSpecView]) -> okc.OkcClient:
         kind = _PROVIDER_KINDS.get(s.kind.lower())
         if kind is None:
             raise EngineError.validation(f"unknown provider kind '{s.kind}'")
-        profiles.append(okc.ProviderProfile(
+        kwargs: dict[str, Any] = dict(
             name=s.name, kind=cast(Any, kind), endpoint=s.endpoint,
             model=s.model, api_key_env=s.api_key_env,
-        ))
+        )
+        if s.timeout_ms is not None:
+            kwargs["timeout_ms"] = s.timeout_ms
+        profiles.append(okc.ProviderProfile(**kwargs))
     try:
         return okc.OkcClient(profiles)
     except okc.OkcError as e:

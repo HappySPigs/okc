@@ -1,0 +1,138 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1120" viewBox="0 0 1800 1120" role="img" aria-labelledby="title desc">
+  <title id="title">okc-core 병합 핵심 로직과 수식</title>
+  <desc id="desc">입력 봉인, 유사 문서 후보 생성, taxonomy 완전 분할, disposition과 evidence 완전성, critic과 해시 결합 승인, 결정론적 materialization과 byte 검증의 여섯 단계를 보여준다. 유사도는 후보만 찾고 완전성 조건이 컴파일 권한을 결정한다.</desc>
+  <defs>
+    <linearGradient id="coreBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#070A11"/>
+      <stop offset="0.55" stop-color="#0D1322"/>
+      <stop offset="1" stop-color="#081117"/>
+    </linearGradient>
+    <linearGradient id="coreGlow" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#546DFF"/>
+      <stop offset="0.5" stop-color="#8D73F2"/>
+      <stop offset="1" stop-color="#33CFB3"/>
+    </linearGradient>
+    <filter id="coreShadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="14" stdDeviation="20" flood-color="#000000" flood-opacity="0.3"/>
+    </filter>
+    <marker id="coreArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7189FF"/>
+    </marker>
+    <style>
+      .sans { font-family: Inter, Pretendard, "Noto Sans KR", -apple-system, BlinkMacSystemFont, sans-serif; }
+      .mono { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; }
+      .eyebrow { fill: #91A3FF; font-size: 18px; font-weight: 780; letter-spacing: 3px; }
+      .mainTitle { fill: #F7F9FF; font-size: 48px; font-weight: 790; letter-spacing: -1.6px; }
+      .subtitle { fill: #A4AEC1; font-size: 21px; }
+      .step { fill: #91A3FF; font-size: 15px; font-weight: 800; letter-spacing: 1.5px; }
+      .cardTitle { fill: #FFFFFF; font-size: 27px; font-weight: 760; }
+      .cardSub { fill: #9EA9BC; font-size: 16px; }
+      .formula { fill: #E7EBF7; font-size: 16px; font-weight: 620; }
+      .note { fill: #8290A8; font-size: 15px; }
+      .gate { fill: #ECF2FF; font-size: 18px; font-weight: 720; }
+      .pill { fill: #C9D4EA; font-size: 13px; font-weight: 780; letter-spacing: 1px; }
+    </style>
+  </defs>
+
+  <rect width="1800" height="1120" fill="url(#coreBg)"/>
+  <circle cx="1660" cy="70" r="260" fill="#536DFF" opacity="0.05"/>
+  <circle cx="100" cy="1060" r="280" fill="#2DD4BF" opacity="0.045"/>
+  <rect x="0" y="0" width="1800" height="6" fill="url(#coreGlow)"/>
+
+  <text x="70" y="72" class="sans eyebrow">OKC-CORE · SCHEMA 3 MERGE LOGIC</text>
+  <text x="70" y="134" class="sans mainTitle">점수는 후보를 찾고, 완전성은 발행 여부를 결정합니다</text>
+  <text x="70" y="176" class="sans subtitle">C(x) = object key를 정렬하고 배열 순서를 보존하는 canonical JSON · lp(x) = ULEB128(byte length) ∥ x</text>
+
+  <path d="M 560 365 L 618 365" stroke="#7189FF" stroke-width="3" marker-end="url(#coreArrow)"/>
+  <path d="M 1140 365 L 1198 365" stroke="#7189FF" stroke-width="3" marker-end="url(#coreArrow)"/>
+  <path d="M 560 716 L 618 716" stroke="#7189FF" stroke-width="3" marker-end="url(#coreArrow)"/>
+  <path d="M 1140 716 L 1198 716" stroke="#7189FF" stroke-width="3" marker-end="url(#coreArrow)"/>
+  <path d="M 1470 500 C 1470 548, 332 548, 332 566" fill="none" stroke="#52647F" stroke-width="2" stroke-dasharray="7 7" marker-end="url(#coreArrow)"/>
+
+  <g filter="url(#coreShadow)">
+    <rect x="70" y="228" width="490" height="272" rx="26" fill="#111827" stroke="#33405A" stroke-width="2"/>
+    <rect x="96" y="252" width="54" height="30" rx="15" fill="#26355C"/>
+    <text x="113" y="273" class="sans step">01</text>
+    <text x="96" y="324" class="sans cardTitle">입력을 내용으로 봉인</text>
+    <text x="96" y="355" class="sans cardSub">텍스트나 입력 집합이 바뀌면 ID도 바뀝니다</text>
+    <rect x="96" y="376" width="438" height="67" rx="12" fill="#0A1020"/>
+    <text x="114" y="401" class="mono formula">H_δ(x) = SHA-256(UTF8(δ) ∥ x)</text>
+    <text x="114" y="428" class="mono formula" font-size="13">ID_δ[p₁…pₙ] = SHA-256(UTF8(δ) ∥ lp(p₁)…lp(pₙ))</text>
+    <rect x="96" y="452" width="438" height="31" rx="10" fill="#0A1020"/>
+    <text x="114" y="473" class="mono formula" font-size="13">CorpusHash = H_δ(C(sort_ID(documents)))</text>
+  </g>
+
+  <g filter="url(#coreShadow)">
+    <rect x="650" y="228" width="490" height="272" rx="26" fill="#13182B" stroke="#536DFF" stroke-width="2"/>
+    <rect x="676" y="252" width="54" height="30" rx="15" fill="#314BAA"/>
+    <text x="693" y="273" class="sans step" fill="#FFFFFF">02</text>
+    <text x="676" y="324" class="sans cardTitle">비슷한 문서를 후보로만 축소</text>
+    <text x="676" y="355" class="sans cardSub">어떤 점수도 삭제·승자 선택 권한을 갖지 않습니다</text>
+    <text x="694" y="399" class="mono formula">sim_MH(a,b) = matching components / 128</text>
+    <text x="694" y="430" class="mono note">5-grapheme · 32×4 LSH · τ = 0.85</text>
+    <text x="694" y="460" class="mono formula">sim_cos(a,b) = ûₐ · ûᵦ</text>
+    <text x="694" y="486" class="mono note">candidate: sim_cos ≥ 0.55 · per-left top 8</text>
+    <rect x="974" y="252" width="140" height="31" rx="15.5" fill="#2A1930" stroke="#91465D"/>
+    <text x="1044" y="273" class="sans pill" fill="#FFB4C0" text-anchor="middle">NO AUTO-MERGE</text>
+  </g>
+
+  <g filter="url(#coreShadow)">
+    <rect x="1230" y="228" width="500" height="272" rx="26" fill="#111827" stroke="#52617B" stroke-width="2"/>
+    <rect x="1256" y="252" width="54" height="30" rx="15" fill="#26355C"/>
+    <text x="1273" y="273" class="sans step">03</text>
+    <text x="1256" y="324" class="sans cardTitle">Taxonomy는 완전 분할</text>
+    <text x="1256" y="355" class="sans cardSub">모든 문서는 정확히 한 cluster에 속해야 합니다</text>
+    <rect x="1256" y="383" width="448" height="58" rx="13" fill="#0A1020"/>
+    <text x="1480" y="419" class="mono formula" font-size="21" text-anchor="middle">∀d ∈ Docs,  Σᵢ 1[d ∈ Cᵢ] = 1</text>
+    <text x="1256" y="474" class="sans note">누락 0 · 중복 0 · unknown document 0 · 빈 cluster 0</text>
+  </g>
+
+  <g filter="url(#coreShadow)">
+    <rect x="70" y="578" width="490" height="276" rx="26" fill="#111827" stroke="#4F6284" stroke-width="2"/>
+    <rect x="96" y="602" width="54" height="30" rx="15" fill="#26355C"/>
+    <text x="113" y="623" class="sans step">04</text>
+    <text x="96" y="674" class="sans cardTitle">모든 조각을 빠짐없이 회계</text>
+    <text x="96" y="705" class="sans cardSub">block과 metadata마다 정확히 한 disposition</text>
+    <text x="112" y="750" class="mono formula" font-size="15">keys(Disposition_c) = Blocks_c ∪ Metadata_c</text>
+    <text x="112" y="783" class="mono formula">Integrated_c ⊆ CitedEvidence_c</text>
+    <text x="112" y="818" class="mono note">Evidence = (DocumentId, BlockId, ContentHash)</text>
+  </g>
+
+  <g filter="url(#coreShadow)">
+    <rect x="650" y="578" width="490" height="276" rx="26" fill="#211A16" stroke="#C58932" stroke-width="2"/>
+    <rect x="676" y="602" width="54" height="30" rx="15" fill="#6C461D"/>
+    <text x="693" y="623" class="sans step" fill="#FFE0AD">05</text>
+    <text x="676" y="674" class="sans cardTitle">Critic과 사람의 승인으로 닫기</text>
+    <text x="676" y="705" class="sans cardSub">Major/Critical은 waiver로 통과할 수 없습니다</text>
+    <text x="694" y="750" class="mono formula">Major ∪ Critical = ∅</text>
+    <text x="694" y="783" class="mono formula">MinorFindingIds = WaivedFindingIds</text>
+    <text x="694" y="812" class="mono note" font-size="14">RevisionHash binds taxonomy_hash · proposal · critic</text>
+    <text x="694" y="836" class="mono note" font-size="14">· omission approvals · minor waivers</text>
+  </g>
+
+  <g filter="url(#coreShadow)">
+    <rect x="1230" y="578" width="500" height="276" rx="26" fill="#0F2927" stroke="#2EC7AC" stroke-width="2"/>
+    <rect x="1256" y="602" width="54" height="30" rx="15" fill="#176B61"/>
+    <text x="1273" y="623" class="sans step" fill="#C9FFF5">06</text>
+    <text x="1256" y="674" class="sans cardTitle">승인 계획을 byte로 재생</text>
+    <text x="1256" y="705" class="sans cardSub">compile과 verify가 같은 materializer F를 공유합니다</text>
+    <text x="1274" y="750" class="mono formula">Expected = F(ApprovedPlan)</text>
+    <text x="1274" y="783" class="mono formula">ActualPaths = ExpectedPaths</text>
+    <text x="1274" y="818" class="mono formula" font-size="15">∀p, ActualBytes(p) = ExpectedBytes(p)</text>
+    <rect x="1562" y="733" width="141" height="31" rx="15.5" fill="#123E38" stroke="#36CDB5"/>
+    <text x="1632" y="754" class="sans pill" fill="#B9FFF3" text-anchor="middle">PROVIDER-FREE</text>
+  </g>
+
+  <rect x="70" y="918" width="1660" height="122" rx="28" fill="#111A2D" stroke="#38496D" stroke-width="2"/>
+  <text x="102" y="956" class="sans eyebrow" font-size="15">COMPILE AUTHORITY</text>
+  <text x="102" y="998" class="mono gate">Partition ✓  ∧  100% Disposition ✓  ∧  Evidence Closure ✓  ∧  Blocking 0 ✓  ∧  Hash-bound Approval ✓</text>
+  <g>
+    <rect x="1353" y="953" width="104" height="40" rx="20" fill="#17243E" stroke="#40599A"/>
+    <text x="1405" y="979" class="mono pill" text-anchor="middle">knowledge/</text>
+    <rect x="1468" y="953" width="95" height="40" rx="20" fill="#17243E" stroke="#40599A"/>
+    <text x="1515" y="979" class="mono pill" text-anchor="middle">legacy/</text>
+    <rect x="1574" y="953" width="116" height="40" rx="20" fill="#12342F" stroke="#287A6E"/>
+    <text x="1632" y="979" class="mono pill" text-anchor="middle">.okc/</text>
+  </g>
+  <text x="70" y="1080" class="sans note">같은 승인 계획을 replay할 때의 결정론입니다. Hash는 내부 무결성을 검증하며 객관적 진실이나 발행자 신원을 증명하는 전자서명은 아닙니다.</text>
+</svg>

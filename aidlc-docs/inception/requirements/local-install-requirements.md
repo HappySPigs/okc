@@ -65,7 +65,7 @@
 - Auto-issuing okc-web tokens from the installer (requires admin auth flow).
 - Claude Desktop registration target (only Claude Code + Codex in v1).
 - Publishing okc-mcp to npm.
-- A repository-root `install.sh` convenience wrapper — **deprioritized**; may be added only if trivial after both module `setup` commands exist.
+- A repository-root one-command installer — **DELIVERED on user request (2026-09-09)**: `install.sh` (macOS/Linux) + `install.ps1` (Windows) + `uninstall.sh`, driven by a single combined config `okc-install.config.json` (template: `okc-install.config.example.json`) rendered into per-module configs by `scripts/okc-install-render.mjs`. It builds both modules and runs each module's `setup` in one shot. This satisfies the user's "fill one config → one file installs both" requirement (supersedes Q2=A's per-module-only framing while keeping the two module `setup` commands as the underlying mechanism).
 
 ## Key Requirements Summary
 

@@ -1,0 +1,25 @@
+{
+  "_README": "이 파일을 okc-install.config.json 으로 복사해 값을 채운 뒤 ./install.sh (윈도우: install.ps1) 를 실행하세요. 토큰은 okc-web 콘솔에서 발급합니다(hooks=upload token, mcp=serving read token).",
+
+  "okc_web_base_url": "https://okc.example.com",
+
+  "hooks": {
+    "enabled": true,
+    "vault_path": "/absolute/path/to/your/vault",
+    "upload_token": "PASTE-OKC-WEB-UPLOAD-TOKEN",
+    "data_dir": "/absolute/path/to/watcher-state"
+  },
+
+  "mcp": {
+    "enabled": true,
+    "agents": ["claude", "codex"],
+    "vault_path": "/absolute/path/to/AuthoringVault",
+    "state_path": "/absolute/path/to/okc-mcp-state",
+    "web": {
+      "enabled": false,
+      "project_id": "your-project-id",
+      "read_token": "PASTE-OKC-WEB-SERVING-READ-TOKEN",
+      "read_only": true
+    }
+  }
+}

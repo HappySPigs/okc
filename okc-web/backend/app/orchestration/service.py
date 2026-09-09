@@ -199,14 +199,26 @@ class OrchestrationService:
             for p in self._config.providers
         ]
 
-    async def bind_provider(self, project_id: str, profile_name: str) -> ProjectStatusView:
+    async def bind_provider(
+        self, project_id: str, profile_name: str, role: str | None = None
+    ) -> ProjectStatusView:
         row = self._registry.get(project_id)
         names = {p.name for p in self._config.providers}
         if profile_name not in names:
             raise EngineError.validation(f"unknown provider profile '{profile_name}'")
+        # ``role=None`` sets the default profile for all roles; a role string binds
+        # just that role (okc-core AiRole literals), enabling e.g. a dedicated
+        # embedding model alongside a generative default.
+        valid_roles = {"embedding", "organizer", "synthesis", "critic"}
+        if role is not None and role not in valid_roles:
+            raise EngineError.validation(
+                f"unknown AI role '{role}' (expected one of {sorted(valid_roles)} or null)"
+            )
         self._guard_not_busy(project_id)
         engine = self._require_engine()
-        await engine.call(lambda e: e.set_ai_route(row.engine_root_abs_path, profile_name))
+        await engine.call(
+            lambda e: e.set_ai_route(row.engine_root_abs_path, profile_name, role)
+        )
         return await self.status(project_id)
 
     # --- E3-S4: preflight + remote disclosure gate (Q2 direct await, Q5 boundaries) ---

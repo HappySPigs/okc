@@ -84,7 +84,7 @@ def register(app: FastAPI, state: AppState) -> None:
         project_id: str, body: BindProviderRequest, ctx: AuthContext = Depends(admin_context)
     ) -> ProjectStatusView:
         require(ctx, (Role.ADMIN,))
-        return await service.bind_provider(project_id, body.profile_name)
+        return await service.bind_provider(project_id, body.profile_name, body.role)
 
     # --- E3-S4: preflight + disclosure gate ---
     @router.post("/{project_id}/preflight", response_model=PreflightGateView)

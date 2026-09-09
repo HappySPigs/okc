@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1536" height="1148" viewBox="0 0 1536 1148" role="img" aria-labelledby="title desc">
+  <title id="title">Obsidian MCP와 OKC의 지식 재사용 순환을 설명하는 6컷 만화</title>
+  <desc id="desc">코딩 중 생긴 결정과 해결법을 Obsidian MCP로 개인 Vault에 기록하고, 다음 세션에 재사용하고, 여러 구성원의 Vault를 출처와 승인 정보가 남는 부서 공동 아카이브로 만들고, 코딩 에이전트가 과거 결정과 런북을 새 개발에 재사용하며 새 배움을 다시 축적하는 과정을 여섯 장면으로 설명한다.</desc>
+  <defs>
+    <linearGradient id="footerBgV2" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#07101C"/>
+      <stop offset="0.55" stop-color="#14213A"/>
+      <stop offset="1" stop-color="#0B2022"/>
+    </linearGradient>
+    <linearGradient id="footerLineV2" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#6C7CFF"/>
+      <stop offset="0.55" stop-color="#7F9CFF"/>
+      <stop offset="1" stop-color="#4BD8BC"/>
+    </linearGradient>
+    <filter id="textShadowV2" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000000" flood-opacity="0.7"/>
+    </filter>
+    <style>
+      .sans { font-family: Inter, Pretendard, "Noto Sans KR", -apple-system, BlinkMacSystemFont, sans-serif; }
+      .panelNumber { fill: #FFFFFF; font-size: 14px; font-weight: 830; }
+      .panelCaption { fill: #FFFFFF; font-size: 17px; font-weight: 770; letter-spacing: -0.25px; }
+      .bubble { fill: #293044; font-size: 19px; font-weight: 780; letter-spacing: -0.3px; }
+      .footerTag { fill: #9DABFF; font-size: 14px; font-weight: 790; letter-spacing: 2.4px; }
+      .footerTitle { fill: #FFFFFF; font-size: 27px; font-weight: 790; letter-spacing: -0.65px; }
+      .pillText { fill: #C5CFE2; font-size: 12px; font-weight: 780; letter-spacing: 0.8px; }
+    </style>
+  </defs>
+
+  <rect width="1536" height="1148" fill="#F5F0E6"/>
+  <image href="09-why-okc-comic-v2-art.png" x="0" y="0" width="1536" height="1024" preserveAspectRatio="xMidYMid meet"/>
+
+  <g filter="url(#textShadowV2)">
+    <rect x="10" y="9" width="495" height="56" fill="#10213A" fill-opacity="0.88"/>
+    <circle cx="36" cy="37" r="16" fill="#7082FF"/>
+    <text x="36" y="42" class="sans panelNumber" text-anchor="middle">1</text>
+    <text x="62" y="43" class="sans panelCaption">Obsidian MCP로 결정·명령·해결법을 바로 기록</text>
+
+    <rect x="519" y="9" width="498" height="56" fill="#10213A" fill-opacity="0.88"/>
+    <circle cx="545" cy="37" r="16" fill="#7082FF"/>
+    <text x="545" y="42" class="sans panelNumber" text-anchor="middle">2</text>
+    <text x="571" y="43" class="sans panelCaption">다음 세션에는 지난 지식을 곧바로 재사용</text>
+
+    <rect x="1031" y="9" width="496" height="56" fill="#10213A" fill-opacity="0.88"/>
+    <circle cx="1057" cy="37" r="16" fill="#38BFA5"/>
+    <text x="1057" y="42" class="sans panelNumber" text-anchor="middle">3</text>
+    <text x="1083" y="43" class="sans panelCaption" font-size="16">각자의 Vault는 유지하고, 지식은 부서 아카이브로</text>
+
+    <rect x="10" y="514" width="495" height="55" fill="#10213A" fill-opacity="0.9"/>
+    <circle cx="36" cy="542" r="16" fill="#E6A13D"/>
+    <text x="36" y="547" class="sans panelNumber" text-anchor="middle">4</text>
+    <text x="62" y="548" class="sans panelCaption">OKC가 출처·승인·모순을 지켜 함께 정리</text>
+
+    <rect x="519" y="514" width="498" height="55" fill="#10213A" fill-opacity="0.9"/>
+    <circle cx="545" cy="542" r="16" fill="#9671F3"/>
+    <text x="545" y="547" class="sans panelNumber" text-anchor="middle">5</text>
+    <text x="571" y="548" class="sans panelCaption">코딩 에이전트가 과거 결정과 런북을 재사용</text>
+
+    <rect x="1031" y="514" width="496" height="55" fill="#10213A" fill-opacity="0.9"/>
+    <circle cx="1057" cy="542" r="16" fill="#38BFA5"/>
+    <text x="1057" y="547" class="sans panelNumber" text-anchor="middle">6</text>
+    <text x="1083" y="548" class="sans panelCaption">새 배움도 돌아와 조직 지식이 자랍니다</text>
+  </g>
+
+  <text x="864" y="121" class="sans bubble" text-anchor="middle">지난 해결법을</text>
+  <text x="864" y="148" class="sans bubble" text-anchor="middle">찾았어요!</text>
+
+  <text x="705" y="616" class="sans bubble" text-anchor="middle" font-size="18">지난 설계와 런북을</text>
+  <text x="705" y="642" class="sans bubble" text-anchor="middle" font-size="18">찾았어요!</text>
+
+  <rect x="0" y="1024" width="1536" height="124" fill="url(#footerBgV2)"/>
+  <rect x="0" y="1024" width="1536" height="5" fill="url(#footerLineV2)"/>
+  <text x="38" y="1063" class="sans footerTag">KNOWLEDGE FLYWHEEL</text>
+  <text x="38" y="1107" class="sans footerTitle">개인의 기록이 부서의 자산이 되고, 다음 개발의 출발점이 됩니다.</text>
+
+  <g>
+    <rect x="1042" y="1062" width="104" height="34" rx="17" fill="#17233F" stroke="#465CB5"/>
+    <text x="1094" y="1084" class="sans pillText" text-anchor="middle">CAPTURE</text>
+    <rect x="1156" y="1062" width="108" height="34" rx="17" fill="#17233F" stroke="#465CB5"/>
+    <text x="1210" y="1084" class="sans pillText" text-anchor="middle">ARCHIVE</text>
+    <rect x="1274" y="1062" width="98" height="34" rx="17" fill="#271E3B" stroke="#7452B4"/>
+    <text x="1323" y="1084" class="sans pillText" text-anchor="middle">REUSE</text>
+    <rect x="1382" y="1062" width="114" height="34" rx="17" fill="#102B27" stroke="#2A7E71"/>
+    <text x="1439" y="1084" class="sans pillText" text-anchor="middle">GROW</text>
+  </g>
+</svg>

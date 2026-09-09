@@ -67,9 +67,14 @@ okc/
 ├── okc-hooks/         # Rust vault-watch upload daemon
 ├── okc-web/           # FastAPI backend + React SPA integration platform
 ├── okc-mcp/           # Node/TypeScript stdio MCP server
+├── install.sh         # One-command local install of okc-hooks + okc-mcp
+├── install.ps1        #   (Windows PowerShell equivalent)
+├── uninstall.sh       # Symmetric teardown
+├── okc-install.config.example.json  # Combined installer config template
 ├── aidlc-docs/        # Umbrella AI-DLC workspace: cross-module coordination
 ├── scripts/           # Cross-module integration & AI-DLC verification helpers
-│                      #   (mcp-integration-client.mjs, test_integration.py, verify-aidlc.mjs)
+│                      #   (okc-install-render.mjs, mcp-integration-client.mjs,
+│                      #    test_integration.py, verify-aidlc.mjs)
 └── .github/workflows/ # Per-module CI (core, hooks, mcp, web backend/frontend)
 ```
 
@@ -77,10 +82,65 @@ Each module keeps its own `aidlc-docs/`, agent instructions
 (`AGENTS.md` / `CLAUDE.md`), and history; the root owns only cross-module
 contracts and integration.
 
+## Quick install (okc-hooks + okc-mcp)
+
+Fill **one** config file, run **one** command, and both the `okc-hooks` upload
+daemon and the `okc-mcp` server (registered into your coding agents) are installed
+locally. The installer just wraps each module's own `setup` command; `okc-core`
+and `okc-web` are not covered by it (see [Getting started](#getting-started)).
+
+**1. Create your config** from the template:
+
+```sh
+cp okc-install.config.example.json okc-install.config.json
+```
+
+**2. Fill in the values** — this is the only file you edit:
+
+| Field | Meaning |
+|---|---|
+| `okc_web_base_url` | Your okc-web site root, e.g. `https://okc.example.com` (no path). |
+| `hooks.vault_path` | Absolute path of the Obsidian vault to watch and upload. |
+| `hooks.upload_token` | okc-web **upload token** (issued in the okc-web console). |
+| `hooks.data_dir` | Absolute path for the daemon's local state. |
+| `mcp.agents` | Coding agents to register into — any of `["claude","codex"]`. |
+| `mcp.vault_path` / `mcp.state_path` | Local authoring vault + state (local mode). |
+| `mcp.web` | Set `enabled: true` with `project_id` and a **serving read token** to read the published web vault instead (read-only). |
+
+Set `"enabled": false` under `hooks` or `mcp` to install just one. Tokens come
+from the okc-web console (hooks = upload token; mcp = serving read token — public
+projects need none).
+
+**3. Install both at once:**
+
+```sh
+./install.sh            # macOS / Linux
+./install.ps1           # Windows (PowerShell)
+```
+
+The installer renders your combined config into per-module configs (written
+`0600`; tokens are never printed), builds each module, then runs each module's
+`setup` — registering the hooks auto-start daemon (launchd / systemd `--user` /
+Windows SCM) and adding okc-mcp to each selected agent through its official CLI
+(`claude mcp add --scope user`, `codex mcp add`; if a CLI isn't on `PATH`, the
+snippet to paste is printed instead).
+
+**Prerequisites:** Node ≥ 22 (always), a Rust toolchain (`cargo`, for the hooks
+build), and `npm` (for the mcp build). Re-running is idempotent; use
+`SKIP_BUILD=1 ./install.sh` to skip rebuilds when the modules are already built.
+
+**Uninstall:** `./uninstall.sh` deregisters the daemon and unregisters okc-mcp
+from your agents — your vaults are never touched.
+
+Installer files: `install.sh`, `install.ps1`, `uninstall.sh`,
+`okc-install.config.example.json`, and `scripts/okc-install-render.mjs`.
+
 ## Getting started
 
-There is no single build for the whole repo — start with the module you need and
-follow its README, which carries the authoritative prerequisites and steps.
+For a one-command local setup of `okc-hooks` + `okc-mcp`, use
+[Quick install](#quick-install-okc-hooks--okc-mcp) above. Otherwise there is no
+single build for the whole repo — start with the module you need and follow its
+README, which carries the authoritative prerequisites and steps.
 
 - **Build/run the engine** → [`okc-core/README.md`](okc-core/README.md) (Rust toolchain).
 - **Run the integration platform** → [`okc-web/README.md`](okc-web/README.md)

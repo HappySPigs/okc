@@ -68,6 +68,11 @@ class ProviderSpecView(BaseModel):
     endpoint: str
     model: str
     api_key_env: str | None = None
+    # Optional per-request timeout (ms) forwarded to the engine provider profile.
+    # Omit to use the engine default (120_000). Large local models generating a
+    # full taxonomy/synthesis can exceed the default, so a self-hosted deployment
+    # may raise it.
+    timeout_ms: int | None = None
 
 
 # --- Views (engine -> okc-web) ---

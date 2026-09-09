@@ -286,3 +286,47 @@ AIDLC 사용해서
 **Context**: Root coordination + aggregate verification only; module authority preserved. Unrelated concurrent working-tree changes (okc-web/okc-core/CI) not touched. NOTE: root audit.md is under concurrent multi-session write contention; this entry was appended and verified — the durable initiative record also lives in aidlc-state.md, the build-and-test summary, and module audit trails.
 
 ---
+
+## Follow-up (Local Install) — One-Command Root Installer
+
+**Timestamp**: 2026-09-09T02:10:00Z
+
+**User Input**: "아니 둘다 config 설정만 하면 자동으로 설치되는 윈도우로 치면 exe,bat 같은 파일 만들어달라니까 / 두개를 한번에 설치"
+
+**AI Response**: Clarified requirement: the user wants a single runnable installer file (Windows .exe/.bat analogy) that installs BOTH modules at once after the config is filled — not manual per-module build+setup. Delivered the previously-deprioritized root installer: `install.sh` (macOS/Linux), `install.ps1` (Windows), `uninstall.sh`, a single combined config template `okc-install.config.example.json`, and `scripts/okc-install-render.mjs` which renders the one combined config into per-module configs (0600) and derives `server_endpoint=<base>/api/sync` for hooks and `web.baseUrl=<base>` for mcp. The installer builds each module then runs each module's existing `setup` (hooks auto-start daemon; mcp agent registration). Verified: `bash -n` syntax OK for both scripts; renderer smoke test emits valid JSON with correct endpoint join and 0600 perms; generated mcp config passes the module's real zod schema via read-only `doctor` (ok:true, exit 0). Deliberately did NOT run the side-effecting `setup` (would register a real OS service and edit the user's real Claude/Codex config). Tokens are confined to 0600 temp files deleted on exit and never printed. No commits.
+
+**Context**: Additive follow-up to the completed initiative; no existing module code changed (installer only orchestrates the already-built `setup` commands). Root-owned convenience wrapper. Security: no secrets logged, 0600 temp + configs, TLS-only endpoint preserved by the existing hooks validation. Appended via heredoc due to concurrent multi-session contention on audit.md.
+
+---
+
+## New Initiative — Full-Flow Local Demo (Inception)
+
+**Timestamp**: 2026-09-09T05:40:00Z
+
+**User Input**: "이 프로젝트에 대해서 데모를 하려고해. 전체적인 flow를 모두 타고싶고 그래서 hook,mcp에도 web 설정이 되어있고 web에는 현재 내 노트북에 인증이 되어있으면해. web도 데모라서 현재 로컬 pc에 띄워져있다고 가정. 시나리오는 1. 5개정도 개인 볼트가 web에 올라가있음. 내 local vault 포함(여기서는 더미 데이터 필요) 2. 내가 특정 세션에서 mcp를 이용해 local vault 업데이트 3. hook이 인지 후 Web에 업로드 4. web에서 변경된거 보여줌. 5. 관리자가 web에서 합치고 conflict 해결까지 보여줌. 새로 작업공간 만들고 띄우는 시점에서 위 연결설정을 다 하고 playwrite 이용해서 전체 데모 다 구성해줄 수 있어."
+
+**AI Response**: Selected umbrella (repo-root) AI-DLC scope per routing rule 4 (coordinates okc-web + okc-hooks + okc-mcp + okc-core plus new root-owned `demo/` tooling). This is a NEW initiative; the two prior root initiatives remain COMPLETE and preserved. Ran targeted current-state investigation (three explorer agents) of okc-hooks daemon, okc-mcp authoring tools, and okc-web review/serving UI instead of re-running full Reverse Engineering (brownfield artifacts + module histories exist). Key confirmed constraints: okc-hooks rejects non-HTTPS endpoints (needs a local TLS proxy); "conflict resolution" in okc-web is preserved-contradictions + critic-finding disposition (minor-waive / regenerate), not git-style pick-a-side; "changed" surfaces as a project-level `stale` banner (no per-file diff UI); no Playwright harness exists yet (rich `data-testid`s do); AI middle requires an embedding provider.
+
+**Decisions captured (via clarifying questions)**: (1) LLM brain = all-local Ollama `qwen2.5:14b` for organizer/synthesis/critic + `nomic-embed-text` for embedding (machine verified: Apple M5, 32 GB, Metal — comfortably runs a 14b). (2) MCP edit beat = scripted stdio `tools/call apply_session_capture(dryRun:false)` for reproducibility (also `claude mcp add` for a real session). (3) "conflict/changed" = use the product's real behavior (stale banner + ClusterReview disposition); dummy vaults authored with deliberate contradictions so the critic actually raises findings. (4) Delivery = fully automated + reproducible (Playwright drives the admin web flow with per-beat screenshots; shell scripts stand up infra + seed).
+
+**User Input**: "AIDLC로 진행시켜" — then: "권장안으로 선택하고 대부분 진행하되 구현, 설계 범위가 너무 커지는 방향은 피해. autopilot으로 자동으로 너가 진행해."
+
+**AI Response**: Adopted autopilot directive (matches prior initiative norm): take recommended options, avoid scope-expanding directions, no hard per-gate blocking, surface concise checkpoints. Produced Requirements (`inception/requirements/demo-full-flow-requirements.md`), Workflow Plan (`inception/plans/demo-full-flow-execution-plan.md`), and light Units (`inception/plans/demo-full-flow-unit-of-work.md`). Extension config for this initiative: Security Baseline = Yes (applicable rules only — token/secret hygiene, TLS, no secrets in logs/commits/state); Resiliency = No; Property-Based Testing = No (thin integration tooling + Playwright e2e; the small okc-web change follows okc-web's existing pytest style). Scope guards: no new web UI, no per-file diff view, okc-web limited to an optional `role` param on the existing provider-bind endpoint, no CI/packaging. Started the long-pole model download (`ollama pull qwen2.5:14b` + `nomic-embed-text`) in the background.
+
+**Context**: Inception for the demo initiative; root-owned demo tooling under `demo/`, module authority preserved (okc-web `role` change implemented in okc-web/ with its own test, linked from root). Bedrock/shim from the earlier session is dropped for this demo in favor of a fully local, offline, reproducible stack.
+
+---
+
+## Full-Flow Demo — Construction: TLS/hooks decision
+
+**Timestamp**: 2026-09-09T06:40:00Z
+
+**AI Response**: Implemented okc-web per-role bind (`role` optional on `POST /api/projects/{id}/provider`) + focused test — ruff/mypy clean, 9/9 orchestration tests pass. Built demo scaffolding under `demo/` (lib.sh, 00_preflight, 10_up, 20_seed, 40_mcp_edit.mjs, 50_sync, down/reset, config/providers.json, config/Caddyfile) and 5 curated dummy vaults with deliberate contradictions. Discovered a hard constraint: the okc-hooks watcher (ureq 3 + rustls) trusts ONLY the bundled Mozilla `webpki-roots` — no platform/native verifier and no CA-file config — so a local self-signed TLS front (Caddy `tls internal`) can never be trusted, and `caddy trust` is moot. Proposed a minimal env-gated okc-hooks change (`OKC_WATCHER_INSECURE_TLS=1`, default off) to accept the local cert.
+
+**User Input**: (rejected the okc-hooks source edit) then "continue"; on the clarifying question chose "로컬 http 업로드로 대체 (추천)".
+
+**AI Response**: Honored the rejection — okc-hooks is left unmodified. Revised scenario step 3: the real watcher still runs on "mine" and demonstrates genuine DETECTION (file-watch → debounce → manifest diff → consent), but the actual transfer of the changed vault is performed by the local contributor upload API (`POST /u/{token}/upload`) on the SAME token/source. Empirically verified on the live demo web that a re-upload on the same token yields the same `source_id` with a new `content_hash` (source_count unchanged) → a new source revision → fingerprint drift → project `stale`. Fully local, offline, no external tunnel, no okc-hooks change. Reflected in `demo/scripts/20_seed.sh` + `50_sync.sh`. Requirements DEMO-04 amended accordingly (watcher = detection; transfer = upload API).
+
+**Context**: Construction, U2/U3/U4. Security: no okc-hooks security posture change; tokens kept in 0600 files under gitignored `demo/state/`; demo admin bootstrap password is local-only. Scope guard held (no new web UI, okc-web change limited to the optional `role`).
+
+---

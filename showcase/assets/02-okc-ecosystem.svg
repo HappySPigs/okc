@@ -1,0 +1,220 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1080" viewBox="0 0 1800 1080" role="img" aria-labelledby="title desc">
+  <title id="title">OKC 지식 에코시스템</title>
+  <desc id="desc">기여자의 Obsidian Vault에서 시작한 지식이 okc-hooks, okc-web, okc-core, okc-mcp를 순환하며 검증 가능한 발행 지식으로 바뀌고 다시 사람과 AI 에이전트의 작업에 쓰이는 구조다.</desc>
+  <defs>
+    <linearGradient id="ecoBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#070A11"/>
+      <stop offset="0.52" stop-color="#0B1120"/>
+      <stop offset="1" stop-color="#070C13"/>
+    </linearGradient>
+    <radialGradient id="ecoGlow" cx="50%" cy="46%" r="62%">
+      <stop offset="0" stop-color="#4361EE" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#4361EE" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="webEco" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3957F2"/>
+      <stop offset="1" stop-color="#2537A8"/>
+    </linearGradient>
+    <linearGradient id="coreEco" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#172238"/>
+      <stop offset="1" stop-color="#101725"/>
+    </linearGradient>
+    <linearGradient id="hooksEco" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#123B3D"/>
+      <stop offset="1" stop-color="#102126"/>
+    </linearGradient>
+    <linearGradient id="mcpEco" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#322355"/>
+      <stop offset="1" stop-color="#19182C"/>
+    </linearGradient>
+    <filter id="ecoShadow" x="-25%" y="-25%" width="150%" height="160%">
+      <feDropShadow dx="0" dy="18" stdDeviation="24" flood-color="#000000" flood-opacity="0.34"/>
+    </filter>
+    <filter id="softGlow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="8"/>
+    </filter>
+    <marker id="ecoBlueArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7890FF"/>
+    </marker>
+    <marker id="ecoTealArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#45D2BE"/>
+    </marker>
+    <marker id="ecoAmberArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#F4B95F"/>
+    </marker>
+    <marker id="ecoPurpleArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#B695FF"/>
+    </marker>
+    <style>
+      .sans { font-family: Inter, Pretendard, "Noto Sans KR", -apple-system, BlinkMacSystemFont, sans-serif; }
+      .mono { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; }
+      .ecoEyebrow { fill: #8EA2FF; font-size: 18px; font-weight: 750; letter-spacing: 3px; }
+      .ecoTitle { fill: #F7F9FF; font-size: 51px; font-weight: 780; letter-spacing: -1.8px; }
+      .ecoSubtitle { fill: #A5AFC2; font-size: 21px; }
+      .actorTitle { fill: #F3F6FC; font-size: 22px; font-weight: 720; }
+      .actorSub { fill: #8894AA; font-size: 15px; }
+      .moduleTitle { fill: #FFFFFF; font-size: 31px; font-weight: 780; letter-spacing: -0.5px; }
+      .moduleSub { fill: #BFC8DA; font-size: 17px; }
+      .moduleSubLight { fill: #E2E7FF; font-size: 17px; }
+      .tagEco { fill: #B5C1D8; font-size: 14px; font-weight: 740; letter-spacing: 1.4px; }
+      .contractEco { fill: #E8ECFF; font-size: 17px; font-weight: 720; }
+      .contractSub { fill: #909CB3; font-size: 14px; }
+      .artifact { fill: #AEB8CC; font-size: 14px; font-weight: 680; letter-spacing: 0.5px; }
+    </style>
+  </defs>
+
+  <rect width="1800" height="1080" fill="url(#ecoBg)"/>
+  <rect width="1800" height="1080" fill="url(#ecoGlow)"/>
+  <circle cx="1670" cy="70" r="250" fill="#2DD4BF" opacity="0.035"/>
+  <circle cx="100" cy="1030" r="270" fill="#A975FF" opacity="0.035"/>
+
+  <text x="72" y="70" class="sans ecoEyebrow">OKC ECOSYSTEM · FOUR MODULES, THREE CONTRACTS</text>
+  <text x="72" y="132" class="sans ecoTitle">지식은 흐르고, 승인은 해시에 묶이고, 증거는 남습니다</text>
+  <text x="72" y="175" class="sans ecoSubtitle">작성부터 자동 동기화, 사람 검토, 결정론적 컴파일, 버전 고정 소비까지 이어지는 하나의 순환 구조</text>
+
+  <rect x="300" y="310" width="1220" height="630" rx="42" fill="#0C1220" fill-opacity="0.62" stroke="#252F45" stroke-width="2" stroke-dasharray="8 10"/>
+  <text x="330" y="341" class="sans" fill="#68758D" font-size="14" font-weight="700" letter-spacing="2">OKC TRUST BOUNDARY</text>
+
+  <g filter="url(#ecoShadow)">
+    <rect x="48" y="365" width="215" height="226" rx="28" fill="#111722" stroke="#303A50" stroke-width="2"/>
+    <circle cx="91" cy="410" r="17" fill="#1E2A42"/>
+    <path d="M 82 411 L 88 417 L 101 403" fill="none" stroke="#8EA2FF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="72" y="464" class="sans actorTitle">Obsidian Vault</text>
+    <text x="72" y="496" class="sans actorSub">개인 · 부서별 원본</text>
+    <rect x="72" y="525" width="166" height="38" rx="12" fill="#171F2E"/>
+    <text x="89" y="550" class="sans" fill="#B1BCD1" font-size="15">Markdown notes</text>
+  </g>
+
+  <g filter="url(#ecoShadow)">
+    <rect x="350" y="365" width="280" height="226" rx="28" fill="url(#hooksEco)" stroke="#2B8D83" stroke-width="2"/>
+    <rect x="375" y="390" width="66" height="27" rx="13.5" fill="#1B5753"/>
+    <text x="393" y="409" class="sans tagEco" fill="#B6FFF4">RUST</text>
+    <text x="375" y="469" class="sans moduleTitle">okc-hooks</text>
+    <text x="375" y="505" class="sans moduleSub">watch · scan · retry</text>
+    <text x="375" y="538" class="sans moduleSub">resume · crash-safe state</text>
+  </g>
+
+  <g filter="url(#ecoShadow)">
+    <rect x="745" y="326" width="340" height="304" rx="32" fill="url(#webEco)"/>
+    <rect x="772" y="353" width="153" height="29" rx="14.5" fill="#FFFFFF" opacity="0.16"/>
+    <text x="789" y="373" class="sans tagEco" fill="#FFFFFF">PYTHON · REACT</text>
+    <text x="772" y="431" class="sans moduleTitle">okc-web</text>
+    <text x="772" y="466" class="sans moduleSubLight">큐레이터 control plane</text>
+    <rect x="772" y="496" width="286" height="36" rx="11" fill="#FFFFFF" opacity="0.12"/>
+    <text x="789" y="520" class="sans moduleSubLight">Freeze source revisions</text>
+    <rect x="772" y="541" width="286" height="36" rx="11" fill="#FFFFFF" opacity="0.12"/>
+    <text x="789" y="565" class="sans moduleSubLight">Review · approve · publish</text>
+    <rect x="772" y="586" width="286" height="36" rx="11" fill="#FFFFFF" opacity="0.12"/>
+    <text x="789" y="610" class="sans moduleSubLight">History · restore · access</text>
+  </g>
+
+  <g filter="url(#ecoShadow)">
+    <rect x="1195" y="365" width="280" height="226" rx="28" fill="url(#mcpEco)" stroke="#7B5BC7" stroke-width="2"/>
+    <rect x="1220" y="390" width="106" height="27" rx="13.5" fill="#513888"/>
+    <text x="1238" y="409" class="sans tagEco" fill="#E5D7FF">NODE · MCP</text>
+    <text x="1220" y="469" class="sans moduleTitle">okc-mcp</text>
+    <rect x="1220" y="494" width="103" height="36" rx="11" fill="#FFFFFF" opacity="0.10"/>
+    <text x="1238" y="518" class="sans" fill="#D8CCF5" font-size="14" font-weight="700">AUTHOR</text>
+    <rect x="1333" y="494" width="116" height="36" rx="11" fill="#FFFFFF" opacity="0.10"/>
+    <text x="1355" y="518" class="sans" fill="#D8CCF5" font-size="14" font-weight="700">READ</text>
+    <text x="1220" y="559" class="sans moduleSub">로컬 저작 · 발행 지식 소비</text>
+  </g>
+
+  <g filter="url(#ecoShadow)">
+    <rect x="745" y="728" width="340" height="190" rx="30" fill="url(#coreEco)" stroke="#B77A30" stroke-width="2"/>
+    <rect x="772" y="754" width="66" height="27" rx="13.5" fill="#6E451B"/>
+    <text x="790" y="773" class="sans tagEco" fill="#FFE2B5">RUST</text>
+    <text x="772" y="830" class="sans moduleTitle">okc-core</text>
+    <text x="772" y="866" class="sans moduleSub">ingest · validate · compile</text>
+    <text x="772" y="898" class="sans moduleSub">verify · provenance explain</text>
+  </g>
+
+  <g filter="url(#ecoShadow)">
+    <rect x="70" y="235" width="205" height="92" rx="22" fill="#111722" stroke="#303A50"/>
+    <circle cx="103" cy="281" r="17" fill="#1E2A42"/>
+    <circle cx="103" cy="276" r="5" fill="#9DA9BF"/>
+    <path d="M 93 293 C 96 285, 110 285, 113 293" fill="none" stroke="#9DA9BF" stroke-width="2"/>
+    <text x="132" y="277" class="sans actorTitle">Contributor</text>
+    <text x="132" y="301" class="sans actorSub">평소처럼 작성</text>
+  </g>
+  <path d="M 172 327 L 172 355" stroke="#65728A" stroke-width="2" marker-end="url(#ecoBlueArrow)"/>
+
+  <g filter="url(#ecoShadow)">
+    <rect x="792" y="212" width="246" height="84" rx="22" fill="#181B28" stroke="#7E6435"/>
+    <circle cx="828" cy="254" r="17" fill="#3D3020"/>
+    <path d="M 819 255 L 826 262 L 838 246" fill="none" stroke="#F4B95F" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="858" y="250" class="sans actorTitle">Curator</text>
+    <text x="858" y="274" class="sans actorSub">검토 · 승인 · 발행</text>
+  </g>
+  <path d="M 915 296 L 915 316" stroke="#F4B95F" stroke-width="2.5" marker-end="url(#ecoAmberArrow)"/>
+
+  <g filter="url(#ecoShadow)">
+    <rect x="1130" y="212" width="260" height="84" rx="22" fill="#111722" stroke="#303A50"/>
+    <circle cx="1167" cy="254" r="17" fill="#202943"/>
+    <circle cx="1167" cy="254" r="7" fill="#8EA2FF" opacity="0.9"/>
+    <text x="1195" y="250" class="sans actorTitle">LLM Provider</text>
+    <text x="1195" y="274" class="sans actorSub">제안만 생성</text>
+  </g>
+  <path d="M 1260 296 C 1260 326, 1132 320, 1132 382 L 1132 716 C 1132 758, 1102 789, 1091 799" fill="none" stroke="#7890FF" stroke-width="2" stroke-dasharray="7 8" marker-end="url(#ecoBlueArrow)"/>
+  <rect x="1099" y="716" width="162" height="32" rx="16" fill="#101827" stroke="#33436A"/>
+  <text x="1123" y="738" class="sans" fill="#98AAEF" font-size="14" font-weight="700">PROPOSAL ONLY</text>
+
+  <g filter="url(#ecoShadow)">
+    <rect x="1537" y="365" width="215" height="226" rx="28" fill="#111722" stroke="#303A50" stroke-width="2"/>
+    <circle cx="1580" cy="410" r="17" fill="#183A36"/>
+    <path d="M 1572 410 L 1578 416 L 1590 403" fill="none" stroke="#45D2BE" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="1561" y="464" class="sans actorTitle">AI Clients</text>
+    <text x="1561" y="496" class="sans actorSub">Codex · Claude</text>
+    <rect x="1561" y="525" width="166" height="38" rx="12" fill="#122622"/>
+    <text x="1584" y="550" class="sans" fill="#9DE8DC" font-size="15">verified corpus</text>
+  </g>
+
+  <path d="M 263 478 L 340 478" stroke="#45D2BE" stroke-width="3" marker-end="url(#ecoTealArrow)"/>
+  <text x="282" y="454" class="sans contractSub">file events</text>
+
+  <path d="M 630 478 L 735 478" stroke="#45D2BE" stroke-width="3" marker-end="url(#ecoTealArrow)"/>
+  <circle cx="681" cy="478" r="7" fill="#45D2BE" filter="url(#softGlow)"/>
+  <circle cx="681" cy="478" r="17" fill="#123B3D" stroke="#45D2BE"/>
+  <text x="681" y="484" class="sans" fill="#C5FFF6" font-size="15" font-weight="800" text-anchor="middle">1</text>
+  <path d="M 616 618 L 668 494" fill="none" stroke="#2B7770" stroke-width="1.5" stroke-dasharray="5 6"/>
+  <rect x="371" y="615" width="272" height="67" rx="18" fill="#0F2325" stroke="#246A64"/>
+  <text x="392" y="641" class="mono contractEco" fill="#A5F3E7">01 /api/sync</text>
+  <text x="392" y="665" class="sans contractSub">CBOR · resumable revision</text>
+
+  <path d="M 1085 478 L 1185 478" stroke="#B695FF" stroke-width="3" marker-end="url(#ecoPurpleArrow)"/>
+  <circle cx="1136" cy="478" r="7" fill="#B695FF" filter="url(#softGlow)"/>
+  <circle cx="1136" cy="478" r="17" fill="#2C2046" stroke="#B695FF"/>
+  <text x="1136" y="484" class="sans" fill="#F0E8FF" font-size="15" font-weight="800" text-anchor="middle">3</text>
+  <path d="M 1215 618 L 1148 494" fill="none" stroke="#624D91" stroke-width="1.5" stroke-dasharray="5 6"/>
+  <rect x="1191" y="615" width="282" height="67" rx="18" fill="#211934" stroke="#60479A"/>
+  <text x="1212" y="641" class="mono contractEco" fill="#E2D5FF">03 /api/serving</text>
+  <text x="1212" y="665" class="sans contractSub">pinned read · verify · explain</text>
+
+  <path d="M 1475 478 L 1527 478" stroke="#B695FF" stroke-width="3" marker-end="url(#ecoPurpleArrow)"/>
+  <text x="1480" y="454" class="sans contractSub">MCP</text>
+
+  <path d="M 853 630 L 853 718" stroke="#F4B95F" stroke-width="3" marker-end="url(#ecoAmberArrow)"/>
+  <path d="M 977 728 L 977 640" stroke="#F4B95F" stroke-width="3" marker-end="url(#ecoAmberArrow)"/>
+  <rect x="796" y="663" width="238" height="34" rx="17" fill="#251A10" stroke="#7F5725"/>
+  <text x="818" y="686" class="mono contractEco" fill="#FFD99A">02 okc binding</text>
+  <text x="682" y="684" class="sans contractSub" text-anchor="end">sealed corpus + approvals</text>
+  <text x="1050" y="684" class="sans contractSub">compiled vault + proof</text>
+
+  <path d="M 1335 591 C 1335 782, 1395 908, 1140 958 C 900 1005, 590 1001, 360 948 C 232 918, 190 720, 167 601" fill="none" stroke="#B695FF" stroke-width="2.5" stroke-dasharray="9 9" marker-end="url(#ecoPurpleArrow)"/>
+  <rect x="470" y="930" width="405" height="38" rx="19" fill="#18142A" stroke="#4F3C7C"/>
+  <text x="498" y="955" class="sans" fill="#CDBBFA" font-size="16" font-weight="700">명시적 로컬 저작: preview → hash gate → atomic write</text>
+
+  <g>
+    <line x1="82" y1="1017" x2="1718" y2="1017" stroke="#29344A" stroke-width="2"/>
+    <circle cx="218" cy="1017" r="7" fill="#45D2BE"/>
+    <circle cx="510" cy="1017" r="7" fill="#45D2BE"/>
+    <circle cx="802" cy="1017" r="7" fill="#F4B95F"/>
+    <circle cx="1094" cy="1017" r="7" fill="#F4B95F"/>
+    <circle cx="1386" cy="1017" r="7" fill="#B695FF"/>
+    <text x="218" y="1047" class="sans artifact" text-anchor="middle">SOURCE REVISION</text>
+    <text x="510" y="1047" class="sans artifact" text-anchor="middle">FROZEN SOURCE SET</text>
+    <text x="802" y="1047" class="sans artifact" text-anchor="middle">APPROVED PLAN</text>
+    <text x="1094" y="1047" class="sans artifact" text-anchor="middle">COMPILED VAULT</text>
+    <text x="1386" y="1047" class="sans artifact" text-anchor="middle">PINNED REVISION</text>
+  </g>
+</svg>

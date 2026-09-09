@@ -19,9 +19,16 @@ class CreateProjectRequest(BaseModel):
 
 
 class BindProviderRequest(BaseModel):
-    """E3-S4 NeedsProvider. Only a pre-provisioned profile NAME (A-2)."""
+    """E3-S4 NeedsProvider. Only a pre-provisioned profile NAME (A-2).
+
+    ``role`` optionally targets a single AI role
+    (``embedding|organizer|synthesis|critic``); omit it to set the default
+    profile applied to all roles. The adapter forwards ``role`` to okc-core's
+    ``set_ai_route``; routes persist in the project manifest.
+    """
 
     profile_name: str = Field(min_length=1)
+    role: str | None = None
 
 
 class RunIntegrationRequest(BaseModel):

@@ -14,6 +14,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import text
 
+from app.adapter.dto import ProviderSpecView
 from app.config import AppConfig
 from app.main import create_app
 
@@ -156,6 +157,48 @@ def test_bind_unknown_provider_rejected(tmp_path, monkeypatch) -> None:  # noqa:
         _login(client)
         pid = _create_project(client)["id"]
         r = client.post(f"/api/projects/{pid}/provider", json={"profile_name": "ghost"})
+        assert r.status_code == 400, r.text
+        assert r.json()["code"] == "VALIDATION_FAILED"
+
+
+def test_bind_provider_role_routing_and_validation(tmp_path, monkeypatch) -> None:  # noqa: ANN001
+    """Per-role AI routing: a default bind (all roles) plus a single-role override,
+    and rejection of an unknown role before any engine mutation. set_ai_route is
+    offline (writes the project manifest; loopback profiles need no network)."""
+    monkeypatch.setenv("OKC_WEB_BOOTSTRAP_ADMIN_EMAIL", ADMIN_EMAIL)
+    monkeypatch.setenv("OKC_WEB_BOOTSTRAP_ADMIN_PASSWORD", ADMIN_PASSWORD)
+    app = create_app(
+        AppConfig(
+            state_db_path=str(tmp_path / "state.db"),
+            projects_root=str(tmp_path / "projects"),
+            providers=[
+                ProviderSpecView(name="gen", kind="ollama", model="qwen2.5:14b",
+                                 endpoint="http://127.0.0.1:11434"),
+                ProviderSpecView(name="embed", kind="ollama", model="nomic-embed-text",
+                                 endpoint="http://127.0.0.1:11434"),
+            ],
+        )
+    )
+    with TestClient(app) as client:
+        _login(client)
+        pid = _create_project(client)["id"]
+
+        # Default bind (all roles) — unchanged, backward-compatible behavior.
+        r = client.post(f"/api/projects/{pid}/provider", json={"profile_name": "gen"})
+        assert r.status_code == 200, r.text
+
+        # Single-role override: embedding -> the dedicated embed profile.
+        r = client.post(
+            f"/api/projects/{pid}/provider",
+            json={"profile_name": "embed", "role": "embedding"},
+        )
+        assert r.status_code == 200, r.text
+
+        # Unknown role is rejected as VALIDATION_FAILED (before any engine mutation).
+        r = client.post(
+            f"/api/projects/{pid}/provider",
+            json={"profile_name": "gen", "role": "bogus"},
+        )
         assert r.status_code == 400, r.text
         assert r.json()["code"] == "VALIDATION_FAILED"
 
